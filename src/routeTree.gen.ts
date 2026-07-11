@@ -9,11 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ToolsRouteImport } from './routes/tools'
 import { Route as ProductRouteImport } from './routes/product'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ToolsCedarHollowRouteImport } from './routes/tools.cedar-hollow'
 import { Route as SolutionsAudienceRouteImport } from './routes/solutions.$audience'
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 
+const ToolsRoute = ToolsRouteImport.update({
+  id: '/tools',
+  path: '/tools',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProductRoute = ProductRouteImport.update({
   id: '/product',
   path: '/product',
@@ -23,6 +30,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ToolsCedarHollowRoute = ToolsCedarHollowRouteImport.update({
+  id: '/cedar-hollow',
+  path: '/cedar-hollow',
+  getParentRoute: () => ToolsRoute,
 } as any)
 const SolutionsAudienceRoute = SolutionsAudienceRouteImport.update({
   id: '/solutions/$audience',
@@ -38,38 +50,71 @@ const ProductSlugRoute = ProductSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/product': typeof ProductRouteWithChildren
+  '/tools': typeof ToolsRouteWithChildren
   '/product/$slug': typeof ProductSlugRoute
   '/solutions/$audience': typeof SolutionsAudienceRoute
+  '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/product': typeof ProductRouteWithChildren
+  '/tools': typeof ToolsRouteWithChildren
   '/product/$slug': typeof ProductSlugRoute
   '/solutions/$audience': typeof SolutionsAudienceRoute
+  '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/product': typeof ProductRouteWithChildren
+  '/tools': typeof ToolsRouteWithChildren
   '/product/$slug': typeof ProductSlugRoute
   '/solutions/$audience': typeof SolutionsAudienceRoute
+  '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/product' | '/product/$slug' | '/solutions/$audience'
+  fullPaths:
+    | '/'
+    | '/product'
+    | '/tools'
+    | '/product/$slug'
+    | '/solutions/$audience'
+    | '/tools/cedar-hollow'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/product' | '/product/$slug' | '/solutions/$audience'
-  id: '__root__' | '/' | '/product' | '/product/$slug' | '/solutions/$audience'
+  to:
+    | '/'
+    | '/product'
+    | '/tools'
+    | '/product/$slug'
+    | '/solutions/$audience'
+    | '/tools/cedar-hollow'
+  id:
+    | '__root__'
+    | '/'
+    | '/product'
+    | '/tools'
+    | '/product/$slug'
+    | '/solutions/$audience'
+    | '/tools/cedar-hollow'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ProductRoute: typeof ProductRouteWithChildren
+  ToolsRoute: typeof ToolsRouteWithChildren
   SolutionsAudienceRoute: typeof SolutionsAudienceRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tools': {
+      id: '/tools'
+      path: '/tools'
+      fullPath: '/tools'
+      preLoaderRoute: typeof ToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/product': {
       id: '/product'
       path: '/product'
@@ -83,6 +128,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/tools/cedar-hollow': {
+      id: '/tools/cedar-hollow'
+      path: '/cedar-hollow'
+      fullPath: '/tools/cedar-hollow'
+      preLoaderRoute: typeof ToolsCedarHollowRouteImport
+      parentRoute: typeof ToolsRoute
     }
     '/solutions/$audience': {
       id: '/solutions/$audience'
@@ -112,9 +164,20 @@ const ProductRouteChildren: ProductRouteChildren = {
 const ProductRouteWithChildren =
   ProductRoute._addFileChildren(ProductRouteChildren)
 
+interface ToolsRouteChildren {
+  ToolsCedarHollowRoute: typeof ToolsCedarHollowRoute
+}
+
+const ToolsRouteChildren: ToolsRouteChildren = {
+  ToolsCedarHollowRoute: ToolsCedarHollowRoute,
+}
+
+const ToolsRouteWithChildren = ToolsRoute._addFileChildren(ToolsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ProductRoute: ProductRouteWithChildren,
+  ToolsRoute: ToolsRouteWithChildren,
   SolutionsAudienceRoute: SolutionsAudienceRoute,
 }
 export const routeTree = rootRouteImport
