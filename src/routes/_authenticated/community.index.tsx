@@ -36,7 +36,7 @@ import {
   seedCedarHollow,
 } from "@/lib/community/api";
 
-export const Route = createFileRoute("/_authenticated/community")({
+export const Route = createFileRoute("/_authenticated/community/")({
   head: () => ({ meta: [{ title: "Community Record — RoadShare" }, { name: "robots", content: "noindex" }] }),
   component: CommunityIndex,
 });

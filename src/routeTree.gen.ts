@@ -33,6 +33,7 @@ import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/ma
 import { Route as AuthenticatedDocumentsRouteImport } from './routes/_authenticated/documents'
 import { Route as AuthenticatedDecisionsRouteImport } from './routes/_authenticated/decisions'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedCommunityIndexRouteImport } from './routes/_authenticated/community.index'
 
 const ToolsRoute = ToolsRouteImport.update({
   id: '/tools',
@@ -153,6 +154,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCommunityIndexRoute =
+  AuthenticatedCommunityIndexRouteImport.update({
+    id: '/community/',
+    path: '/community/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -178,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
   '/product/': typeof ProductIndexRoute
   '/tools/': typeof ToolsIndexRoute
+  '/community/': typeof AuthenticatedCommunityIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -201,6 +209,7 @@ export interface FileRoutesByTo {
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
   '/product': typeof ProductIndexRoute
   '/tools': typeof ToolsIndexRoute
+  '/community': typeof AuthenticatedCommunityIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -228,6 +237,7 @@ export interface FileRoutesById {
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
   '/product/': typeof ProductIndexRoute
   '/tools/': typeof ToolsIndexRoute
+  '/_authenticated/community/': typeof AuthenticatedCommunityIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -255,6 +265,7 @@ export interface FileRouteTypes {
     | '/tools/cedar-hollow'
     | '/product/'
     | '/tools/'
+    | '/community/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -278,6 +289,7 @@ export interface FileRouteTypes {
     | '/tools/cedar-hollow'
     | '/product'
     | '/tools'
+    | '/community'
   id:
     | '__root__'
     | '/'
@@ -304,6 +316,7 @@ export interface FileRouteTypes {
     | '/tools/cedar-hollow'
     | '/product/'
     | '/tools/'
+    | '/_authenticated/community/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -493,6 +506,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/community/': {
+      id: '/_authenticated/community/'
+      path: '/community'
+      fullPath: '/community/'
+      preLoaderRoute: typeof AuthenticatedCommunityIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -502,6 +522,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDocumentsRoute: typeof AuthenticatedDocumentsRoute
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedCommunityIndexRoute: typeof AuthenticatedCommunityIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -510,6 +531,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDocumentsRoute: AuthenticatedDocumentsRoute,
   AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedCommunityIndexRoute: AuthenticatedCommunityIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
