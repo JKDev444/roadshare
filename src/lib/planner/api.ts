@@ -15,6 +15,7 @@ export const ALLOCATION_METHODS: { value: AllocationMethod; label: string; blurb
   { value: "area", label: "By lot area", blurb: "Proportional to each parcel's area in square feet." },
   { value: "segment_benefit", label: "By benefit weight", blurb: "Proportional to a per-parcel benefit weight you set." },
   { value: "base_plus_use", label: "Base + use", blurb: "A flat base per parcel, remainder split by weight." },
+  { value: "distance", label: "By distance from entrance", blurb: "Proportional to how far each parcel sits from the community entrance." },
   { value: "custom", label: "Custom weights", blurb: "Full control: weights and fixed overrides per parcel." },
 ];
 
