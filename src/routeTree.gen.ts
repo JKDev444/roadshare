@@ -35,7 +35,6 @@ import { Route as AuthenticatedDecisionsRouteImport } from './routes/_authentica
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCommunityIndexRouteImport } from './routes/_authenticated/community.index'
 import { Route as AuthenticatedCommunityIdRouteImport } from './routes/_authenticated/community.$id'
-import { Route as AuthenticatedCommunityIdProjectProjectIdRouteImport } from './routes/_authenticated/community.$id.project.$projectId'
 
 const ToolsRoute = ToolsRouteImport.update({
   id: '/tools',
@@ -168,12 +167,6 @@ const AuthenticatedCommunityIdRoute =
     path: '/community/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedCommunityIdProjectProjectIdRoute =
-  AuthenticatedCommunityIdProjectProjectIdRouteImport.update({
-    id: '/project/$projectId',
-    path: '/project/$projectId',
-    getParentRoute: () => AuthenticatedCommunityIdRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -199,9 +192,8 @@ export interface FileRoutesByFullPath {
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
   '/product/': typeof ProductIndexRoute
   '/tools/': typeof ToolsIndexRoute
-  '/community/$id': typeof AuthenticatedCommunityIdRouteWithChildren
+  '/community/$id': typeof AuthenticatedCommunityIdRoute
   '/community/': typeof AuthenticatedCommunityIndexRoute
-  '/community/$id/project/$projectId': typeof AuthenticatedCommunityIdProjectProjectIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -225,9 +217,8 @@ export interface FileRoutesByTo {
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
   '/product': typeof ProductIndexRoute
   '/tools': typeof ToolsIndexRoute
-  '/community/$id': typeof AuthenticatedCommunityIdRouteWithChildren
+  '/community/$id': typeof AuthenticatedCommunityIdRoute
   '/community': typeof AuthenticatedCommunityIndexRoute
-  '/community/$id/project/$projectId': typeof AuthenticatedCommunityIdProjectProjectIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -255,9 +246,8 @@ export interface FileRoutesById {
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
   '/product/': typeof ProductIndexRoute
   '/tools/': typeof ToolsIndexRoute
-  '/_authenticated/community/$id': typeof AuthenticatedCommunityIdRouteWithChildren
+  '/_authenticated/community/$id': typeof AuthenticatedCommunityIdRoute
   '/_authenticated/community/': typeof AuthenticatedCommunityIndexRoute
-  '/_authenticated/community/$id/project/$projectId': typeof AuthenticatedCommunityIdProjectProjectIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -287,7 +277,6 @@ export interface FileRouteTypes {
     | '/tools/'
     | '/community/$id'
     | '/community/'
-    | '/community/$id/project/$projectId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -313,7 +302,6 @@ export interface FileRouteTypes {
     | '/tools'
     | '/community/$id'
     | '/community'
-    | '/community/$id/project/$projectId'
   id:
     | '__root__'
     | '/'
@@ -342,7 +330,6 @@ export interface FileRouteTypes {
     | '/tools/'
     | '/_authenticated/community/$id'
     | '/_authenticated/community/'
-    | '/_authenticated/community/$id/project/$projectId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -546,30 +533,8 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCommunityIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/community/$id/project/$projectId': {
-      id: '/_authenticated/community/$id/project/$projectId'
-      path: '/project/$projectId'
-      fullPath: '/community/$id/project/$projectId'
-      preLoaderRoute: typeof AuthenticatedCommunityIdProjectProjectIdRouteImport
-      parentRoute: typeof AuthenticatedCommunityIdRoute
-    }
   }
 }
-
-interface AuthenticatedCommunityIdRouteChildren {
-  AuthenticatedCommunityIdProjectProjectIdRoute: typeof AuthenticatedCommunityIdProjectProjectIdRoute
-}
-
-const AuthenticatedCommunityIdRouteChildren: AuthenticatedCommunityIdRouteChildren =
-  {
-    AuthenticatedCommunityIdProjectProjectIdRoute:
-      AuthenticatedCommunityIdProjectProjectIdRoute,
-  }
-
-const AuthenticatedCommunityIdRouteWithChildren =
-  AuthenticatedCommunityIdRoute._addFileChildren(
-    AuthenticatedCommunityIdRouteChildren,
-  )
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -577,7 +542,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDocumentsRoute: typeof AuthenticatedDocumentsRoute
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
-  AuthenticatedCommunityIdRoute: typeof AuthenticatedCommunityIdRouteWithChildren
+  AuthenticatedCommunityIdRoute: typeof AuthenticatedCommunityIdRoute
   AuthenticatedCommunityIndexRoute: typeof AuthenticatedCommunityIndexRoute
 }
 
@@ -587,7 +552,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDocumentsRoute: AuthenticatedDocumentsRoute,
   AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
-  AuthenticatedCommunityIdRoute: AuthenticatedCommunityIdRouteWithChildren,
+  AuthenticatedCommunityIdRoute: AuthenticatedCommunityIdRoute,
   AuthenticatedCommunityIndexRoute: AuthenticatedCommunityIndexRoute,
 }
 
