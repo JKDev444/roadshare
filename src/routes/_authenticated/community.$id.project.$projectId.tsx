@@ -167,14 +167,14 @@ function CostCard({ project, lineTotal, onSave }: { project: { total_cost: numbe
       <div className="mt-4 space-y-4">
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <Label>Total cost ($)</Label>
+            <Label htmlFor="p-total">Total cost ($)</Label>
             {lineTotal > 0 && <button className="text-xs font-medium text-primary hover:underline" onClick={() => { setTotal(String(lineTotal)); onSave({ total_cost: lineTotal }); }}>Use line items ({money(lineTotal)})</button>}
           </div>
-          <Input type="number" value={total} onChange={(e) => setTotal(e.target.value)} onBlur={() => onSave({ total_cost: Number(total) || 0 })} />
+          <Input id="p-total" type="number" value={total} onChange={(e) => setTotal(e.target.value)} onBlur={() => onSave({ total_cost: Number(total) || 0 })} />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5"><Label>Contingency (%)</Label><Input type="number" value={cont} onChange={(e) => setCont(e.target.value)} onBlur={() => onSave({ contingency_pct: Number(cont) || 0 })} /></div>
-          <div className="space-y-1.5"><Label>Reserve ($)</Label><Input type="number" value={reserve} onChange={(e) => setReserve(e.target.value)} onBlur={() => onSave({ reserve_target: Number(reserve) || 0 })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="p-cont">Contingency (%)</Label><Input id="p-cont" type="number" value={cont} onChange={(e) => setCont(e.target.value)} onBlur={() => onSave({ contingency_pct: Number(cont) || 0 })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="p-reserve">Reserve ($)</Label><Input id="p-reserve" type="number" value={reserve} onChange={(e) => setReserve(e.target.value)} onBlur={() => onSave({ reserve_target: Number(reserve) || 0 })} /></div>
         </div>
       </div>
     </div>
