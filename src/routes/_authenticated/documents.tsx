@@ -180,6 +180,10 @@ function DocumentsPage() {
 
       <Sheet open={!!open} onOpenChange={(o) => !o && setOpenId(null)}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+          <SheetHeader className="sr-only">
+            <SheetTitle>{open?.title ?? "Document"}</SheetTitle>
+            <SheetDescription>Review, classify, and verify this document.</SheetDescription>
+          </SheetHeader>
           {open && <DetailPanel key={open.id} doc={open} onClose={() => setOpenId(null)} />}
         </SheetContent>
       </Sheet>
