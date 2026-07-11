@@ -1,11 +1,20 @@
-import { useRef, useState } from "react";
-import { Pencil, MousePointer2, Trash2, Undo2, Check, X, Plus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Pencil, MousePointer2, Trash2, Undo2, Check, X, Plus, HelpCircle, Move, PencilRuler } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { pathLengthFt, toPoints, type Parcel, type Point, type RoadSegment } from "@/lib/community/api";
 
 type Mode = "select" | "draw";
+
+const ONBOARD_KEY = "roadshare.gis.onboarded";
 
 const RESP_COLOR: Record<string, string> = {
   shared: "var(--color-primary)",
@@ -35,6 +44,18 @@ export function GisEditor({
   const svgRef = useRef<SVGSVGElement>(null);
   const [mode, setMode] = useState<Mode>("select");
   const [draft, setDraft] = useState<Point[]>([]);
+  const [showGuide, setShowGuide] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!window.localStorage.getItem(ONBOARD_KEY)) setShowGuide(true);
+  }, []);
+
+  function closeGuide() {
+    setShowGuide(false);
+    try { window.localStorage.setItem(ONBOARD_KEY, "1"); } catch { /* ignore */ }
+  }
+
   const [drag, setDrag] = useState<
     | { kind: "vertex"; segId: string; index: number; pts: Point[] }
     | { kind: "parcel"; id: string; pos: Point }
@@ -120,6 +141,10 @@ export function GisEditor({
             <Pencil className="h-4 w-4" /> Draw road
           </button>
         </div>
+
+        <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setShowGuide(true)}>
+          <HelpCircle className="h-4 w-4" /> How it works
+        </Button>
 
         {mode === "draw" && (
           <>
