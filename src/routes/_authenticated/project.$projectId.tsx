@@ -150,9 +150,14 @@ function ProjectPlanner() {
           <div className="rounded-2xl border border-border bg-card p-5">
             <div className="flex items-center justify-between">
               <h3 className="font-display text-base font-semibold">Cost allocation</h3>
-              <Button size="sm" variant="outline" onClick={exportCsv} disabled={!result || result.rows.length === 0}>
-                <Download className="h-4 w-4" /> Export CSV
-              </Button>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={exportCsv} disabled={!result || result.rows.length === 0}>
+                  <Download className="h-4 w-4" /> CSV
+                </Button>
+                <Button size="sm" variant="outline" onClick={exportEvidence} disabled={!result || result.rows.length === 0}>
+                  <FileText className="h-4 w-4" /> Evidence package
+                </Button>
+              </div>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">{ALLOCATION_METHODS.find((m) => m.value === p.allocation_method)?.blurb}</p>
             <AllocationTable
@@ -160,6 +165,14 @@ function ProjectPlanner() {
               method={p.allocation_method}
               rows={result?.rows ?? []}
             />
+            {result && (
+              <ScenariosCard
+                projectId={projectId}
+                communityId={communityId!}
+                project={p}
+                result={result}
+              />
+            )}
           </div>
         </div>
       </div>
