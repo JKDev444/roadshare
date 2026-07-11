@@ -427,22 +427,25 @@ function Index() {
           </div>
 
           {/* Results (sticky) */}
-          <aside className="lg:sticky lg:top-6 lg:h-fit">
-            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <aside className="lg:sticky lg:top-20 lg:h-fit">
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
               <div className="mb-4">
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Allocation method
+                <h2 className="font-display text-lg font-bold tracking-tight">
+                  Allocation
+                </h2>
+                <Label className="mt-3 block text-xs uppercase tracking-wide text-muted-foreground">
+                  Method
                 </Label>
-                <div className="mt-2 grid grid-cols-3 gap-1 rounded-lg bg-muted p-1">
+                <div className="mt-2 grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
                   {METHODS.map((m) => (
                     <button
                       key={m.id}
                       type="button"
                       onClick={() => setMethodology(m.id)}
                       className={cn(
-                        "rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+                        "rounded-lg px-2 py-1.5 text-xs font-medium transition-colors",
                         methodology === m.id
-                          ? "bg-card text-foreground shadow-sm"
+                          ? "bg-primary text-primary-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground",
                       )}
                     >
