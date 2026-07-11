@@ -253,8 +253,10 @@ function LineItemsCard({ projectId }: { projectId: string }) {
   );
 }
 
-function MethodCard({ project, onSave }: { project: { allocation_method: AllocationMethod; base_amount: number }; onSave: (i: ProjectInput) => void }) {
+function MethodCard({ project, onSave }: { project: { allocation_method: AllocationMethod; base_amount: number; entrance_x: number | null; entrance_y: number | null }; onSave: (i: ProjectInput) => void }) {
   const [base, setBase] = useState(String(project.base_amount));
+  const [ex, setEx] = useState(project.entrance_x != null ? String(project.entrance_x) : "50");
+  const [ey, setEy] = useState(project.entrance_y != null ? String(project.entrance_y) : "92");
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <h3 className="font-display text-base font-semibold">Allocation method</h3>
@@ -265,6 +267,16 @@ function MethodCard({ project, onSave }: { project: { allocation_method: Allocat
         </Select>
         {project.allocation_method === "base_plus_use" && (
           <div className="space-y-1.5"><Label htmlFor="p-base">Base amount per parcel ($)</Label><Input id="p-base" type="number" value={base} onChange={(e) => setBase(e.target.value)} onBlur={() => onSave({ base_amount: Number(base) || 0 })} /></div>
+        )}
+        {project.allocation_method === "distance" && (
+          <div className="space-y-1.5">
+            <Label>Entrance location (map units 0–100)</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <Input aria-label="Entrance X" type="number" value={ex} onChange={(e) => setEx(e.target.value)} onBlur={() => onSave({ entrance_x: Number(ex) || 0 })} placeholder="X" />
+              <Input aria-label="Entrance Y" type="number" value={ey} onChange={(e) => setEy(e.target.value)} onBlur={() => onSave({ entrance_y: Number(ey) || 0 })} placeholder="Y" />
+            </div>
+            <p className="text-xs text-muted-foreground">Cost rises with distance from this point. Defaults to the bottom-center entrance.</p>
+          </div>
         )}
       </div>
     </div>
