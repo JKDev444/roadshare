@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -155,7 +155,9 @@ function Stat({ icon: Icon, label, value, tone = "default" }: { icon: typeof Use
 }
 
 // ---------------- Overview ----------------
-function OverviewTab({ community, parcels, segments, events }: { community?: string | null; parcels: Parcel[]; segments: RoadSegment[]; events: ReturnType<typeof listEvents> extends Promise<infer T> ? T : never }) {
+type EventRow = { id: string; action: string; entity_type: string; entity_label: string | null; note: string | null; created_at: string };
+
+function OverviewTab({ community, parcels, segments, events }: { community?: string | null; parcels: Parcel[]; segments: RoadSegment[]; events: EventRow[] }) {
   return (
     <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
       <div className="space-y-6">
@@ -207,7 +209,7 @@ function PlatPreview({ parcels, segments }: { parcels: Parcel[]; segments: RoadS
   );
 }
 
-function ActivityList({ events }: { events: { id: string; action: string; entity_type: string; entity_label: string | null; note: string | null; created_at: string }[] }) {
+function ActivityList({ events }: { events: EventRow[] }) {
   if (events.length === 0) return <p className="mt-4 text-sm text-muted-foreground">No activity yet.</p>;
   return (
     <ol className="mt-4 space-y-4">
@@ -535,7 +537,7 @@ function SegmentPanel({ communityId, segment, onSaved }: { communityId: string; 
 }
 
 // ---------------- Provenance ----------------
-function ProvenanceTab({ events, loading }: { events: { id: string; action: string; entity_type: string; entity_label: string | null; note: string | null; created_at: string }[]; loading: boolean }) {
+function ProvenanceTab({ events, loading }: { events: EventRow[]; loading: boolean }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
       <h3 className="font-display text-base font-semibold">Change history</h3>
