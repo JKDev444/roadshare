@@ -30,6 +30,7 @@ import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
+import { Route as AuthenticatedDocumentsRouteImport } from './routes/_authenticated/documents'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCommunityRouteImport } from './routes/_authenticated/community'
 
@@ -137,6 +138,11 @@ const AuthenticatedMapRoute = AuthenticatedMapRouteImport.update({
   path: '/map',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedDocumentsRoute = AuthenticatedDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -163,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/tools': typeof ToolsRouteWithChildren
   '/community': typeof AuthenticatedCommunityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/documents': typeof AuthenticatedDocumentsRoute
   '/map': typeof AuthenticatedMapRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -185,6 +192,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/community': typeof AuthenticatedCommunityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/documents': typeof AuthenticatedDocumentsRoute
   '/map': typeof AuthenticatedMapRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -211,6 +219,7 @@ export interface FileRoutesById {
   '/tools': typeof ToolsRouteWithChildren
   '/_authenticated/community': typeof AuthenticatedCommunityRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/documents': typeof AuthenticatedDocumentsRoute
   '/_authenticated/map': typeof AuthenticatedMapRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -237,6 +246,7 @@ export interface FileRouteTypes {
     | '/tools'
     | '/community'
     | '/dashboard'
+    | '/documents'
     | '/map'
     | '/settings'
     | '/auth/callback'
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/community'
     | '/dashboard'
+    | '/documents'
     | '/map'
     | '/settings'
     | '/auth/callback'
@@ -284,6 +295,7 @@ export interface FileRouteTypes {
     | '/tools'
     | '/_authenticated/community'
     | '/_authenticated/dashboard'
+    | '/_authenticated/documents'
     | '/_authenticated/map'
     | '/_authenticated/settings'
     | '/auth/callback'
@@ -460,6 +472,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMapRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/documents': {
+      id: '/_authenticated/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof AuthenticatedDocumentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -480,6 +499,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCommunityRoute: typeof AuthenticatedCommunityRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDocumentsRoute: typeof AuthenticatedDocumentsRoute
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
 }
@@ -487,6 +507,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCommunityRoute: AuthenticatedCommunityRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDocumentsRoute: AuthenticatedDocumentsRoute,
   AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
 }
