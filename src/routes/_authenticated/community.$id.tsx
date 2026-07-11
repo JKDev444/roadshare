@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   ClipboardList,
+  Download,
   History,
   LayoutGrid,
   Plus,
@@ -43,6 +44,7 @@ import {
   createSegment,
   deleteParcel,
   deleteSegment,
+  downloadGeoJSON,
   getCommunity,
   listEvents,
   listParcels,
@@ -52,6 +54,7 @@ import {
   updateParcel,
   updateSegment,
   type Confidence,
+  type Community,
   type Parcel,
   type ParcelInput,
   type Point,
@@ -127,7 +130,7 @@ function CommunityDetail() {
             <PropertiesTab communityId={id} parcels={p} loading={parcels.isLoading} />
           </TabsContent>
           <TabsContent value="roads" className="mt-6">
-            <RoadsTab communityId={id} parcels={p} segments={s} />
+            <RoadsTab communityId={id} community={community.data ?? null} parcels={p} segments={s} />
           </TabsContent>
           <TabsContent value="provenance" className="mt-6">
             <ProvenanceTab events={events.data ?? []} loading={events.isLoading} />
@@ -398,7 +401,7 @@ function Field({ label, children, full }: { label: string; children: React.React
 }
 
 // ---------------- Roads ----------------
-function RoadsTab({ communityId, parcels, segments }: { communityId: string; parcels: Parcel[]; segments: RoadSegment[] }) {
+function RoadsTab({ communityId, community, parcels, segments }: { communityId: string; community: Community | null; parcels: Parcel[]; segments: RoadSegment[] }) {
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const invalidate = () => {
@@ -430,7 +433,21 @@ function RoadsTab({ communityId, parcels, segments }: { communityId: string; par
   const selected = segments.find((s) => s.id === selectedId) ?? null;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">{segments.length} road segment{segments.length === 1 ? "" : "s"} mapped</p>
+        <Button
+          variant="outline"
+          disabled={segments.length === 0}
+          onClick={() => {
+            downloadGeoJSON(community, segments);
+            toast.success("GeoJSON exported");
+          }}
+        >
+          <Download className="h-4 w-4" /> Export GeoJSON
+        </Button>
+      </div>
+      <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
       <GisEditor
         parcels={parcels}
         segments={segments}
@@ -464,6 +481,7 @@ function RoadsTab({ communityId, parcels, segments }: { communityId: string; par
             </ul>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
