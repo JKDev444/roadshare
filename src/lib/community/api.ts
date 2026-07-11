@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 
 export type Community = Database["public"]["Tables"]["communities"]["Row"];
 export type Parcel = Database["public"]["Tables"]["parcels"]["Row"];
@@ -30,10 +30,10 @@ export function pathLengthFt(points: Point[]): number {
   return Math.round(total * FT_PER_UNIT);
 }
 
-async function unwrap<T>(p: PromiseLike<{ data: T | null; error: { message: string } | null }>): Promise<T> {
+async function unwrap<T>(p: PromiseLike<{ data: T; error: { message: string } | null }>): Promise<NonNullable<T>> {
   const { data, error } = await p;
   if (error) throw new Error(error.message);
-  return data as T;
+  return data as NonNullable<T>;
 }
 
 // ---------------- Communities ----------------
@@ -187,7 +187,15 @@ export async function updateSegment(
   input: SegmentInput,
   { silent }: { silent?: boolean } = {},
 ): Promise<RoadSegment> {
-  const patch: Record<string, unknown> = { ...input };
+  const patch: Database["public"]["Tables"]["road_segments"]["Update"] = {
+    name: input.name,
+    surface: input.surface,
+    responsibility: input.responsibility,
+    source: input.source,
+    confidence: input.confidence,
+    verification: input.verification,
+    geometry: input.geometry as Json | undefined,
+  };
   if (input.geometry) patch.length_ft = pathLengthFt(input.geometry);
   const segment = await unwrap(
     supabase.from("road_segments").update(patch).eq("id", id).select().single(),
