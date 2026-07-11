@@ -51,7 +51,7 @@ function ProductDetail() {
       />
       <Section>
         <div className="grid gap-4 md:grid-cols-3">
-          {product.features.map((f, i) => (
+          {product.features.map((f: { title: string; body: string }, i: number) => (
             <Reveal key={f.title} delay={i * 0.05}>
               <div className="h-full rounded-2xl border border-border bg-card p-6">
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">

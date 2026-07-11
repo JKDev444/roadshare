@@ -53,7 +53,7 @@ function SolutionDetail() {
           <h2 className="font-display text-2xl font-bold tracking-tight">What you get</h2>
         </Reveal>
         <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {solution.outcomes.map((o, i) => (
+          {solution.outcomes.map((o: string, i: number) => (
             <Reveal key={o} delay={i * 0.05}>
               <div className="flex h-full items-start gap-3 rounded-2xl border border-border bg-card p-6">
                 <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-selected/15 text-selected">
