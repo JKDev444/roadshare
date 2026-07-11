@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   ClipboardList,
   Download,
+  HardHat,
   History,
   LayoutGrid,
   Plus,
@@ -39,6 +40,7 @@ import {
 } from "@/components/ui/dialog";
 import { ConfidenceBadge, VerificationBadge } from "@/components/community/badges";
 import { GisEditor } from "@/components/community/GisEditor";
+import { ProjectsTab } from "@/components/planner/ProjectsTab";
 import {
   createParcel,
   createSegment,
@@ -62,7 +64,7 @@ import {
   type Verification,
 } from "@/lib/community/api";
 
-const TABS = ["overview", "properties", "roads", "provenance"] as const;
+const TABS = ["overview", "properties", "roads", "projects", "provenance"] as const;
 type Tab = (typeof TABS)[number];
 
 export const Route = createFileRoute("/_authenticated/community/$id")({
@@ -120,6 +122,7 @@ function CommunityDetail() {
             <TabsTrigger value="overview"><LayoutGrid className="mr-1.5 h-4 w-4" /> Overview</TabsTrigger>
             <TabsTrigger value="properties"><Users className="mr-1.5 h-4 w-4" /> Property layer</TabsTrigger>
             <TabsTrigger value="roads"><RouteIcon className="mr-1.5 h-4 w-4" /> Road geometry</TabsTrigger>
+            <TabsTrigger value="projects"><HardHat className="mr-1.5 h-4 w-4" /> Projects</TabsTrigger>
             <TabsTrigger value="provenance"><History className="mr-1.5 h-4 w-4" /> Provenance</TabsTrigger>
           </TabsList>
 
@@ -131,6 +134,9 @@ function CommunityDetail() {
           </TabsContent>
           <TabsContent value="roads" className="mt-6">
             <RoadsTab communityId={id} community={community.data ?? null} parcels={p} segments={s} />
+          </TabsContent>
+          <TabsContent value="projects" className="mt-6">
+            <ProjectsTab communityId={id} />
           </TabsContent>
           <TabsContent value="provenance" className="mt-6">
             <ProvenanceTab events={events.data ?? []} loading={events.isLoading} />

@@ -34,6 +34,7 @@ import { Route as AuthenticatedDocumentsRouteImport } from './routes/_authentica
 import { Route as AuthenticatedDecisionsRouteImport } from './routes/_authenticated/decisions'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCommunityIndexRouteImport } from './routes/_authenticated/community.index'
+import { Route as AuthenticatedProjectProjectIdRouteImport } from './routes/_authenticated/project.$projectId'
 import { Route as AuthenticatedCommunityIdRouteImport } from './routes/_authenticated/community.$id'
 
 const ToolsRoute = ToolsRouteImport.update({
@@ -161,6 +162,12 @@ const AuthenticatedCommunityIndexRoute =
     path: '/community/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedProjectProjectIdRoute =
+  AuthenticatedProjectProjectIdRouteImport.update({
+    id: '/project/$projectId',
+    path: '/project/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCommunityIdRoute =
   AuthenticatedCommunityIdRouteImport.update({
     id: '/community/$id',
@@ -193,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/product/': typeof ProductIndexRoute
   '/tools/': typeof ToolsIndexRoute
   '/community/$id': typeof AuthenticatedCommunityIdRoute
+  '/project/$projectId': typeof AuthenticatedProjectProjectIdRoute
   '/community/': typeof AuthenticatedCommunityIndexRoute
 }
 export interface FileRoutesByTo {
@@ -218,6 +226,7 @@ export interface FileRoutesByTo {
   '/product': typeof ProductIndexRoute
   '/tools': typeof ToolsIndexRoute
   '/community/$id': typeof AuthenticatedCommunityIdRoute
+  '/project/$projectId': typeof AuthenticatedProjectProjectIdRoute
   '/community': typeof AuthenticatedCommunityIndexRoute
 }
 export interface FileRoutesById {
@@ -247,6 +256,7 @@ export interface FileRoutesById {
   '/product/': typeof ProductIndexRoute
   '/tools/': typeof ToolsIndexRoute
   '/_authenticated/community/$id': typeof AuthenticatedCommunityIdRoute
+  '/_authenticated/project/$projectId': typeof AuthenticatedProjectProjectIdRoute
   '/_authenticated/community/': typeof AuthenticatedCommunityIndexRoute
 }
 export interface FileRouteTypes {
@@ -276,6 +286,7 @@ export interface FileRouteTypes {
     | '/product/'
     | '/tools/'
     | '/community/$id'
+    | '/project/$projectId'
     | '/community/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -301,6 +312,7 @@ export interface FileRouteTypes {
     | '/product'
     | '/tools'
     | '/community/$id'
+    | '/project/$projectId'
     | '/community'
   id:
     | '__root__'
@@ -329,6 +341,7 @@ export interface FileRouteTypes {
     | '/product/'
     | '/tools/'
     | '/_authenticated/community/$id'
+    | '/_authenticated/project/$projectId'
     | '/_authenticated/community/'
   fileRoutesById: FileRoutesById
 }
@@ -526,6 +539,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCommunityIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/project/$projectId': {
+      id: '/_authenticated/project/$projectId'
+      path: '/project/$projectId'
+      fullPath: '/project/$projectId'
+      preLoaderRoute: typeof AuthenticatedProjectProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/community/$id': {
       id: '/_authenticated/community/$id'
       path: '/community/$id'
@@ -543,6 +563,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedCommunityIdRoute: typeof AuthenticatedCommunityIdRoute
+  AuthenticatedProjectProjectIdRoute: typeof AuthenticatedProjectProjectIdRoute
   AuthenticatedCommunityIndexRoute: typeof AuthenticatedCommunityIndexRoute
 }
 
@@ -553,6 +574,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedCommunityIdRoute: AuthenticatedCommunityIdRoute,
+  AuthenticatedProjectProjectIdRoute: AuthenticatedProjectProjectIdRoute,
   AuthenticatedCommunityIndexRoute: AuthenticatedCommunityIndexRoute,
 }
 
