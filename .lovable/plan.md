@@ -33,10 +33,12 @@ First backend phase — Lovable Cloud enabled.
 - ✅ Phase 4/6/10 sections stubbed as in-app "coming soon" so nav is complete.
 - Deferred to later phases: onboarding/community-creation wizard, portfolio switcher, team invitations.
 
-## Phase 4 — Community Record & GIS Editor 🔵
-- Tables: communities, properties/parcels, organizations, assets, access points, evidence/provenance — each with source, confidence, verification status, effective date, change history (§2.1).
-- Community Record tabs (§8): overview, property layer, org layer, asset layer, provenance.
-- Road geometry editor (§9.2): import/draw/split/merge centerlines, correct private-road geometry.
+## Phase 4 — Community Record & GIS Editor 🔵 ✅ BUILT (pending authed E2E)
+- ✅ Tables: communities, parcels, road_segments, record_events — each with source, confidence, verification status, effective date; append-only change history. Owner-scoped RLS + GRANTs.
+- ✅ Community Record tabs: Overview (stats + plat preview + activity), Property layer (table + add/edit/delete with data-quality fields), Road geometry (GIS editor), Provenance (change-history timeline).
+- ✅ Road geometry editor: draw multi-point centerlines, drag vertices, remove points, delete segments, drag parcels to reposition, per-segment surface/responsibility/confidence/verification editing, live length in ft.
+- ✅ Sample "Cedar Hollow" seeding, Miro-style design throughout.
+- ⏳ Needs an authenticated preview session for full end-to-end verification (seed → edit → GIS draw).
 
 ## Phase 5 — Production Project Planner 🔵
 - Real projects: costs, contractor bids, named scenarios, funding options, reserves (§9).
