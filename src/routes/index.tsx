@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { MapPin, Search, X } from "lucide-react";
+import { Check, MapPin, Route as RouteIcon, Search, X } from "lucide-react";
 
 import { PlatMap } from "@/components/roadshare/PlatMap";
 import { ResultsPanel } from "@/components/roadshare/ResultsPanel";
@@ -29,21 +29,42 @@ export const Route = createFileRoute("/")({
 function Section({
   step,
   title,
+  hint,
+  done,
   children,
 }: {
   step: number;
   title: string;
+  hint?: string;
+  done?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <div className="mb-3 flex items-center gap-2">
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary font-mono text-xs font-bold text-primary-foreground">
-          {step}
+    <section
+      className={cn(
+        "rounded-2xl border bg-card p-4 shadow-sm transition-colors",
+        done ? "border-selected/40" : "border-border",
+      )}
+    >
+      <div className="mb-3 flex items-center gap-2.5">
+        <span
+          className={cn(
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold transition-colors",
+            done
+              ? "bg-selected text-selected-foreground"
+              : "bg-primary text-primary-foreground",
+          )}
+        >
+          {done ? <Check className="h-4 w-4" /> : step}
         </span>
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wide">
-          {title}
-        </h2>
+        <div className="min-w-0">
+          <h2 className="font-display text-sm font-semibold tracking-tight">
+            {title}
+          </h2>
+          {hint && (
+            <p className="text-xs text-muted-foreground">{hint}</p>
+          )}
+        </div>
       </div>
       {children}
     </section>
@@ -105,19 +126,32 @@ function Index() {
   };
 
   const pctTotal = surfaces.reduce((s, x) => s + (Number(x.pct) || 0), 0);
+  const pctValid = Math.abs(pctTotal - 100) < 0.001;
+
+  const steps = [
+    { label: "Property", done: !!you },
+    { label: "Neighborhood", done: selected.length > 0 },
+    { label: "Entrances", done: entrances.length > 0 },
+    { label: "Surface", done: pctValid },
+  ];
+  const completedCount = steps.filter((s) => s.done).length;
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/60 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-selected" />
-            <span className="font-display text-lg font-bold tracking-tight">
-              RoadShare
+      <header className="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-sm">
+              <RouteIcon className="h-5 w-5" />
             </span>
-            <Badge variant="secondary" className="ml-1 font-mono text-[10px]">
-              PROTOTYPE
-            </Badge>
+            <div className="leading-tight">
+              <span className="font-display text-lg font-bold tracking-tight">
+                RoadShare
+              </span>
+              <Badge variant="secondary" className="ml-1.5 font-mono text-[9px]">
+                PROTOTYPE
+              </Badge>
+            </div>
           </div>
           <p className="hidden text-sm text-muted-foreground sm:block">
             Cedar Hollow · private road cost sharing
@@ -125,17 +159,57 @@ function Index() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-6">
-          <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            Share private road maintenance costs, fairly.
+      {/* Hero */}
+      <div className="relative overflow-hidden border-b border-border bg-gradient-to-br from-primary/10 via-background to-selected/10">
+        <div className="mx-auto max-w-7xl px-4 py-8">
+          <h1 className="max-w-3xl font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl">
+            Split private road costs{" "}
+            <span className="text-primary">fairly</span>, by how far each home
+            drives.
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Pick your property, choose the neighborhood group, pin the entrances,
-            and set the surface and cost. RoadShare allocates each household's
-            share using along-road distance responsibility.
+          <p className="mt-3 max-w-2xl text-sm text-muted-foreground sm:text-base">
+            Find your property, build the neighborhood group, pin the entrances,
+            and set the surface. RoadShare allocates each household's share using
+            true along-road distance responsibility.
           </p>
+
+          {/* Progress strip */}
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            {steps.map((s, i) => (
+              <div key={s.label} className="flex items-center gap-2">
+                <div
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                    s.done
+                      ? "border-selected/50 bg-selected/15 text-foreground"
+                      : "border-border bg-card text-muted-foreground",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold",
+                      s.done
+                        ? "bg-selected text-selected-foreground"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {s.done ? <Check className="h-3 w-3" /> : i + 1}
+                  </span>
+                  {s.label}
+                </div>
+                {i < steps.length - 1 && (
+                  <span className="hidden h-px w-4 bg-border sm:block" />
+                )}
+              </div>
+            ))}
+            <span className="ml-1 font-mono text-xs text-muted-foreground">
+              {completedCount}/4
+            </span>
+          </div>
         </div>
+      </div>
+
+      <main className="mx-auto max-w-7xl px-4 py-6">
 
         <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
           <div className="space-y-4">
@@ -150,13 +224,13 @@ function Index() {
             />
 
             {/* Step 1 */}
-            <Section step={1} title="Find your property">
+            <Section step={1} title="Find your property" hint="Search an address in Cedar Hollow" done={!!you}>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search an address…"
+                  placeholder="e.g. 101 Cedar Hollow Lane"
                   className="pl-9"
                 />
                 {matches.length > 0 && query !== you && (
@@ -166,8 +240,9 @@ function Index() {
                         <button
                           type="button"
                           onClick={() => pickYou(p.id, p.address)}
-                          className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
                         >
+                          <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
                           {p.address}
                         </button>
                       </li>
@@ -176,15 +251,21 @@ function Index() {
                 )}
               </div>
               {you && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Your property is highlighted in{" "}
-                  <span className="font-semibold text-gold">gold</span>.
-                </p>
+                <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-gold/15 px-3 py-2 text-xs">
+                  <MapPin className="h-3.5 w-3.5 text-gold" />
+                  <span className="font-medium text-foreground">{query}</span>
+                  <span className="text-muted-foreground">is your property</span>
+                </div>
               )}
             </Section>
 
             {/* Step 2 */}
-            <Section step={2} title="Select the neighborhood">
+            <Section
+              step={2}
+              title="Select the neighborhood"
+              hint="Tap lots on the map to add them to the group"
+              done={selected.length > 0}
+            >
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   size="sm"
@@ -200,14 +281,19 @@ function Index() {
                 >
                   <X className="mr-1 h-3.5 w-3.5" /> Clear
                 </Button>
-                <span className="text-sm text-muted-foreground">
-                  {selected.length} of {PARCELS.length} parcels
+                <span className="ml-auto rounded-full bg-selected/15 px-2.5 py-1 font-mono text-xs font-semibold text-foreground">
+                  {selected.length}/{PARCELS.length} lots
                 </span>
               </div>
             </Section>
 
             {/* Step 3 */}
-            <Section step={3} title="Pin the entrances">
+            <Section
+              step={3}
+              title="Pin the entrances"
+              hint="Where the private road meets a public road"
+              done={entrances.length > 0}
+            >
               <div className="flex flex-wrap gap-2">
                 {ENTRANCES.map((e) => (
                   <button
@@ -215,15 +301,25 @@ function Index() {
                     type="button"
                     onClick={() => toggleEntrance(e.id)}
                     className={cn(
-                      "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+                      "flex flex-1 items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors",
                       entrances.includes(e.id)
-                        ? "border-selected bg-selected/15"
+                        ? "border-primary bg-primary/10"
                         : "border-border hover:bg-accent",
                     )}
                   >
-                    <div className="font-medium">{e.label}</div>
-                    <div className="text-xs text-muted-foreground">
-                      meets {e.meets}
+                    <MapPin
+                      className={cn(
+                        "h-4 w-4 shrink-0",
+                        entrances.includes(e.id)
+                          ? "text-primary"
+                          : "text-muted-foreground",
+                      )}
+                    />
+                    <div className="min-w-0">
+                      <div className="font-medium">{e.label}</div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        meets {e.meets}
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -231,7 +327,12 @@ function Index() {
             </Section>
 
             {/* Step 4 */}
-            <Section step={4} title="Road surface & cost">
+            <Section
+              step={4}
+              title="Road surface & cost"
+              hint="Set the surface mix, unit prices, width and horizon"
+              done={pctValid}
+            >
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Surface mix</span>
@@ -326,22 +427,25 @@ function Index() {
           </div>
 
           {/* Results (sticky) */}
-          <aside className="lg:sticky lg:top-6 lg:h-fit">
-            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <aside className="lg:sticky lg:top-20 lg:h-fit">
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
               <div className="mb-4">
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Allocation method
+                <h2 className="font-display text-lg font-bold tracking-tight">
+                  Allocation
+                </h2>
+                <Label className="mt-3 block text-xs uppercase tracking-wide text-muted-foreground">
+                  Method
                 </Label>
-                <div className="mt-2 grid grid-cols-3 gap-1 rounded-lg bg-muted p-1">
+                <div className="mt-2 grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
                   {METHODS.map((m) => (
                     <button
                       key={m.id}
                       type="button"
                       onClick={() => setMethodology(m.id)}
                       className={cn(
-                        "rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+                        "rounded-lg px-2 py-1.5 text-xs font-medium transition-colors",
                         methodology === m.id
-                          ? "bg-card text-foreground shadow-sm"
+                          ? "bg-primary text-primary-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground",
                       )}
                     >

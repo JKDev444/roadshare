@@ -66,32 +66,38 @@
   --color-map-road: var(--map-road);
   --color-map-parcel: var(--map-parcel);
   --color-map-ink: var(--map-ink);
+  --color-map-land-top: var(--map-land-top);
+  --color-map-land-bottom: var(--map-land-bottom);
+  --color-map-asphalt: var(--map-asphalt);
+  --color-map-asphalt-edge: var(--map-asphalt-edge);
+  --color-map-lane: var(--map-lane);
+  --color-map-parcel-edge: var(--map-parcel-edge);
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
+  --radius: 0.85rem;
+  --background: oklch(0.985 0.008 150);
+  --foreground: oklch(0.24 0.03 205);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
+  --card-foreground: oklch(0.24 0.03 205);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
+  --popover-foreground: oklch(0.24 0.03 205);
+  --primary: oklch(0.47 0.083 195);
+  --primary-foreground: oklch(0.985 0.01 190);
+  --secondary: oklch(0.955 0.012 175);
+  --secondary-foreground: oklch(0.32 0.05 195);
+  --muted: oklch(0.96 0.008 170);
+  --muted-foreground: oklch(0.5 0.028 200);
+  --accent: oklch(0.94 0.03 180);
+  --accent-foreground: oklch(0.32 0.05 195);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
+  --border: oklch(0.9 0.012 190);
+  --input: oklch(0.9 0.012 190);
+  --ring: oklch(0.47 0.083 195);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -105,13 +111,19 @@
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
-  --gold: oklch(0.78 0.14 82);
-  --gold-foreground: oklch(0.28 0.06 70);
-  --selected: oklch(0.68 0.13 155);
-  --selected-foreground: oklch(0.98 0.01 155);
-  --map-road: oklch(0.72 0.02 80);
-  --map-parcel: oklch(0.965 0.008 90);
-  --map-ink: oklch(0.42 0.03 75);
+  --gold: oklch(0.79 0.145 78);
+  --gold-foreground: oklch(0.3 0.07 68);
+  --selected: oklch(0.62 0.12 178);
+  --selected-foreground: oklch(0.99 0.01 178);
+  --map-road: oklch(0.34 0.012 220);
+  --map-parcel: oklch(0.985 0.014 95);
+  --map-ink: oklch(0.42 0.03 205);
+  --map-land-top: oklch(0.955 0.03 160);
+  --map-land-bottom: oklch(0.93 0.04 145);
+  --map-asphalt: oklch(0.36 0.012 220);
+  --map-asphalt-edge: oklch(0.28 0.012 220);
+  --map-lane: oklch(0.88 0.09 92);
+  --map-parcel-edge: oklch(0.82 0.02 150);
 }
 
 .dark {
@@ -147,13 +159,19 @@
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
-  --gold: oklch(0.78 0.14 82);
-  --gold-foreground: oklch(0.22 0.05 70);
-  --selected: oklch(0.66 0.13 155);
-  --selected-foreground: oklch(0.14 0.02 155);
-  --map-road: oklch(0.5 0.02 80);
-  --map-parcel: oklch(0.26 0.02 90);
-  --map-ink: oklch(0.72 0.03 80);
+  --gold: oklch(0.8 0.14 80);
+  --gold-foreground: oklch(0.2 0.05 68);
+  --selected: oklch(0.66 0.12 178);
+  --selected-foreground: oklch(0.14 0.02 178);
+  --map-road: oklch(0.4 0.015 220);
+  --map-parcel: oklch(0.28 0.02 200);
+  --map-ink: oklch(0.78 0.03 180);
+  --map-land-top: oklch(0.24 0.03 200);
+  --map-land-bottom: oklch(0.2 0.03 210);
+  --map-asphalt: oklch(0.42 0.015 220);
+  --map-asphalt-edge: oklch(0.32 0.015 220);
+  --map-lane: oklch(0.78 0.09 92);
+  --map-parcel-edge: oklch(0.4 0.02 190);
 }
 
 @layer base {
@@ -172,4 +190,12 @@
   0% { transform: scale(1); opacity: 0.9; }
   70% { transform: scale(1.9); opacity: 0; }
   100% { transform: scale(1.9); opacity: 0; }
+}
+
+@keyframes rs-dash {
+  to { stroke-dashoffset: -24; }
+}
+
+@utility map-shadow {
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.12));
 }
