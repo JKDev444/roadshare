@@ -55,8 +55,8 @@ function Home() {
               <Eyebrow>Community governance intelligence</Eyebrow>
             </Reveal>
             <Reveal delay={0.05}>
-              <h1 className="mt-5 max-w-2xl font-display text-4xl font-bold leading-[1.03] tracking-tight sm:text-6xl">
-                Split shared road costs <span className="text-primary">fairly</span>, by how far each home drives.
+              <h1 className="mt-5 max-w-2xl font-display text-4xl font-extrabold leading-[1.03] tracking-tight sm:text-6xl">
+                Split shared road costs <span className="mark-gold">fairly</span>, by how far each home drives.
               </h1>
             </Reveal>
             <Reveal delay={0.1}>
