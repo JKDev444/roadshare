@@ -8,7 +8,7 @@ import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 function sanitizeRedirect(value: string | undefined): string {
   if (!value) return "/dashboard";
@@ -17,6 +17,7 @@ function sanitizeRedirect(value: string | undefined): string {
 }
 
 export const Route = createFileRoute("/auth")({
+  ssr: false,
   validateSearch: (search: Record<string, unknown>) => ({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
   }),
@@ -127,13 +128,27 @@ function AuthPage() {
         </Link>
 
         <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-xl sm:p-8">
-          <Tabs value={mode} onValueChange={(v) => setMode(v as "signin" | "signup")}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign in</TabsTrigger>
-              <TabsTrigger value="signup">Create account</TabsTrigger>
-            </TabsList>
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
+            {(["signin", "signup"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="tab"
+                aria-selected={mode === m}
+                onClick={() => setMode(m)}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  mode === m
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {m === "signin" ? "Sign in" : "Create account"}
+              </button>
+            ))}
+          </div>
 
-            <div className="mt-6">
+          <div className="mt-6">
               <Button
                 type="button"
                 variant="outline"
@@ -150,23 +165,8 @@ function AuthPage() {
                 <span className="h-px flex-1 bg-border" />
               </div>
 
-              <TabsContent value="signin" className="mt-0">
-                <form onSubmit={handleEmail} className="space-y-4">
-                  <EmailFields
-                    email={email}
-                    setEmail={setEmail}
-                    password={password}
-                    setPassword={setPassword}
-                  />
-                  <Button type="submit" className="w-full" disabled={submitting}>
-                    {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Sign in
-                  </Button>
-                </form>
-              </TabsContent>
-
-              <TabsContent value="signup" className="mt-0">
-                <form onSubmit={handleEmail} className="space-y-4">
+              <form onSubmit={handleEmail} className="space-y-4">
+                {mode === "signup" && (
                   <div className="space-y-2">
                     <Label htmlFor="fullName">Full name</Label>
                     <Input
@@ -177,20 +177,19 @@ function AuthPage() {
                       required
                     />
                   </div>
-                  <EmailFields
-                    email={email}
-                    setEmail={setEmail}
-                    password={password}
-                    setPassword={setPassword}
-                  />
-                  <Button type="submit" className="w-full" disabled={submitting}>
-                    {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Create account
-                  </Button>
-                </form>
-              </TabsContent>
-            </div>
-          </Tabs>
+                )}
+                <EmailFields
+                  email={email}
+                  setEmail={setEmail}
+                  password={password}
+                  setPassword={setPassword}
+                />
+                <Button type="submit" className="w-full" disabled={submitting}>
+                  {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {mode === "signin" ? "Sign in" : "Create account"}
+                </Button>
+              </form>
+          </div>
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
