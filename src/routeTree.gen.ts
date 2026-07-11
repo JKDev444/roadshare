@@ -29,6 +29,7 @@ import { Route as SolutionsAudienceRouteImport } from './routes/solutions.$audie
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCommunityRouteImport } from './routes/_authenticated/community'
 
@@ -131,6 +132,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMapRoute = AuthenticatedMapRouteImport.update({
+  id: '/map',
+  path: '/map',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -157,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/tools': typeof ToolsRouteWithChildren
   '/community': typeof AuthenticatedCommunityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/map': typeof AuthenticatedMapRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$slug': typeof ProductSlugRoute
@@ -178,6 +185,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/community': typeof AuthenticatedCommunityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/map': typeof AuthenticatedMapRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$slug': typeof ProductSlugRoute
@@ -203,6 +211,7 @@ export interface FileRoutesById {
   '/tools': typeof ToolsRouteWithChildren
   '/_authenticated/community': typeof AuthenticatedCommunityRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/map': typeof AuthenticatedMapRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$slug': typeof ProductSlugRoute
@@ -228,6 +237,7 @@ export interface FileRouteTypes {
     | '/tools'
     | '/community'
     | '/dashboard'
+    | '/map'
     | '/settings'
     | '/auth/callback'
     | '/product/$slug'
@@ -249,6 +259,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/community'
     | '/dashboard'
+    | '/map'
     | '/settings'
     | '/auth/callback'
     | '/product/$slug'
@@ -273,6 +284,7 @@ export interface FileRouteTypes {
     | '/tools'
     | '/_authenticated/community'
     | '/_authenticated/dashboard'
+    | '/_authenticated/map'
     | '/_authenticated/settings'
     | '/auth/callback'
     | '/product/$slug'
@@ -441,6 +453,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/map': {
+      id: '/_authenticated/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof AuthenticatedMapRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -461,12 +480,14 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCommunityRoute: typeof AuthenticatedCommunityRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCommunityRoute: AuthenticatedCommunityRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
 }
 
