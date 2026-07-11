@@ -337,3 +337,128 @@ function AllocationTable({ projectId, method, rows }: { projectId: string; metho
     </div>
   );
 }
+function ScenariosCard({
+  projectId,
+  communityId,
+  project,
+  result,
+}: {
+  projectId: string;
+  communityId: string;
+  project: import("@/lib/planner/api").Project;
+  result: ReturnType<typeof computeAllocations>;
+}) {
+  const qc = useQueryClient();
+  const [name, setName] = useState("");
+  const [compare, setCompare] = useState<[string | null, string | null]>([null, null]);
+  const { data: scenarios } = useQuery({ queryKey: ["scenarios", projectId], queryFn: () => listScenarios(projectId) });
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["scenarios", projectId] });
+
+  const save = useMutation({
+    mutationFn: () => saveScenario(communityId, projectId, name, project, result),
+    onSuccess: () => { invalidate(); setName(""); toast.success("Scenario saved"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const del = useMutation({
+    mutationFn: (id: string) => deleteScenario(id),
+    onSuccess: () => { invalidate(); setCompare([null, null]); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const list = scenarios ?? [];
+  const [aId, bId] = compare;
+  const a = list.find((s) => s.id === aId) ?? null;
+  const b = list.find((s) => s.id === bId) ?? null;
+
+  return (
+    <div className="mt-6 rounded-xl border border-border bg-secondary/30 p-4">
+      <div className="flex items-center gap-2">
+        <Layers className="h-4 w-4 text-primary" />
+        <h4 className="font-display text-sm font-semibold">Scenarios &amp; comparison</h4>
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">Save the current setup as a named, versioned snapshot, then compare any two side by side.</p>
+
+      <div className="mt-3 flex gap-2">
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Scenario name (e.g. Frontage v2)" className="h-9" />
+        <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}><Plus className="h-4 w-4" /> Save</Button>
+      </div>
+
+      {list.length === 0 ? (
+        <p className="mt-3 text-xs text-muted-foreground">No saved scenarios yet.</p>
+      ) : (
+        <ul className="mt-3 space-y-1.5">
+          {list.map((s) => (
+            <li key={s.id} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm">
+              <span className="rounded bg-secondary px-1.5 py-0.5 text-xs font-medium text-muted-foreground">v{s.version}</span>
+              <span className="min-w-0 flex-1 truncate font-medium">{s.name}</span>
+              <span className="text-xs text-muted-foreground">{money(scenarioSummary(s).allocated)}</span>
+              <button
+                className={`rounded px-1.5 py-0.5 text-xs font-medium ${aId === s.id ? "bg-primary text-primary-foreground" : "text-primary hover:underline"}`}
+                onClick={() => setCompare([aId === s.id ? null : s.id, bId])}
+              >A</button>
+              <button
+                className={`rounded px-1.5 py-0.5 text-xs font-medium ${bId === s.id ? "bg-primary text-primary-foreground" : "text-primary hover:underline"}`}
+                onClick={() => setCompare([aId, bId === s.id ? null : s.id])}
+              >B</button>
+              <button aria-label="Delete scenario" className="text-muted-foreground hover:text-destructive" onClick={() => del.mutate(s.id)}><Trash2 className="h-3.5 w-3.5" /></button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {a && b && <ScenarioCompare a={a} b={b} />}
+    </div>
+  );
+}
+
+function ScenarioCompare({ a, b }: { a: Scenario; b: Scenario }) {
+  const sa = scenarioSummary(a);
+  const sb = scenarioSummary(b);
+  const parcels = new Map<string, { label: string; owner: string | null; a: number; b: number }>();
+  for (const r of sa.rows) parcels.set(r.parcel_id, { label: r.label, owner: r.owner, a: r.benefits ? r.amount : 0, b: 0 });
+  for (const r of sb.rows) {
+    const e = parcels.get(r.parcel_id) ?? { label: r.label, owner: r.owner, a: 0, b: 0 };
+    e.b = r.benefits ? r.amount : 0;
+    parcels.set(r.parcel_id, e);
+  }
+  return (
+    <div className="mt-4 rounded-xl border border-border bg-card p-3">
+      <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+        <GitCompare className="h-4 w-4 text-primary" /> {a.name} (A) vs {b.name} (B)
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <th className="px-2 py-1.5 font-semibold">Lot</th>
+              <th className="px-2 py-1.5 text-right font-semibold">A</th>
+              <th className="px-2 py-1.5 text-right font-semibold">B</th>
+              <th className="px-2 py-1.5 text-right font-semibold">Δ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...parcels.values()].map((r, i) => {
+              const d = r.b - r.a;
+              return (
+                <tr key={i} className="border-b border-border/60 last:border-0">
+                  <td className="px-2 py-1.5"><span className="font-medium">{r.label}</span></td>
+                  <td className="px-2 py-1.5 text-right text-muted-foreground">{money(r.a)}</td>
+                  <td className="px-2 py-1.5 text-right text-muted-foreground">{money(r.b)}</td>
+                  <td className={`px-2 py-1.5 text-right font-semibold ${d > 0 ? "text-destructive" : d < 0 ? "text-primary" : "text-muted-foreground"}`}>{d > 0 ? "+" : ""}{money(d)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr className="border-t border-border font-semibold">
+              <td className="px-2 py-1.5">Total</td>
+              <td className="px-2 py-1.5 text-right">{money(sa.allocated)}</td>
+              <td className="px-2 py-1.5 text-right">{money(sb.allocated)}</td>
+              <td className="px-2 py-1.5 text-right">{money(sb.allocated - sa.allocated)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  );
+}
