@@ -58,7 +58,12 @@ First backend phase — Lovable Cloud enabled.
 - ⏳ Deferred: full OCR for scanned PDFs/images (currently extracts text from text files; hooks in place for an OCR provider in Phase 13 data-integration work).
 
 ## Phase 7 — Amendment & Clause Graph 🔵🟣
-- Clause extraction + taxonomy (§10.3), effective-date lineage, supersession, conflict + missing-document detection (§2.2, §10.5), human-readable document timeline.
+- ✅ `clauses` table (category taxonomy, status, effective date, supersession self-reference, source/confidence/verification, AI-suggestion columns kept separate from verified facts). Owner-scoped RLS + GRANTs.
+- ✅ Clause Graph page: effective-date timeline, category filter, add/edit/verify/delete, supersession lineage (creating a superseding clause auto-marks the older one superseded).
+- ✅ AI clause extraction from document text via Lovable AI Gateway (suggested category + summary + confidence → stored as advisory, verify before fact).
+- ✅ Conflict detection (multiple active clauses in one category with no supersession chain) and missing-provision detection (§2.2, §10.5).
+- ✅ Miro-style design; nav entry added; authenticated render verified (auto-confirm signup → seed Cedar Hollow → Clause Graph shows missing-provisions insight + empty timeline).
+- ⏳ Deferred: cross-document conflict scoring beyond same-category heuristic.
 
 ## Phase 8 — Ask My Community (Cited Q&A) 🔵🟣
 - Evidence-first answer engine (§2.3, §11): required answer structure with citations, confidence, abstention, high-risk routing (§11.3), professional-escalation packages, answer history. Uses Lovable AI Gateway.
