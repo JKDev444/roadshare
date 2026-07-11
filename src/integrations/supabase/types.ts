@@ -136,6 +136,163 @@ export type Database = {
         }
         Relationships: []
       }
+      project_allocations: {
+        Row: {
+          benefits: boolean
+          created_at: string
+          id: string
+          override_amount: number | null
+          owner_id: string
+          parcel_id: string
+          project_id: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          benefits?: boolean
+          created_at?: string
+          id?: string
+          override_amount?: number | null
+          owner_id?: string
+          parcel_id: string
+          project_id: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          benefits?: boolean
+          created_at?: string
+          id?: string
+          override_amount?: number | null
+          owner_id?: string
+          parcel_id?: string
+          project_id?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_allocations_parcel_id_fkey"
+            columns: ["parcel_id"]
+            isOneToOne: false
+            referencedRelation: "parcels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_allocations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_line_items: {
+        Row: {
+          amount: number
+          category: string | null
+          contractor: string | null
+          created_at: string
+          id: string
+          is_bid: boolean
+          label: string
+          owner_id: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          category?: string | null
+          contractor?: string | null
+          created_at?: string
+          id?: string
+          is_bid?: boolean
+          label: string
+          owner_id?: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          contractor?: string | null
+          created_at?: string
+          id?: string
+          is_bid?: boolean
+          label?: string
+          owner_id?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_line_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          allocation_method: Database["public"]["Enums"]["allocation_method"]
+          base_amount: number
+          community_id: string
+          contingency_pct: number
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          notes: string | null
+          owner_id: string
+          reserve_target: number
+          status: Database["public"]["Enums"]["project_status"]
+          total_cost: number
+          updated_at: string
+        }
+        Insert: {
+          allocation_method?: Database["public"]["Enums"]["allocation_method"]
+          base_amount?: number
+          community_id: string
+          contingency_pct?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          owner_id?: string
+          reserve_target?: number
+          status?: Database["public"]["Enums"]["project_status"]
+          total_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          allocation_method?: Database["public"]["Enums"]["allocation_method"]
+          base_amount?: number
+          community_id?: string
+          contingency_pct?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          owner_id?: string
+          reserve_target?: number
+          status?: Database["public"]["Enums"]["project_status"]
+          total_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       record_events: {
         Row: {
           action: string
@@ -268,8 +425,16 @@ export type Database = {
       }
     }
     Enums: {
+      allocation_method:
+        | "equal"
+        | "frontage"
+        | "area"
+        | "segment_benefit"
+        | "base_plus_use"
+        | "custom"
       app_role: "admin" | "member"
       confidence_level: "high" | "medium" | "low"
+      project_status: "planning" | "bidding" | "funded" | "complete"
       verification_status: "verified" | "unverified" | "disputed"
     }
     CompositeTypes: {
@@ -398,8 +563,17 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      allocation_method: [
+        "equal",
+        "frontage",
+        "area",
+        "segment_benefit",
+        "base_plus_use",
+        "custom",
+      ],
       app_role: ["admin", "member"],
       confidence_level: ["high", "medium", "low"],
+      project_status: ["planning", "bidding", "funded", "complete"],
       verification_status: ["verified", "unverified", "disputed"],
     },
   },
