@@ -78,7 +78,7 @@ export function ProjectsTab({ communityId }: { communityId: string }) {
               <p className="mt-3 text-sm"><span className="font-display text-xl font-bold">{money(fundingTarget(p))}</span> <span className="text-muted-foreground">to fund</span></p>
               <div className="mt-4 flex items-center justify-between">
                 <Button size="sm" asChild>
-                  <Link to="/community/$id/project/$projectId" params={{ id: communityId, projectId: p.id }}>
+                  <Link to="/project/$projectId" params={{ projectId: p.id }}>
                     Open planner <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 </Button>
