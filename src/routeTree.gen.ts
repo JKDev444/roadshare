@@ -33,7 +33,8 @@ import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/ma
 import { Route as AuthenticatedDocumentsRouteImport } from './routes/_authenticated/documents'
 import { Route as AuthenticatedDecisionsRouteImport } from './routes/_authenticated/decisions'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedCommunityRouteImport } from './routes/_authenticated/community'
+import { Route as AuthenticatedCommunityIndexRouteImport } from './routes/_authenticated/community.index'
+import { Route as AuthenticatedCommunityIdRouteImport } from './routes/_authenticated/community.$id'
 
 const ToolsRoute = ToolsRouteImport.update({
   id: '/tools',
@@ -154,11 +155,18 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedCommunityRoute = AuthenticatedCommunityRouteImport.update({
-  id: '/community',
-  path: '/community',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
+const AuthenticatedCommunityIndexRoute =
+  AuthenticatedCommunityIndexRouteImport.update({
+    id: '/community/',
+    path: '/community/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCommunityIdRoute =
+  AuthenticatedCommunityIdRouteImport.update({
+    id: '/community/$id',
+    path: '/community/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -173,7 +181,6 @@ export interface FileRoutesByFullPath {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tools': typeof ToolsRouteWithChildren
-  '/community': typeof AuthenticatedCommunityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/decisions': typeof AuthenticatedDecisionsRoute
   '/documents': typeof AuthenticatedDocumentsRoute
@@ -185,6 +192,8 @@ export interface FileRoutesByFullPath {
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
   '/product/': typeof ProductIndexRoute
   '/tools/': typeof ToolsIndexRoute
+  '/community/$id': typeof AuthenticatedCommunityIdRoute
+  '/community/': typeof AuthenticatedCommunityIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -197,7 +206,6 @@ export interface FileRoutesByTo {
   '/robots.txt': typeof RobotsDottxtRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/community': typeof AuthenticatedCommunityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/decisions': typeof AuthenticatedDecisionsRoute
   '/documents': typeof AuthenticatedDocumentsRoute
@@ -209,6 +217,8 @@ export interface FileRoutesByTo {
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
   '/product': typeof ProductIndexRoute
   '/tools': typeof ToolsIndexRoute
+  '/community/$id': typeof AuthenticatedCommunityIdRoute
+  '/community': typeof AuthenticatedCommunityIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -225,7 +235,6 @@ export interface FileRoutesById {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tools': typeof ToolsRouteWithChildren
-  '/_authenticated/community': typeof AuthenticatedCommunityRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/decisions': typeof AuthenticatedDecisionsRoute
   '/_authenticated/documents': typeof AuthenticatedDocumentsRoute
@@ -237,6 +246,8 @@ export interface FileRoutesById {
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
   '/product/': typeof ProductIndexRoute
   '/tools/': typeof ToolsIndexRoute
+  '/_authenticated/community/$id': typeof AuthenticatedCommunityIdRoute
+  '/_authenticated/community/': typeof AuthenticatedCommunityIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -253,7 +264,6 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/tools'
-    | '/community'
     | '/dashboard'
     | '/decisions'
     | '/documents'
@@ -265,6 +275,8 @@ export interface FileRouteTypes {
     | '/tools/cedar-hollow'
     | '/product/'
     | '/tools/'
+    | '/community/$id'
+    | '/community/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -277,7 +289,6 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/security'
     | '/sitemap.xml'
-    | '/community'
     | '/dashboard'
     | '/decisions'
     | '/documents'
@@ -289,6 +300,8 @@ export interface FileRouteTypes {
     | '/tools/cedar-hollow'
     | '/product'
     | '/tools'
+    | '/community/$id'
+    | '/community'
   id:
     | '__root__'
     | '/'
@@ -304,7 +317,6 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/tools'
-    | '/_authenticated/community'
     | '/_authenticated/dashboard'
     | '/_authenticated/decisions'
     | '/_authenticated/documents'
@@ -316,6 +328,8 @@ export interface FileRouteTypes {
     | '/tools/cedar-hollow'
     | '/product/'
     | '/tools/'
+    | '/_authenticated/community/$id'
+    | '/_authenticated/community/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -505,32 +519,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/community': {
-      id: '/_authenticated/community'
+    '/_authenticated/community/': {
+      id: '/_authenticated/community/'
       path: '/community'
-      fullPath: '/community'
-      preLoaderRoute: typeof AuthenticatedCommunityRouteImport
+      fullPath: '/community/'
+      preLoaderRoute: typeof AuthenticatedCommunityIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/community/$id': {
+      id: '/_authenticated/community/$id'
+      path: '/community/$id'
+      fullPath: '/community/$id'
+      preLoaderRoute: typeof AuthenticatedCommunityIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedCommunityRoute: typeof AuthenticatedCommunityRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDecisionsRoute: typeof AuthenticatedDecisionsRoute
   AuthenticatedDocumentsRoute: typeof AuthenticatedDocumentsRoute
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedCommunityIdRoute: typeof AuthenticatedCommunityIdRoute
+  AuthenticatedCommunityIndexRoute: typeof AuthenticatedCommunityIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedCommunityRoute: AuthenticatedCommunityRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDecisionsRoute: AuthenticatedDecisionsRoute,
   AuthenticatedDocumentsRoute: AuthenticatedDocumentsRoute,
   AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedCommunityIdRoute: AuthenticatedCommunityIdRoute,
+  AuthenticatedCommunityIndexRoute: AuthenticatedCommunityIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

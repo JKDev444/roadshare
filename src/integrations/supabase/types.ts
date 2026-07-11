@@ -14,6 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
+      communities: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          owner_id: string
+          region: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          owner_id?: string
+          region?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          region?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      parcels: {
+        Row: {
+          address: string | null
+          area_sqft: number | null
+          community_id: string
+          confidence: Database["public"]["Enums"]["confidence_level"]
+          created_at: string
+          effective_date: string | null
+          frontage_ft: number | null
+          id: string
+          label: string
+          owner_id: string
+          owner_name: string | null
+          pos_x: number
+          pos_y: number
+          source: string | null
+          updated_at: string
+          verification: Database["public"]["Enums"]["verification_status"]
+        }
+        Insert: {
+          address?: string | null
+          area_sqft?: number | null
+          community_id: string
+          confidence?: Database["public"]["Enums"]["confidence_level"]
+          created_at?: string
+          effective_date?: string | null
+          frontage_ft?: number | null
+          id?: string
+          label: string
+          owner_id?: string
+          owner_name?: string | null
+          pos_x?: number
+          pos_y?: number
+          source?: string | null
+          updated_at?: string
+          verification?: Database["public"]["Enums"]["verification_status"]
+        }
+        Update: {
+          address?: string | null
+          area_sqft?: number | null
+          community_id?: string
+          confidence?: Database["public"]["Enums"]["confidence_level"]
+          created_at?: string
+          effective_date?: string | null
+          frontage_ft?: number | null
+          id?: string
+          label?: string
+          owner_id?: string
+          owner_name?: string | null
+          pos_x?: number
+          pos_y?: number
+          source?: string | null
+          updated_at?: string
+          verification?: Database["public"]["Enums"]["verification_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcels_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -40,6 +135,103 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      record_events: {
+        Row: {
+          action: string
+          community_id: string
+          created_at: string
+          entity_label: string | null
+          entity_type: string
+          id: string
+          note: string | null
+          owner_id: string
+        }
+        Insert: {
+          action: string
+          community_id: string
+          created_at?: string
+          entity_label?: string | null
+          entity_type: string
+          id?: string
+          note?: string | null
+          owner_id?: string
+        }
+        Update: {
+          action?: string
+          community_id?: string
+          created_at?: string
+          entity_label?: string | null
+          entity_type?: string
+          id?: string
+          note?: string | null
+          owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "record_events_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      road_segments: {
+        Row: {
+          community_id: string
+          confidence: Database["public"]["Enums"]["confidence_level"]
+          created_at: string
+          geometry: Json
+          id: string
+          length_ft: number | null
+          name: string
+          owner_id: string
+          responsibility: string
+          source: string | null
+          surface: string | null
+          updated_at: string
+          verification: Database["public"]["Enums"]["verification_status"]
+        }
+        Insert: {
+          community_id: string
+          confidence?: Database["public"]["Enums"]["confidence_level"]
+          created_at?: string
+          geometry?: Json
+          id?: string
+          length_ft?: number | null
+          name: string
+          owner_id?: string
+          responsibility?: string
+          source?: string | null
+          surface?: string | null
+          updated_at?: string
+          verification?: Database["public"]["Enums"]["verification_status"]
+        }
+        Update: {
+          community_id?: string
+          confidence?: Database["public"]["Enums"]["confidence_level"]
+          created_at?: string
+          geometry?: Json
+          id?: string
+          length_ft?: number | null
+          name?: string
+          owner_id?: string
+          responsibility?: string
+          source?: string | null
+          surface?: string | null
+          updated_at?: string
+          verification?: Database["public"]["Enums"]["verification_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "road_segments_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -77,6 +269,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "member"
+      confidence_level: "high" | "medium" | "low"
+      verification_status: "verified" | "unverified" | "disputed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -205,6 +399,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "member"],
+      confidence_level: ["high", "medium", "low"],
+      verification_status: ["verified", "unverified", "disputed"],
     },
   },
 } as const
