@@ -190,3 +190,163 @@ export function computeAllocations(
 export function money(n: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(Math.round(n));
 }
+
+// ---------------- Scenarios (named comparison + versioning) ----------------
+export type Scenario = Database["public"]["Tables"]["project_scenarios"]["Row"];
+
+export type ScenarioConfig = {
+  allocation_method: AllocationMethod;
+  total_cost: number;
+  contingency_pct: number;
+  reserve_target: number;
+  base_amount: number;
+  entrance_x: number | null;
+  entrance_y: number | null;
+};
+
+export type ScenarioSummary = {
+  target: number;
+  allocated: number;
+  benefiting: number;
+  parcels: number;
+  rows: { parcel_id: string; label: string; owner: string | null; benefits: boolean; amount: number; share: number }[];
+};
+
+export function snapshotConfig(project: Project): ScenarioConfig {
+  return {
+    allocation_method: project.allocation_method,
+    total_cost: Number(project.total_cost) || 0,
+    contingency_pct: Number(project.contingency_pct) || 0,
+    reserve_target: Number(project.reserve_target) || 0,
+    base_amount: Number(project.base_amount) || 0,
+    entrance_x: project.entrance_x != null ? Number(project.entrance_x) : null,
+    entrance_y: project.entrance_y != null ? Number(project.entrance_y) : null,
+  };
+}
+
+export function snapshotSummary(result: ReturnType<typeof computeAllocations>): ScenarioSummary {
+  return {
+    target: result.target,
+    allocated: result.allocated,
+    benefiting: result.rows.filter((r) => r.benefits).length,
+    parcels: result.rows.length,
+    rows: result.rows.map((r) => ({
+      parcel_id: r.parcel.id,
+      label: r.parcel.label,
+      owner: r.parcel.owner_name,
+      benefits: r.benefits,
+      amount: r.amount,
+      share: r.share,
+    })),
+  };
+}
+
+export async function listScenarios(projectId: string): Promise<Scenario[]> {
+  return unwrap(
+    supabase.from("project_scenarios").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
+  );
+}
+
+export async function saveScenario(
+  communityId: string,
+  projectId: string,
+  name: string,
+  project: Project,
+  result: ReturnType<typeof computeAllocations>,
+): Promise<Scenario> {
+  // Version = one more than the highest existing version for this project.
+  const existing = await listScenarios(projectId);
+  const version = existing.reduce((m, s) => Math.max(m, s.version), 0) + 1;
+  const scenario = await unwrap(
+    supabase
+      .from("project_scenarios")
+      .insert({
+        project_id: projectId,
+        name: name.trim() || `Scenario ${version}`,
+        version,
+        config: snapshotConfig(project) as unknown as Database["public"]["Tables"]["project_scenarios"]["Insert"]["config"],
+        summary: snapshotSummary(result) as unknown as Database["public"]["Tables"]["project_scenarios"]["Insert"]["summary"],
+      })
+      .select()
+      .single(),
+  );
+  await logEvent(communityId, { entity_type: "project", entity_label: `${project.name} · ${scenario.name}`, action: "created" });
+  return scenario;
+}
+
+export async function deleteScenario(id: string): Promise<void> {
+  const { error } = await supabase.from("project_scenarios").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export function scenarioConfig(s: Scenario): ScenarioConfig {
+  return s.config as unknown as ScenarioConfig;
+}
+export function scenarioSummary(s: Scenario): ScenarioSummary {
+  return s.summary as unknown as ScenarioSummary;
+}
+
+// ---------------- Shareable evidence package ----------------
+export function buildEvidenceHtml(args: {
+  communityName: string;
+  project: Project;
+  lineItems: LineItem[];
+  result: ReturnType<typeof computeAllocations>;
+}): string {
+  const { communityName, project, lineItems, result } = args;
+  const method = ALLOCATION_METHODS.find((m) => m.value === project.allocation_method);
+  const rows = result.rows
+    .map(
+      (r) => `<tr><td>${esc(r.parcel.label)}</td><td>${esc(r.parcel.owner_name ?? "—")}</td><td>${r.benefits ? "Yes" : "No"}</td><td class="r">${r.benefits ? money(r.amount) : "—"}</td><td class="r">${r.benefits ? (r.share * 100).toFixed(1) + "%" : "—"}</td></tr>`,
+    )
+    .join("");
+  const items = lineItems
+    .map((i) => `<tr><td>${esc(i.label)}</td><td>${esc(i.contractor ?? "—")}</td><td class="r">${money(Number(i.amount))}</td></tr>`)
+    .join("");
+  const generated = new Date().toLocaleString("en-US");
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(project.name)} — Cost-share evidence package</title>
+<style>
+:root{color-scheme:light}
+body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#0f172a;max-width:840px;margin:40px auto;padding:0 24px;line-height:1.5}
+h1{font-size:26px;margin:0 0 4px}h2{font-size:16px;margin:28px 0 8px;border-bottom:1px solid #e2e8f0;padding-bottom:6px}
+.muted{color:#64748b}.pill{display:inline-block;background:#eef2ff;color:#4338ca;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+.card{border:1px solid #e2e8f0;border-radius:12px;padding:12px}.card b{display:block;font-size:20px}
+table{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #eef2f6}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#64748b}.r{text-align:right}
+footer{margin-top:32px;font-size:12px;color:#94a3b8}
+</style></head><body>
+<span class="pill">Cost-share evidence package</span>
+<h1>${esc(project.name)}</h1>
+<p class="muted">${esc(communityName)} · ${esc(STATUS_LABEL[project.status])}${project.description ? " · " + esc(project.description) : ""}</p>
+<div class="grid">
+<div class="card"><span class="muted">Funding target</span><b>${money(result.target)}</b></div>
+<div class="card"><span class="muted">Allocated</span><b>${money(result.allocated)}</b></div>
+<div class="card"><span class="muted">Benefiting parcels</span><b>${result.rows.filter((r) => r.benefits).length}</b></div>
+</div>
+<h2>Method &amp; assumptions</h2>
+<p><b>${esc(method?.label ?? project.allocation_method)}</b> — ${esc(method?.blurb ?? "")}</p>
+<p class="muted">Total cost ${money(Number(project.total_cost))} · Contingency ${Number(project.contingency_pct)}% · Reserve ${money(Number(project.reserve_target))}${project.allocation_method === "base_plus_use" ? " · Base per parcel " + money(Number(project.base_amount)) : ""}</p>
+<h2>Cost breakdown</h2>
+<table><thead><tr><th>Item</th><th>Contractor</th><th class="r">Amount</th></tr></thead><tbody>${items || '<tr><td colspan="3" class="muted">No line items recorded.</td></tr>'}</tbody></table>
+<h2>Per-parcel allocation</h2>
+<table><thead><tr><th>Lot</th><th>Owner</th><th>Benefits</th><th class="r">Amount</th><th class="r">Share</th></tr></thead><tbody>${rows}</tbody></table>
+<footer>Generated ${esc(generated)} · RoadShare. Figures reflect the settings recorded at generation time and are for community discussion, not a legal assessment.</footer>
+</body></html>`;
+}
+
+function esc(s: string): string {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+
+export function downloadFile(filename: string, content: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
