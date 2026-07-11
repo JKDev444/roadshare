@@ -234,6 +234,50 @@ export type Database = {
           },
         ]
       }
+      project_scenarios: {
+        Row: {
+          config: Json
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          project_id: string
+          summary: Json
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          id?: string
+          name: string
+          owner_id?: string
+          project_id: string
+          summary?: Json
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          project_id?: string
+          summary?: Json
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_scenarios_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           allocation_method: Database["public"]["Enums"]["allocation_method"]
@@ -242,6 +286,8 @@ export type Database = {
           contingency_pct: number
           created_at: string
           description: string | null
+          entrance_x: number | null
+          entrance_y: number | null
           id: string
           name: string
           notes: string | null
@@ -258,6 +304,8 @@ export type Database = {
           contingency_pct?: number
           created_at?: string
           description?: string | null
+          entrance_x?: number | null
+          entrance_y?: number | null
           id?: string
           name: string
           notes?: string | null
@@ -274,6 +322,8 @@ export type Database = {
           contingency_pct?: number
           created_at?: string
           description?: string | null
+          entrance_x?: number | null
+          entrance_y?: number | null
           id?: string
           name?: string
           notes?: string | null
@@ -432,6 +482,7 @@ export type Database = {
         | "segment_benefit"
         | "base_plus_use"
         | "custom"
+        | "distance"
       app_role: "admin" | "member"
       confidence_level: "high" | "medium" | "low"
       project_status: "planning" | "bidding" | "funded" | "complete"
@@ -570,6 +621,7 @@ export const Constants = {
         "segment_benefit",
         "base_plus_use",
         "custom",
+        "distance",
       ],
       app_role: ["admin", "member"],
       confidence_level: ["high", "medium", "low"],

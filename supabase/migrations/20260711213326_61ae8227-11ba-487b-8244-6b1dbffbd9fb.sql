@@ -1,0 +1,1 @@
+ALTER TYPE public.allocation_method ADD VALUE IF NOT EXISTS 'distance';

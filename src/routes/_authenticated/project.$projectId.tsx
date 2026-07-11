@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, Download, Plus, Trash2, Wallet } from "lucide-react";
+import { ArrowLeft, Download, FileText, GitCompare, Layers, Plus, Trash2, Wallet } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
@@ -23,9 +23,16 @@ import {
   STATUS_LABEL,
   updateProject,
   upsertAllocation,
+  listScenarios,
+  saveScenario,
+  deleteScenario,
+  scenarioSummary,
+  buildEvidenceHtml,
+  downloadFile,
   type AllocationMethod,
   type ProjectInput,
   type ProjectStatus,
+  type Scenario,
 } from "@/lib/planner/api";
 
 export const Route = createFileRoute("/_authenticated/project/$projectId")({
@@ -96,6 +103,18 @@ function ProjectPlanner() {
     toast.success("Allocation CSV exported");
   }
 
+  function exportEvidence() {
+    if (!result) return;
+    const html = buildEvidenceHtml({
+      communityName: community.data?.name ?? "Community",
+      project: p!,
+      lineItems: items.data ?? [],
+      result,
+    });
+    downloadFile(`${p!.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-evidence.html`, html, "text/html");
+    toast.success("Evidence package exported");
+  }
+
   return (
     <AppShell>
       <div className="mx-auto max-w-6xl space-y-6">
@@ -131,9 +150,14 @@ function ProjectPlanner() {
           <div className="rounded-2xl border border-border bg-card p-5">
             <div className="flex items-center justify-between">
               <h3 className="font-display text-base font-semibold">Cost allocation</h3>
-              <Button size="sm" variant="outline" onClick={exportCsv} disabled={!result || result.rows.length === 0}>
-                <Download className="h-4 w-4" /> Export CSV
-              </Button>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={exportCsv} disabled={!result || result.rows.length === 0}>
+                  <Download className="h-4 w-4" /> CSV
+                </Button>
+                <Button size="sm" variant="outline" onClick={exportEvidence} disabled={!result || result.rows.length === 0}>
+                  <FileText className="h-4 w-4" /> Evidence package
+                </Button>
+              </div>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">{ALLOCATION_METHODS.find((m) => m.value === p.allocation_method)?.blurb}</p>
             <AllocationTable
@@ -141,6 +165,14 @@ function ProjectPlanner() {
               method={p.allocation_method}
               rows={result?.rows ?? []}
             />
+            {result && (
+              <ScenariosCard
+                projectId={projectId}
+                communityId={communityId!}
+                project={p}
+                result={result}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -221,8 +253,10 @@ function LineItemsCard({ projectId }: { projectId: string }) {
   );
 }
 
-function MethodCard({ project, onSave }: { project: { allocation_method: AllocationMethod; base_amount: number }; onSave: (i: ProjectInput) => void }) {
+function MethodCard({ project, onSave }: { project: { allocation_method: AllocationMethod; base_amount: number; entrance_x: number | null; entrance_y: number | null }; onSave: (i: ProjectInput) => void }) {
   const [base, setBase] = useState(String(project.base_amount));
+  const [ex, setEx] = useState(project.entrance_x != null ? String(project.entrance_x) : "50");
+  const [ey, setEy] = useState(project.entrance_y != null ? String(project.entrance_y) : "92");
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <h3 className="font-display text-base font-semibold">Allocation method</h3>
@@ -233,6 +267,16 @@ function MethodCard({ project, onSave }: { project: { allocation_method: Allocat
         </Select>
         {project.allocation_method === "base_plus_use" && (
           <div className="space-y-1.5"><Label htmlFor="p-base">Base amount per parcel ($)</Label><Input id="p-base" type="number" value={base} onChange={(e) => setBase(e.target.value)} onBlur={() => onSave({ base_amount: Number(base) || 0 })} /></div>
+        )}
+        {project.allocation_method === "distance" && (
+          <div className="space-y-1.5">
+            <Label>Entrance location (map units 0–100)</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <Input aria-label="Entrance X" type="number" value={ex} onChange={(e) => setEx(e.target.value)} onBlur={() => onSave({ entrance_x: Number(ex) || 0 })} placeholder="X" />
+              <Input aria-label="Entrance Y" type="number" value={ey} onChange={(e) => setEy(e.target.value)} onBlur={() => onSave({ entrance_y: Number(ey) || 0 })} placeholder="Y" />
+            </div>
+            <p className="text-xs text-muted-foreground">Cost rises with distance from this point. Defaults to the bottom-center entrance.</p>
+          </div>
         )}
       </div>
     </div>
@@ -290,6 +334,131 @@ function AllocationTable({ projectId, method, rows }: { projectId: string; metho
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+function ScenariosCard({
+  projectId,
+  communityId,
+  project,
+  result,
+}: {
+  projectId: string;
+  communityId: string;
+  project: import("@/lib/planner/api").Project;
+  result: ReturnType<typeof computeAllocations>;
+}) {
+  const qc = useQueryClient();
+  const [name, setName] = useState("");
+  const [compare, setCompare] = useState<[string | null, string | null]>([null, null]);
+  const { data: scenarios } = useQuery({ queryKey: ["scenarios", projectId], queryFn: () => listScenarios(projectId) });
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["scenarios", projectId] });
+
+  const save = useMutation({
+    mutationFn: () => saveScenario(communityId, projectId, name, project, result),
+    onSuccess: () => { invalidate(); setName(""); toast.success("Scenario saved"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const del = useMutation({
+    mutationFn: (id: string) => deleteScenario(id),
+    onSuccess: () => { invalidate(); setCompare([null, null]); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const list = scenarios ?? [];
+  const [aId, bId] = compare;
+  const a = list.find((s) => s.id === aId) ?? null;
+  const b = list.find((s) => s.id === bId) ?? null;
+
+  return (
+    <div className="mt-6 rounded-xl border border-border bg-secondary/30 p-4">
+      <div className="flex items-center gap-2">
+        <Layers className="h-4 w-4 text-primary" />
+        <h4 className="font-display text-sm font-semibold">Scenarios &amp; comparison</h4>
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">Save the current setup as a named, versioned snapshot, then compare any two side by side.</p>
+
+      <div className="mt-3 flex gap-2">
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Scenario name (e.g. Frontage v2)" className="h-9" />
+        <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}><Plus className="h-4 w-4" /> Save</Button>
+      </div>
+
+      {list.length === 0 ? (
+        <p className="mt-3 text-xs text-muted-foreground">No saved scenarios yet.</p>
+      ) : (
+        <ul className="mt-3 space-y-1.5">
+          {list.map((s) => (
+            <li key={s.id} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm">
+              <span className="rounded bg-secondary px-1.5 py-0.5 text-xs font-medium text-muted-foreground">v{s.version}</span>
+              <span className="min-w-0 flex-1 truncate font-medium">{s.name}</span>
+              <span className="text-xs text-muted-foreground">{money(scenarioSummary(s).allocated)}</span>
+              <button
+                className={`rounded px-1.5 py-0.5 text-xs font-medium ${aId === s.id ? "bg-primary text-primary-foreground" : "text-primary hover:underline"}`}
+                onClick={() => setCompare([aId === s.id ? null : s.id, bId])}
+              >A</button>
+              <button
+                className={`rounded px-1.5 py-0.5 text-xs font-medium ${bId === s.id ? "bg-primary text-primary-foreground" : "text-primary hover:underline"}`}
+                onClick={() => setCompare([aId, bId === s.id ? null : s.id])}
+              >B</button>
+              <button aria-label="Delete scenario" className="text-muted-foreground hover:text-destructive" onClick={() => del.mutate(s.id)}><Trash2 className="h-3.5 w-3.5" /></button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {a && b && <ScenarioCompare a={a} b={b} />}
+    </div>
+  );
+}
+
+function ScenarioCompare({ a, b }: { a: Scenario; b: Scenario }) {
+  const sa = scenarioSummary(a);
+  const sb = scenarioSummary(b);
+  const parcels = new Map<string, { label: string; owner: string | null; a: number; b: number }>();
+  for (const r of sa.rows) parcels.set(r.parcel_id, { label: r.label, owner: r.owner, a: r.benefits ? r.amount : 0, b: 0 });
+  for (const r of sb.rows) {
+    const e = parcels.get(r.parcel_id) ?? { label: r.label, owner: r.owner, a: 0, b: 0 };
+    e.b = r.benefits ? r.amount : 0;
+    parcels.set(r.parcel_id, e);
+  }
+  return (
+    <div className="mt-4 rounded-xl border border-border bg-card p-3">
+      <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+        <GitCompare className="h-4 w-4 text-primary" /> {a.name} (A) vs {b.name} (B)
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <th className="px-2 py-1.5 font-semibold">Lot</th>
+              <th className="px-2 py-1.5 text-right font-semibold">A</th>
+              <th className="px-2 py-1.5 text-right font-semibold">B</th>
+              <th className="px-2 py-1.5 text-right font-semibold">Δ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...parcels.values()].map((r, i) => {
+              const d = r.b - r.a;
+              return (
+                <tr key={i} className="border-b border-border/60 last:border-0">
+                  <td className="px-2 py-1.5"><span className="font-medium">{r.label}</span></td>
+                  <td className="px-2 py-1.5 text-right text-muted-foreground">{money(r.a)}</td>
+                  <td className="px-2 py-1.5 text-right text-muted-foreground">{money(r.b)}</td>
+                  <td className={`px-2 py-1.5 text-right font-semibold ${d > 0 ? "text-destructive" : d < 0 ? "text-primary" : "text-muted-foreground"}`}>{d > 0 ? "+" : ""}{money(d)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr className="border-t border-border font-semibold">
+              <td className="px-2 py-1.5">Total</td>
+              <td className="px-2 py-1.5 text-right">{money(sa.allocated)}</td>
+              <td className="px-2 py-1.5 text-right">{money(sb.allocated)}</td>
+              <td className="px-2 py-1.5 text-right">{money(sb.allocated - sa.allocated)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </div>
   );
 }

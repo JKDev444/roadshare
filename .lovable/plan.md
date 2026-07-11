@@ -41,11 +41,14 @@ First backend phase — Lovable Cloud enabled.
 - ✅ Auto-confirm signups enabled; GeoJSON export of road geometry; in-editor onboarding walkthrough.
 - ✅ Authenticated Playwright pass verified: signup → seed Cedar Hollow → add/edit parcels → draw/edit segments (persist across reload) → provenance logging → GeoJSON export.
 
-## Phase 5 — Production Project Planner 🔵 🚧 IN PROGRESS
+## Phase 5 — Production Project Planner 🔵 ✅ DONE (authed E2E passed)
 - ✅ Projects tied to communities: costs, contingency, reserves, cost breakdown / contractor bids, status (planning/bidding/funded/complete).
 - ✅ Allocation engine (§2.5): equal, frontage, area, benefit weight, base-plus-use, custom weights + per-parcel overrides and benefit toggles. Live per-parcel amounts + shares. Allocation CSV export.
 - ✅ Authenticated E2E verified: create project → set costs/line items → switch method → allocations compute & persist → CSV export.
-- ⏳ Remaining: named scenario comparison (§9.6), versioning, distance method, entrance configurations, shareable evidence packages (§2.8).
+- ✅ Distance-from-entrance allocation method with configurable entrance point.
+- ✅ Named, versioned scenarios (auto-incrementing versions) with side-by-side A/B comparison showing per-parcel deltas.
+- ✅ Shareable evidence package (§2.8): downloadable HTML report with method/assumptions, cost breakdown, and per-parcel allocation.
+- ✅ Authenticated E2E re-verified: distance method computes per-parcel amounts, two scenarios saved & compared, evidence package exported.
 
 ## Phase 6 — Document Vault 🔵🟣
 - Upload + storage, OCR abstraction, classification, in-app viewer, metadata, permissions (§10).
