@@ -41,7 +41,7 @@ export async function getProject(id: string): Promise<Project> {
 }
 
 export type ProjectInput = Partial<
-  Pick<Project, "name" | "description" | "status" | "total_cost" | "contingency_pct" | "reserve_target" | "base_amount" | "allocation_method" | "notes">
+  Pick<Project, "name" | "description" | "status" | "total_cost" | "contingency_pct" | "reserve_target" | "base_amount" | "allocation_method" | "notes" | "entrance_x" | "entrance_y">
 >;
 
 export async function createProject(communityId: string, input: ProjectInput): Promise<Project> {
