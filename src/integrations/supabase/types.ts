@@ -44,6 +44,80 @@ export type Database = {
         }
         Relationships: []
       }
+      documents: {
+        Row: {
+          ai_confidence: number | null
+          ai_suggested_type: Database["public"]["Enums"]["doc_type"] | null
+          ai_summary: string | null
+          community_id: string
+          created_at: string
+          doc_type: Database["public"]["Enums"]["doc_type"] | null
+          effective_date: string | null
+          extracted_text: string | null
+          file_path: string
+          id: string
+          mime_type: string | null
+          notes: string | null
+          owner_id: string
+          size_bytes: number | null
+          source: string | null
+          status: Database["public"]["Enums"]["doc_status"]
+          title: string
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          ai_confidence?: number | null
+          ai_suggested_type?: Database["public"]["Enums"]["doc_type"] | null
+          ai_summary?: string | null
+          community_id: string
+          created_at?: string
+          doc_type?: Database["public"]["Enums"]["doc_type"] | null
+          effective_date?: string | null
+          extracted_text?: string | null
+          file_path: string
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          owner_id?: string
+          size_bytes?: number | null
+          source?: string | null
+          status?: Database["public"]["Enums"]["doc_status"]
+          title: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          ai_confidence?: number | null
+          ai_suggested_type?: Database["public"]["Enums"]["doc_type"] | null
+          ai_summary?: string | null
+          community_id?: string
+          created_at?: string
+          doc_type?: Database["public"]["Enums"]["doc_type"] | null
+          effective_date?: string | null
+          extracted_text?: string | null
+          file_path?: string
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          owner_id?: string
+          size_bytes?: number | null
+          source?: string | null
+          status?: Database["public"]["Enums"]["doc_status"]
+          title?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parcels: {
         Row: {
           address: string | null
@@ -485,6 +559,17 @@ export type Database = {
         | "distance"
       app_role: "admin" | "member"
       confidence_level: "high" | "medium" | "low"
+      doc_status: "processing" | "needs_review" | "verified" | "rejected"
+      doc_type:
+        | "deed"
+        | "plat"
+        | "agreement"
+        | "amendment"
+        | "bylaws"
+        | "bid"
+        | "invoice"
+        | "correspondence"
+        | "other"
       project_status: "planning" | "bidding" | "funded" | "complete"
       verification_status: "verified" | "unverified" | "disputed"
     }
@@ -625,6 +710,18 @@ export const Constants = {
       ],
       app_role: ["admin", "member"],
       confidence_level: ["high", "medium", "low"],
+      doc_status: ["processing", "needs_review", "verified", "rejected"],
+      doc_type: [
+        "deed",
+        "plat",
+        "agreement",
+        "amendment",
+        "bylaws",
+        "bid",
+        "invoice",
+        "correspondence",
+        "other",
+      ],
       project_status: ["planning", "bidding", "funded", "complete"],
       verification_status: ["verified", "unverified", "disputed"],
     },
