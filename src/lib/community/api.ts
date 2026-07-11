@@ -30,6 +30,58 @@ export function pathLengthFt(points: Point[]): number {
   return Math.round(total * FT_PER_UNIT);
 }
 
+/** Serialize road segments to a GeoJSON FeatureCollection. Canvas units (0..100)
+ *  are mapped to a simple local planar coordinate space (x, inverted y). */
+export function segmentsToGeoJSON(community: Pick<Community, "name" | "region"> | null, segments: RoadSegment[]) {
+  return {
+    type: "FeatureCollection" as const,
+    name: community?.name ?? "RoadShare export",
+    metadata: {
+      community: community?.name ?? null,
+      region: community?.region ?? null,
+      generated_at: new Date().toISOString(),
+      coordinate_note: "Local plat units (0-100); y-axis inverted so north is up.",
+    },
+    features: segments
+      .map((seg) => {
+        const pts = toPoints(seg.geometry);
+        if (pts.length < 2) return null;
+        return {
+          type: "Feature" as const,
+          geometry: {
+            type: "LineString" as const,
+            coordinates: pts.map((p) => [p.x, 100 - p.y]),
+          },
+          properties: {
+            name: seg.name,
+            surface: seg.surface,
+            responsibility: seg.responsibility,
+            source: seg.source,
+            confidence: seg.confidence,
+            verification: seg.verification,
+            length_ft: pathLengthFt(pts),
+          },
+        };
+      })
+      .filter((f): f is NonNullable<typeof f> => f !== null),
+  };
+}
+
+/** Trigger a browser download of the community's road geometry as GeoJSON. */
+export function downloadGeoJSON(community: Pick<Community, "name" | "region"> | null, segments: RoadSegment[]) {
+  const json = JSON.stringify(segmentsToGeoJSON(community, segments), null, 2);
+  const blob = new Blob([json], { type: "application/geo+json" });
+  const url = URL.createObjectURL(blob);
+  const slug = (community?.name ?? "roadshare").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${slug || "roadshare"}-roads.geojson`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 async function unwrap<T>(p: PromiseLike<{ data: T; error: { message: string } | null }>): Promise<NonNullable<T>> {
   const { data, error } = await p;
   if (error) throw new Error(error.message);
