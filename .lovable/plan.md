@@ -33,17 +33,19 @@ First backend phase — Lovable Cloud enabled.
 - ✅ Phase 4/6/10 sections stubbed as in-app "coming soon" so nav is complete.
 - Deferred to later phases: onboarding/community-creation wizard, portfolio switcher, team invitations.
 
-## Phase 4 — Community Record & GIS Editor 🔵 ✅ BUILT (pending authed E2E)
+## Phase 4 — Community Record & GIS Editor 🔵 ✅ DONE (authed E2E passed)
 - ✅ Tables: communities, parcels, road_segments, record_events — each with source, confidence, verification status, effective date; append-only change history. Owner-scoped RLS + GRANTs.
 - ✅ Community Record tabs: Overview (stats + plat preview + activity), Property layer (table + add/edit/delete with data-quality fields), Road geometry (GIS editor), Provenance (change-history timeline).
 - ✅ Road geometry editor: draw multi-point centerlines, drag vertices, remove points, delete segments, drag parcels to reposition, per-segment surface/responsibility/confidence/verification editing, live length in ft.
 - ✅ Sample "Cedar Hollow" seeding, Miro-style design throughout.
-- ⏳ Needs an authenticated preview session for full end-to-end verification (seed → edit → GIS draw).
+- ✅ Auto-confirm signups enabled; GeoJSON export of road geometry; in-editor onboarding walkthrough.
+- ✅ Authenticated Playwright pass verified: signup → seed Cedar Hollow → add/edit parcels → draw/edit segments (persist across reload) → provenance logging → GeoJSON export.
 
-## Phase 5 — Production Project Planner 🔵
-- Real projects: costs, contractor bids, named scenarios, funding options, reserves (§9).
-- Full allocation engine (§2.5): segment benefit, equal, distance, frontage, base-plus-use, custom, document-defined; one/multiple/assigned/weighted entrances.
-- Scenario comparison (§9.6), versioning, shareable evidence packages (§2.8).
+## Phase 5 — Production Project Planner 🔵 🚧 IN PROGRESS
+- ✅ Projects tied to communities: costs, contingency, reserves, cost breakdown / contractor bids, status (planning/bidding/funded/complete).
+- ✅ Allocation engine (§2.5): equal, frontage, area, benefit weight, base-plus-use, custom weights + per-parcel overrides and benefit toggles. Live per-parcel amounts + shares. Allocation CSV export.
+- ✅ Authenticated E2E verified: create project → set costs/line items → switch method → allocations compute & persist → CSV export.
+- ⏳ Remaining: named scenario comparison (§9.6), versioning, distance method, entrance configurations, shareable evidence packages (§2.8).
 
 ## Phase 6 — Document Vault 🔵🟣
 - Upload + storage, OCR abstraction, classification, in-app viewer, metadata, permissions (§10).
