@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, TrendingDown, TrendingUp } from "lucide-react";
 import {
   formatFt,
   formatUSD,
@@ -54,16 +54,14 @@ export function ResultsPanel({
   const { rows, pctValid, hasEntrance } = result;
   const maxResp = Math.max(1, ...rows.map((r) => r.responsibility));
   const showDollars = pctValid && hasEntrance;
+  const yourRow = rows.find((r) => r.isYou);
+  const yourDelta =
+    yourRow && yourRow.equalPerYear > 0
+      ? yourRow.perYear - yourRow.equalPerYear
+      : 0;
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="font-display text-lg font-semibold">Allocation</h2>
-        <p className="text-xs text-muted-foreground">
-          Method: {METHOD_LABEL[methodology]}
-        </p>
-      </div>
-
       {!pctValid && (
         <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -80,6 +78,45 @@ export function ResultsPanel({
         </div>
       )}
 
+      {/* Your-share hero */}
+      {showDollars && yourRow && (
+        <div className="overflow-hidden rounded-xl border border-gold/60 bg-gradient-to-br from-gold/20 to-gold/5 p-4">
+          <div className="text-[11px] font-medium uppercase tracking-wide text-gold-foreground/80">
+            Your estimated share
+          </div>
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className="font-display text-3xl font-bold text-foreground">
+              {formatUSD(yourRow.perYear)}
+            </span>
+            <span className="text-sm text-muted-foreground">/ year</span>
+          </div>
+          <div className="mt-1 flex items-center gap-1.5 text-xs">
+            <span className="font-mono font-semibold text-foreground">
+              {(yourRow.share * 100).toFixed(1)}%
+            </span>
+            <span className="text-muted-foreground">of the group ·</span>
+            {Math.abs(yourDelta) < 1 ? (
+              <span className="text-muted-foreground">even with equal split</span>
+            ) : yourDelta > 0 ? (
+              <span className="flex items-center gap-0.5 text-destructive">
+                <TrendingUp className="h-3 w-3" /> {formatUSD(yourDelta)} vs equal
+              </span>
+            ) : (
+              <span className="flex items-center gap-0.5 text-selected">
+                <TrendingDown className="h-3 w-3" /> {formatUSD(-yourDelta)} vs equal
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-base font-semibold">Cost breakdown</h2>
+        <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+          {METHOD_LABEL[methodology]}
+        </span>
+      </div>
+
       <div className="grid grid-cols-2 gap-2">
         <Tile label="Total road" value={formatFt(result.totalRoadFt)} />
         <Tile
@@ -93,7 +130,6 @@ export function ResultsPanel({
         <Tile
           label="Per year"
           value={showDollars ? formatUSD(result.totalPerYear) : "—"}
-          highlight
         />
       </div>
 
