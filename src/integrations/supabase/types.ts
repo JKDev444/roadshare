@@ -432,6 +432,7 @@ export type Database = {
         | "segment_benefit"
         | "base_plus_use"
         | "custom"
+        | "distance"
       app_role: "admin" | "member"
       confidence_level: "high" | "medium" | "low"
       project_status: "planning" | "bidding" | "funded" | "complete"
@@ -570,6 +571,7 @@ export const Constants = {
         "segment_benefit",
         "base_plus_use",
         "custom",
+        "distance",
       ],
       app_role: ["admin", "member"],
       confidence_level: ["high", "medium", "low"],
