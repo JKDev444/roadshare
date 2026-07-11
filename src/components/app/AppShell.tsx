@@ -9,6 +9,7 @@ import {
   Menu,
   MessageSquare,
   Route as RouteIcon,
+  Scale,
   Settings,
   Users,
   X,
@@ -30,6 +31,7 @@ const NAV: NavLink[] = [
   { to: "/community", label: "Community Record", icon: Users },
   { to: "/map", label: "GIS & Roads", icon: MapIcon },
   { to: "/documents", label: "Documents", icon: FileText },
+  { to: "/clauses", label: "Clause Graph", icon: Scale },
   { to: "/decisions", label: "Decision Rooms", icon: MessageSquare },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
