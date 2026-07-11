@@ -24,11 +24,14 @@ The marketing ecosystem (§5).
 - Move current planner to `/tools/cedar-hollow`, keep the engine, wrap in shell with methodology explainer + mocked "share scenario" + lead capture.
 - SEO foundation: `robots.txt`, XML sitemap route, breadcrumb + SoftwareApplication schema.
 
-## Phase 3 — Authentication & Application Shell 🔵
-First backend phase — enables Lovable Cloud.
-- Email + Google/Apple auth, onboarding branches (§7.1), community creation wizard (§7.2).
-- Roles in a separate `user_roles` table + `has_role()` security-definer; RLS on every table before data.
-- Authenticated app layout (`_authenticated`), dashboard widgets (§7.3), portfolio switcher, team invitations.
+## Phase 3 — Authentication & Application Shell 🔵 ✅ DONE
+First backend phase — Lovable Cloud enabled.
+- ✅ Email/password + Google sign-in (`/auth`, `/auth/callback`), leaked-password protection on.
+- ✅ `profiles` + separate `user_roles` table with `has_role()` security-definer; RLS + GRANTs on all tables.
+- ✅ Auto profile + `member` role on signup (trigger). Session-aware public header, sign-out hygiene.
+- ✅ `_authenticated` app shell with sidebar, dashboard widgets, working Settings (profile editing).
+- ✅ Phase 4/6/10 sections stubbed as in-app "coming soon" so nav is complete.
+- Deferred to later phases: onboarding/community-creation wizard, portfolio switcher, team invitations.
 
 ## Phase 4 — Community Record & GIS Editor 🔵
 - Tables: communities, properties/parcels, organizations, assets, access points, evidence/provenance — each with source, confidence, verification status, effective date, change history (§2.1).

@@ -4,10 +4,12 @@ import { Menu, Route as RouteIcon, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { PRIMARY_NAV } from "@/lib/site/content";
+import { useSession } from "@/lib/auth/useSession";
 import { cn } from "@/lib/utils";
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const { user, loading } = useSession();
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/80 backdrop-blur-xl">
@@ -33,12 +35,20 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/contact">Sign in</Link>
-          </Button>
-          <Button size="sm" asChild>
-            <Link to="/tools/cedar-hollow">Build a free scenario</Link>
-          </Button>
+          {loading ? null : user ? (
+            <Button size="sm" asChild>
+              <Link to="/dashboard">Go to dashboard</Link>
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/auth">Sign in</Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link to="/tools/cedar-hollow">Build a free scenario</Link>
+              </Button>
+            </>
+          )}
         </div>
 
         <button
@@ -69,9 +79,20 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
-          <Button className="mt-2" asChild onClick={() => setOpen(false)}>
-            <Link to="/tools/cedar-hollow">Build a free scenario</Link>
-          </Button>
+          {user ? (
+            <Button className="mt-2" asChild onClick={() => setOpen(false)}>
+              <Link to="/dashboard">Go to dashboard</Link>
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" className="mt-2" asChild onClick={() => setOpen(false)}>
+                <Link to="/auth">Sign in</Link>
+              </Button>
+              <Button className="mt-1" asChild onClick={() => setOpen(false)}>
+                <Link to="/tools/cedar-hollow">Build a free scenario</Link>
+              </Button>
+            </>
+          )}
         </nav>
       </div>
     </header>
