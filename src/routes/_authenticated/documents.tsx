@@ -136,15 +136,15 @@ function DocumentsPage() {
                 No documents {filter !== "all" ? `in “${DOC_STATUS[filter].label}”` : "yet"}.
               </div>
             ) : (
-              <div className="overflow-hidden rounded-2xl border border-border bg-card">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+                <table className="w-full table-fixed text-sm">
                   <thead>
                     <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                       <th className="px-4 py-2.5 font-semibold">Document</th>
-                      <th className="px-4 py-2.5 font-semibold">Type</th>
-                      <th className="px-4 py-2.5 font-semibold">Status</th>
-                      <th className="px-4 py-2.5 font-semibold">Size</th>
-                      <th className="px-4 py-2.5" />
+                      <th className="w-36 px-4 py-2.5 font-semibold">Type</th>
+                      <th className="w-32 px-4 py-2.5 font-semibold">Status</th>
+                      <th className="w-20 px-4 py-2.5 font-semibold">Size</th>
+                      <th className="w-24 px-4 py-2.5" />
                     </tr>
                   </thead>
                   <tbody>
@@ -162,7 +162,7 @@ function DocumentsPage() {
                         <td className="px-4 py-3">
                           <span>{docTypeLabel(d.doc_type)}</span>
                           {d.status !== "verified" && d.ai_suggested_type && (
-                            <span className="ml-1 inline-flex items-center gap-0.5 text-xs text-muted-foreground"><Sparkles className="h-3 w-3" /> {docTypeLabel(d.ai_suggested_type)}?</span>
+                            <span className="mt-0.5 flex items-center gap-0.5 text-xs text-muted-foreground"><Sparkles className="h-3 w-3" /> {docTypeLabel(d.ai_suggested_type)}?</span>
                           )}
                         </td>
                         <td className="px-4 py-3"><DocStatusBadge value={d.status} /></td>
