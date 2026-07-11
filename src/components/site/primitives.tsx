@@ -30,7 +30,8 @@ export function Reveal({
 
 export function Eyebrow({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-foreground shadow-sm">
+      <span className="h-2 w-2 rounded-full bg-gold" aria-hidden />
       {children}
     </span>
   );
