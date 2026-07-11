@@ -14,6 +14,97 @@ export type Database = {
   }
   public: {
     Tables: {
+      clauses: {
+        Row: {
+          ai_confidence: number | null
+          ai_suggested_category:
+            | Database["public"]["Enums"]["clause_category"]
+            | null
+          ai_summary: string | null
+          category: Database["public"]["Enums"]["clause_category"]
+          clause_text: string
+          community_id: string
+          confidence: Database["public"]["Enums"]["confidence_level"]
+          created_at: string
+          created_by: string | null
+          document_id: string | null
+          effective_date: string | null
+          id: string
+          source: string | null
+          status: Database["public"]["Enums"]["clause_status"]
+          supersedes_id: string | null
+          title: string
+          updated_at: string
+          verification: Database["public"]["Enums"]["verification_status"]
+        }
+        Insert: {
+          ai_confidence?: number | null
+          ai_suggested_category?:
+            | Database["public"]["Enums"]["clause_category"]
+            | null
+          ai_summary?: string | null
+          category?: Database["public"]["Enums"]["clause_category"]
+          clause_text?: string
+          community_id: string
+          confidence?: Database["public"]["Enums"]["confidence_level"]
+          created_at?: string
+          created_by?: string | null
+          document_id?: string | null
+          effective_date?: string | null
+          id?: string
+          source?: string | null
+          status?: Database["public"]["Enums"]["clause_status"]
+          supersedes_id?: string | null
+          title: string
+          updated_at?: string
+          verification?: Database["public"]["Enums"]["verification_status"]
+        }
+        Update: {
+          ai_confidence?: number | null
+          ai_suggested_category?:
+            | Database["public"]["Enums"]["clause_category"]
+            | null
+          ai_summary?: string | null
+          category?: Database["public"]["Enums"]["clause_category"]
+          clause_text?: string
+          community_id?: string
+          confidence?: Database["public"]["Enums"]["confidence_level"]
+          created_at?: string
+          created_by?: string | null
+          document_id?: string | null
+          effective_date?: string | null
+          id?: string
+          source?: string | null
+          status?: Database["public"]["Enums"]["clause_status"]
+          supersedes_id?: string | null
+          title?: string
+          updated_at?: string
+          verification?: Database["public"]["Enums"]["verification_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clauses_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clauses_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clauses_supersedes_id_fkey"
+            columns: ["supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "clauses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       communities: {
         Row: {
           created_at: string
@@ -558,6 +649,18 @@ export type Database = {
         | "custom"
         | "distance"
       app_role: "admin" | "member"
+      clause_category:
+        | "maintenance_responsibility"
+        | "cost_sharing"
+        | "access_rights"
+        | "easement"
+        | "use_restriction"
+        | "enforcement"
+        | "dispute_resolution"
+        | "amendment_process"
+        | "insurance"
+        | "other"
+      clause_status: "proposed" | "active" | "superseded" | "void"
       confidence_level: "high" | "medium" | "low"
       doc_status: "processing" | "needs_review" | "verified" | "rejected"
       doc_type:
@@ -709,6 +812,19 @@ export const Constants = {
         "distance",
       ],
       app_role: ["admin", "member"],
+      clause_category: [
+        "maintenance_responsibility",
+        "cost_sharing",
+        "access_rights",
+        "easement",
+        "use_restriction",
+        "enforcement",
+        "dispute_resolution",
+        "amendment_process",
+        "insurance",
+        "other",
+      ],
+      clause_status: ["proposed", "active", "superseded", "void"],
       confidence_level: ["high", "medium", "low"],
       doc_status: ["processing", "needs_review", "verified", "rejected"],
       doc_type: [
