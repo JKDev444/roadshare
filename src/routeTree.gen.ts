@@ -9,38 +9,299 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ToolsRouteImport } from './routes/tools'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SecurityRouteImport } from './routes/security'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as ProductRouteImport } from './routes/product'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as MethodologyRouteImport } from './routes/methodology'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ToolsIndexRouteImport } from './routes/tools.index'
+import { Route as ProductIndexRouteImport } from './routes/product.index'
+import { Route as ToolsCedarHollowRouteImport } from './routes/tools.cedar-hollow'
+import { Route as SolutionsAudienceRouteImport } from './routes/solutions.$audience'
+import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 
+const ToolsRoute = ToolsRouteImport.update({
+  id: '/tools',
+  path: '/tools',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SecurityRoute = SecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductRoute = ProductRouteImport.update({
+  id: '/product',
+  path: '/product',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MethodologyRoute = MethodologyRouteImport.update({
+  id: '/methodology',
+  path: '/methodology',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToolsIndexRoute = ToolsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ToolsRoute,
+} as any)
+const ProductIndexRoute = ProductIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ProductRoute,
+} as any)
+const ToolsCedarHollowRoute = ToolsCedarHollowRouteImport.update({
+  id: '/cedar-hollow',
+  path: '/cedar-hollow',
+  getParentRoute: () => ToolsRoute,
+} as any)
+const SolutionsAudienceRoute = SolutionsAudienceRouteImport.update({
+  id: '/solutions/$audience',
+  path: '/solutions/$audience',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductSlugRoute = ProductSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => ProductRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/contact': typeof ContactRoute
+  '/methodology': typeof MethodologyRoute
+  '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
+  '/product': typeof ProductRouteWithChildren
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/security': typeof SecurityRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/tools': typeof ToolsRouteWithChildren
+  '/product/$slug': typeof ProductSlugRoute
+  '/solutions/$audience': typeof SolutionsAudienceRoute
+  '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
+  '/product/': typeof ProductIndexRoute
+  '/tools/': typeof ToolsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/contact': typeof ContactRoute
+  '/methodology': typeof MethodologyRoute
+  '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/security': typeof SecurityRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/product/$slug': typeof ProductSlugRoute
+  '/solutions/$audience': typeof SolutionsAudienceRoute
+  '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
+  '/product': typeof ProductIndexRoute
+  '/tools': typeof ToolsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/contact': typeof ContactRoute
+  '/methodology': typeof MethodologyRoute
+  '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
+  '/product': typeof ProductRouteWithChildren
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/security': typeof SecurityRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/tools': typeof ToolsRouteWithChildren
+  '/product/$slug': typeof ProductSlugRoute
+  '/solutions/$audience': typeof SolutionsAudienceRoute
+  '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
+  '/product/': typeof ProductIndexRoute
+  '/tools/': typeof ToolsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/contact'
+    | '/methodology'
+    | '/pricing'
+    | '/privacy'
+    | '/product'
+    | '/robots.txt'
+    | '/security'
+    | '/sitemap.xml'
+    | '/tools'
+    | '/product/$slug'
+    | '/solutions/$audience'
+    | '/tools/cedar-hollow'
+    | '/product/'
+    | '/tools/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/about'
+    | '/contact'
+    | '/methodology'
+    | '/pricing'
+    | '/privacy'
+    | '/robots.txt'
+    | '/security'
+    | '/sitemap.xml'
+    | '/product/$slug'
+    | '/solutions/$audience'
+    | '/tools/cedar-hollow'
+    | '/product'
+    | '/tools'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/contact'
+    | '/methodology'
+    | '/pricing'
+    | '/privacy'
+    | '/product'
+    | '/robots.txt'
+    | '/security'
+    | '/sitemap.xml'
+    | '/tools'
+    | '/product/$slug'
+    | '/solutions/$audience'
+    | '/tools/cedar-hollow'
+    | '/product/'
+    | '/tools/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
+  ContactRoute: typeof ContactRoute
+  MethodologyRoute: typeof MethodologyRoute
+  PricingRoute: typeof PricingRoute
+  PrivacyRoute: typeof PrivacyRoute
+  ProductRoute: typeof ProductRouteWithChildren
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SecurityRoute: typeof SecurityRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ToolsRoute: typeof ToolsRouteWithChildren
+  SolutionsAudienceRoute: typeof SolutionsAudienceRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tools': {
+      id: '/tools'
+      path: '/tools'
+      fullPath: '/tools'
+      preLoaderRoute: typeof ToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/security': {
+      id: '/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof SecurityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/product': {
+      id: '/product'
+      path: '/product'
+      fullPath: '/product'
+      preLoaderRoute: typeof ProductRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/methodology': {
+      id: '/methodology'
+      path: '/methodology'
+      fullPath: '/methodology'
+      preLoaderRoute: typeof MethodologyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +309,82 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tools/': {
+      id: '/tools/'
+      path: '/'
+      fullPath: '/tools/'
+      preLoaderRoute: typeof ToolsIndexRouteImport
+      parentRoute: typeof ToolsRoute
+    }
+    '/product/': {
+      id: '/product/'
+      path: '/'
+      fullPath: '/product/'
+      preLoaderRoute: typeof ProductIndexRouteImport
+      parentRoute: typeof ProductRoute
+    }
+    '/tools/cedar-hollow': {
+      id: '/tools/cedar-hollow'
+      path: '/cedar-hollow'
+      fullPath: '/tools/cedar-hollow'
+      preLoaderRoute: typeof ToolsCedarHollowRouteImport
+      parentRoute: typeof ToolsRoute
+    }
+    '/solutions/$audience': {
+      id: '/solutions/$audience'
+      path: '/solutions/$audience'
+      fullPath: '/solutions/$audience'
+      preLoaderRoute: typeof SolutionsAudienceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/product/$slug': {
+      id: '/product/$slug'
+      path: '/$slug'
+      fullPath: '/product/$slug'
+      preLoaderRoute: typeof ProductSlugRouteImport
+      parentRoute: typeof ProductRoute
+    }
   }
 }
 
+interface ProductRouteChildren {
+  ProductSlugRoute: typeof ProductSlugRoute
+  ProductIndexRoute: typeof ProductIndexRoute
+}
+
+const ProductRouteChildren: ProductRouteChildren = {
+  ProductSlugRoute: ProductSlugRoute,
+  ProductIndexRoute: ProductIndexRoute,
+}
+
+const ProductRouteWithChildren =
+  ProductRoute._addFileChildren(ProductRouteChildren)
+
+interface ToolsRouteChildren {
+  ToolsCedarHollowRoute: typeof ToolsCedarHollowRoute
+  ToolsIndexRoute: typeof ToolsIndexRoute
+}
+
+const ToolsRouteChildren: ToolsRouteChildren = {
+  ToolsCedarHollowRoute: ToolsCedarHollowRoute,
+  ToolsIndexRoute: ToolsIndexRoute,
+}
+
+const ToolsRouteWithChildren = ToolsRoute._addFileChildren(ToolsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
+  ContactRoute: ContactRoute,
+  MethodologyRoute: MethodologyRoute,
+  PricingRoute: PricingRoute,
+  PrivacyRoute: PrivacyRoute,
+  ProductRoute: ProductRouteWithChildren,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SecurityRoute: SecurityRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ToolsRoute: ToolsRouteWithChildren,
+  SolutionsAudienceRoute: SolutionsAudienceRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

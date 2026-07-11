@@ -1,471 +1,232 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Check, MapPin, Route as RouteIcon, Search, X } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  FileText,
+  GitBranch,
+  MapPin,
+  MessageSquareQuote,
+  Route as RouteIcon,
+  Scale,
+  Users,
+} from "lucide-react";
 
-import { PlatMap } from "@/components/roadshare/PlatMap";
-import { ResultsPanel } from "@/components/roadshare/ResultsPanel";
-import {
-  DEFAULTS,
-  ENTRANCES,
-  PARCELS,
-  SURFACE_TYPES,
-} from "@/lib/roadshare/data";
-import {
-  computeAllocation,
-  formatUSD,
-  type Methodology,
-} from "@/lib/roadshare/engine";
+import { SiteLayout } from "@/components/site/SiteLayout";
+import { CTASection, Eyebrow, Reveal, Section } from "@/components/site/primitives";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { PRODUCTS, SOLUTIONS, SITE } from "@/lib/site/content";
 
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "RoadShare — Community Governance Intelligence" },
+      {
+        name: "description",
+        content:
+          "Plan private-road projects, allocate costs fairly, organize documents, gather resident input, and document defensible community decisions.",
+      },
+      { property: "og:title", content: "RoadShare — Community Governance Intelligence" },
+      { property: "og:description", content: SITE.description },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
+  component: Home,
 });
 
-function Section({
-  step,
-  title,
-  hint,
-  done,
-  children,
-}: {
-  step: number;
-  title: string;
-  hint?: string;
-  done?: boolean;
-  children: React.ReactNode;
-}) {
+const STORY = [
+  { icon: MapPin, title: "Map the project", body: "Select scope directly on the parcel and road-network map." },
+  { icon: Scale, title: "Allocate fairly", body: "Compare distance, frontage, and equal methods with live numbers." },
+  { icon: FileText, title: "Ground it in documents", body: "Clause timelines, effective dates, and missing-document flags." },
+  { icon: Users, title: "Gather the community", body: "Scenario-specific feedback with strict resident privacy." },
+  { icon: GitBranch, title: "Decide in the open", body: "Assemble evidence, track votes, publish a versioned record." },
+  { icon: MessageSquareQuote, title: "Deliver a report", body: "Board-ready, cited reports for owners and professionals." },
+];
+
+function Home() {
   return (
-    <section
-      className={cn(
-        "rounded-2xl border bg-card p-4 shadow-sm transition-colors",
-        done ? "border-selected/40" : "border-border",
-      )}
-    >
-      <div className="mb-3 flex items-center gap-2.5">
-        <span
-          className={cn(
-            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold transition-colors",
-            done
-              ? "bg-selected text-selected-foreground"
-              : "bg-primary text-primary-foreground",
-          )}
-        >
-          {done ? <Check className="h-4 w-4" /> : step}
-        </span>
-        <div className="min-w-0">
-          <h2 className="font-display text-sm font-semibold tracking-tight">
-            {title}
-          </h2>
-          {hint && (
-            <p className="text-xs text-muted-foreground">{hint}</p>
-          )}
+    <SiteLayout>
+      {/* Hero */}
+      <div className="relative overflow-hidden border-b border-border surface-glow">
+        <div className="absolute inset-0 topo-grid opacity-40" aria-hidden />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-20 sm:py-28 lg:grid-cols-[1.1fr_0.9fr]">
+          <div>
+            <Reveal>
+              <Eyebrow>Community governance intelligence</Eyebrow>
+            </Reveal>
+            <Reveal delay={0.05}>
+              <h1 className="mt-5 max-w-2xl font-display text-4xl font-bold leading-[1.03] tracking-tight sm:text-6xl">
+                Split shared road costs <span className="text-primary">fairly</span>, by how far each home drives.
+              </h1>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <p className="mt-5 max-w-xl text-lg text-muted-foreground">
+                RoadShare connects the map, the properties, the documents, the law, the numbers,
+                and the people — so community decisions are easier to understand and harder to dispute.
+              </p>
+            </Reveal>
+            <Reveal delay={0.15}>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Button size="lg" asChild>
+                  <Link to="/tools/cedar-hollow">
+                    Build a free scenario <ArrowRight className="ml-1.5 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button size="lg" variant="outline" asChild>
+                  <Link to="/product">Explore the platform</Link>
+                </Button>
+              </div>
+            </Reveal>
+          </div>
+
+          <Reveal delay={0.2}>
+            <HeroMap />
+          </Reveal>
         </div>
       </div>
-      {children}
-    </section>
+
+      {/* Story sequence */}
+      <Section>
+        <Reveal className="max-w-2xl">
+          <Eyebrow>From problem to decision</Eyebrow>
+          <h2 className="mt-4 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+            One connected workflow, not a pile of spreadsheets.
+          </h2>
+          <p className="mt-3 text-muted-foreground">
+            RoadShare turns a raw problem into scope, costs, methodology, feedback, and a permanent,
+            defensible record.
+          </p>
+        </Reveal>
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {STORY.map((s, i) => (
+            <Reveal key={s.title} delay={i * 0.05}>
+              <div className="group h-full rounded-2xl border border-border bg-card p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <s.icon className="h-5 w-5" />
+                </span>
+                <h3 className="mt-4 font-display text-lg font-semibold">{s.title}</h3>
+                <p className="mt-1.5 text-sm text-muted-foreground">{s.body}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </Section>
+
+      {/* Products */}
+      <Section muted>
+        <Reveal className="max-w-2xl">
+          <Eyebrow>The platform</Eyebrow>
+          <h2 className="mt-4 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+            Everything a community needs to understand shared obligations.
+          </h2>
+        </Reveal>
+        <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {PRODUCTS.map((p, i) => (
+            <Reveal key={p.slug} delay={(i % 3) * 0.05}>
+              <Link
+                to="/product/$slug"
+                params={{ slug: p.slug }}
+                className="group flex h-full flex-col rounded-2xl border border-border bg-background p-6 transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                    {p.eyebrow}
+                  </span>
+                  {p.status !== "live" && (
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
+                      {p.status === "preview" ? "Preview" : "Roadmap"}
+                    </span>
+                  )}
+                </div>
+                <h3 className="mt-3 font-display text-lg font-semibold">{p.name}</h3>
+                <p className="mt-1.5 flex-1 text-sm text-muted-foreground">{p.tagline}</p>
+                <span className="mt-4 inline-flex items-center text-sm font-medium text-primary">
+                  Learn more <ArrowRight className="ml-1 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </Link>
+            </Reveal>
+          ))}
+        </div>
+      </Section>
+
+      {/* Audiences */}
+      <Section>
+        <Reveal className="max-w-2xl">
+          <Eyebrow>Built for everyone at the table</Eyebrow>
+          <h2 className="mt-4 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+            From neighbors to boards, agents, title, lenders, and counsel.
+          </h2>
+        </Reveal>
+        <div className="mt-10 flex flex-wrap gap-2.5">
+          {SOLUTIONS.map((s, i) => (
+            <Reveal key={s.slug} delay={i * 0.03}>
+              <Link
+                to="/solutions/$audience"
+                params={{ audience: s.slug }}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium transition-colors hover:border-primary/40 hover:text-primary"
+              >
+                {s.audience}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </Reveal>
+          ))}
+        </div>
+      </Section>
+
+      <CTASection />
+    </SiteLayout>
   );
 }
 
-const METHODS: { id: Methodology; label: string }[] = [
-  { id: "distance", label: "Distance" },
-  { id: "frontage", label: "Frontage" },
-  { id: "equal", label: "Equal / lot" },
-];
-
-function Index() {
-  const [you, setYou] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<string[]>([]);
-  const [entrances, setEntrances] = useState<("west" | "north")[]>([]);
-  const [hovered, setHovered] = useState<string | null>(null);
-  const [methodology, setMethodology] = useState<Methodology>("distance");
-  const [roadWidth, setRoadWidth] = useState(DEFAULTS.roadWidth);
-  const [fundingPeriod, setFundingPeriod] = useState(DEFAULTS.fundingPeriod);
-  const [surfaces, setSurfaces] = useState(
-    SURFACE_TYPES.map((s) => ({ pct: s.defaultPct, cost: s.defaultCost })),
-  );
-
-  const matches = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return PARCELS.filter((p) => p.address.toLowerCase().includes(q)).slice(0, 6);
-  }, [query]);
-
-  const result = useMemo(
-    () =>
-      computeAllocation({
-        selected,
-        entrances,
-        methodology,
-        surfaces,
-        surfaceTypes: SURFACE_TYPES,
-        roadWidth,
-        fundingPeriod,
-        you,
-      }),
-    [selected, entrances, methodology, surfaces, roadWidth, fundingPeriod, you],
-  );
-
-  const toggleParcel = (id: string) =>
-    setSelected((s) =>
-      s.includes(id) ? s.filter((x) => x !== id) : [...s, id],
-    );
-  const toggleEntrance = (id: "west" | "north") =>
-    setEntrances((e) =>
-      e.includes(id) ? e.filter((x) => x !== id) : [...e, id],
-    );
-  const pickYou = (id: string, address: string) => {
-    setYou(id);
-    setQuery(address);
-    setSelected((s) => (s.includes(id) ? s : [...s, id]));
-  };
-
-  const pctTotal = surfaces.reduce((s, x) => s + (Number(x.pct) || 0), 0);
-  const pctValid = Math.abs(pctTotal - 100) < 0.001;
-
-  const steps = [
-    { label: "Property", done: !!you },
-    { label: "Neighborhood", done: selected.length > 0 },
-    { label: "Entrances", done: entrances.length > 0 },
-    { label: "Surface", done: pctValid },
-  ];
-  const completedCount = steps.filter((s) => s.done).length;
-
+function HeroMap() {
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-sm">
-              <RouteIcon className="h-5 w-5" />
-            </span>
-            <div className="leading-tight">
-              <span className="font-display text-lg font-bold tracking-tight">
-                RoadShare
-              </span>
-              <Badge variant="secondary" className="ml-1.5 font-mono text-[9px]">
-                PROTOTYPE
-              </Badge>
-            </div>
-          </div>
-          <p className="hidden text-sm text-muted-foreground sm:block">
-            Cedar Hollow · private road cost sharing
-          </p>
-        </div>
-      </header>
-
-      {/* Hero */}
-      <div className="relative overflow-hidden border-b border-border bg-gradient-to-br from-primary/10 via-background to-selected/10">
-        <div className="mx-auto max-w-7xl px-4 py-8">
-          <h1 className="max-w-3xl font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl">
-            Split private road costs{" "}
-            <span className="text-primary">fairly</span>, by how far each home
-            drives.
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm text-muted-foreground sm:text-base">
-            Find your property, build the neighborhood group, pin the entrances,
-            and set the surface. RoadShare allocates each household's share using
-            true along-road distance responsibility.
-          </p>
-
-          {/* Progress strip */}
-          <div className="mt-6 flex flex-wrap items-center gap-2">
-            {steps.map((s, i) => (
-              <div key={s.label} className="flex items-center gap-2">
-                <div
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                    s.done
-                      ? "border-selected/50 bg-selected/15 text-foreground"
-                      : "border-border bg-card text-muted-foreground",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold",
-                      s.done
-                        ? "bg-selected text-selected-foreground"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    {s.done ? <Check className="h-3 w-3" /> : i + 1}
-                  </span>
-                  {s.label}
-                </div>
-                {i < steps.length - 1 && (
-                  <span className="hidden h-px w-4 bg-border sm:block" />
-                )}
-              </div>
-            ))}
-            <span className="ml-1 font-mono text-xs text-muted-foreground">
-              {completedCount}/4
-            </span>
-          </div>
-        </div>
+    <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-border bg-card shadow-lg">
+      <div className="absolute inset-0 topo-grid opacity-50" aria-hidden />
+      <svg viewBox="0 0 400 300" className="relative h-full w-full">
+        <g fill="none" stroke="var(--color-map-asphalt)" strokeWidth="14" strokeLinecap="round">
+          <path d="M20 210 H250" />
+          <path d="M250 210 V70" />
+          <path d="M250 210 H360" />
+        </g>
+        <g fill="none" stroke="var(--color-map-lane)" strokeWidth="2" strokeDasharray="10 10" strokeLinecap="round">
+          <motion.path
+            d="M20 210 H250 V70 M250 210 H360"
+            animate={{ strokeDashoffset: [0, -40] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          />
+        </g>
+        {[
+          [60, 235], [130, 235], [200, 235], [300, 235],
+          [60, 175], [130, 175],
+          [285, 150], [285, 100],
+        ].map(([x, y], i) => (
+          <motion.rect
+            key={i}
+            x={x - 22}
+            y={y - 14}
+            width={44}
+            height={28}
+            rx={5}
+            fill={i === 3 ? "var(--color-gold)" : "var(--color-selected)"}
+            opacity={i === 3 ? 0.9 : 0.55}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: i === 3 ? 0.9 : 0.55, scale: 1 }}
+            transition={{ delay: 0.3 + i * 0.06, duration: 0.4 }}
+          />
+        ))}
+        {[[20, 210], [250, 70]].map(([x, y], i) => (
+          <g key={i}>
+            <circle cx={x} cy={y} r="7" fill="var(--color-primary)" />
+            <circle cx={x} cy={y} r="7" fill="none" stroke="var(--color-primary)" strokeWidth="2">
+              <animate attributeName="r" values="7;16" dur="1.8s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.7;0" dur="1.8s" repeatCount="indefinite" />
+            </circle>
+          </g>
+        ))}
+      </svg>
+      <div className="absolute bottom-4 left-4 flex items-center gap-2 rounded-lg bg-background/80 px-3 py-1.5 text-xs font-medium backdrop-blur">
+        <RouteIcon className="h-3.5 w-3.5 text-primary" /> Cedar Hollow · live demo
       </div>
-
-      <main className="mx-auto max-w-7xl px-4 py-6">
-
-        <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-          <div className="space-y-4">
-            <PlatMap
-              selected={selected}
-              you={you}
-              entrances={entrances}
-              hovered={hovered}
-              onToggleParcel={toggleParcel}
-              onHoverParcel={setHovered}
-              onToggleEntrance={toggleEntrance}
-            />
-
-            {/* Step 1 */}
-            <Section step={1} title="Find your property" hint="Search an address in Cedar Hollow" done={!!you}>
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="e.g. 101 Cedar Hollow Lane"
-                  className="pl-9"
-                />
-                {matches.length > 0 && query !== you && (
-                  <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
-                    {matches.map((p) => (
-                      <li key={p.id}>
-                        <button
-                          type="button"
-                          onClick={() => pickYou(p.id, p.address)}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
-                        >
-                          <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                          {p.address}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              {you && (
-                <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-gold/15 px-3 py-2 text-xs">
-                  <MapPin className="h-3.5 w-3.5 text-gold" />
-                  <span className="font-medium text-foreground">{query}</span>
-                  <span className="text-muted-foreground">is your property</span>
-                </div>
-              )}
-            </Section>
-
-            {/* Step 2 */}
-            <Section
-              step={2}
-              title="Select the neighborhood"
-              hint="Tap lots on the map to add them to the group"
-              done={selected.length > 0}
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setSelected(PARCELS.map((p) => p.id))}
-                >
-                  Select all
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setSelected(you ? [you] : [])}
-                >
-                  <X className="mr-1 h-3.5 w-3.5" /> Clear
-                </Button>
-                <span className="ml-auto rounded-full bg-selected/15 px-2.5 py-1 font-mono text-xs font-semibold text-foreground">
-                  {selected.length}/{PARCELS.length} lots
-                </span>
-              </div>
-            </Section>
-
-            {/* Step 3 */}
-            <Section
-              step={3}
-              title="Pin the entrances"
-              hint="Where the private road meets a public road"
-              done={entrances.length > 0}
-            >
-              <div className="flex flex-wrap gap-2">
-                {ENTRANCES.map((e) => (
-                  <button
-                    key={e.id}
-                    type="button"
-                    onClick={() => toggleEntrance(e.id)}
-                    className={cn(
-                      "flex flex-1 items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors",
-                      entrances.includes(e.id)
-                        ? "border-primary bg-primary/10"
-                        : "border-border hover:bg-accent",
-                    )}
-                  >
-                    <MapPin
-                      className={cn(
-                        "h-4 w-4 shrink-0",
-                        entrances.includes(e.id)
-                          ? "text-primary"
-                          : "text-muted-foreground",
-                      )}
-                    />
-                    <div className="min-w-0">
-                      <div className="font-medium">{e.label}</div>
-                      <div className="truncate text-xs text-muted-foreground">
-                        meets {e.meets}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </Section>
-
-            {/* Step 4 */}
-            <Section
-              step={4}
-              title="Road surface & cost"
-              hint="Set the surface mix, unit prices, width and horizon"
-              done={pctValid}
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Surface mix</span>
-                  <span
-                    className={cn(
-                      "font-mono font-semibold",
-                      Math.abs(pctTotal - 100) < 0.001
-                        ? "text-selected"
-                        : "text-destructive",
-                    )}
-                  >
-                    {pctTotal.toFixed(0)}%
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {SURFACE_TYPES.map((s, i) => (
-                    <div key={s.id} className="grid grid-cols-[1fr_72px_84px] items-center gap-2">
-                      <Label className="text-sm">{s.label}</Label>
-                      <div className="relative">
-                        <Input
-                          type="number"
-                          value={surfaces[i].pct}
-                          min={0}
-                          max={100}
-                          onChange={(e) =>
-                            setSurfaces((arr) =>
-                              arr.map((x, j) =>
-                                j === i ? { ...x, pct: Number(e.target.value) } : x,
-                              ),
-                            )
-                          }
-                          className="h-8 pr-5 font-mono text-sm"
-                        />
-                        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                          %
-                        </span>
-                      </div>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                          $
-                        </span>
-                        <Input
-                          type="number"
-                          step="0.25"
-                          value={surfaces[i].cost}
-                          onChange={(e) =>
-                            setSurfaces((arr) =>
-                              arr.map((x, j) =>
-                                j === i ? { ...x, cost: Number(e.target.value) } : x,
-                              ),
-                            )
-                          }
-                          className="h-8 pl-5 font-mono text-sm"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm">Road width</Label>
-                      <span className="font-mono text-sm">{roadWidth} ft</span>
-                    </div>
-                    <Slider
-                      value={[roadWidth]}
-                      min={8}
-                      max={40}
-                      step={1}
-                      onValueChange={(v) => setRoadWidth(v[0])}
-                      className="mt-2"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm">Funding period</Label>
-                      <span className="font-mono text-sm">{fundingPeriod} yr</span>
-                    </div>
-                    <Slider
-                      value={[fundingPeriod]}
-                      min={1}
-                      max={40}
-                      step={1}
-                      onValueChange={(v) => setFundingPeriod(v[0])}
-                      className="mt-2"
-                    />
-                  </div>
-                </div>
-              </div>
-            </Section>
-          </div>
-
-          {/* Results (sticky) */}
-          <aside className="lg:sticky lg:top-20 lg:h-fit">
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
-              <div className="mb-4">
-                <h2 className="font-display text-lg font-bold tracking-tight">
-                  Allocation
-                </h2>
-                <Label className="mt-3 block text-xs uppercase tracking-wide text-muted-foreground">
-                  Method
-                </Label>
-                <div className="mt-2 grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
-                  {METHODS.map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => setMethodology(m.id)}
-                      className={cn(
-                        "rounded-lg px-2 py-1.5 text-xs font-medium transition-colors",
-                        methodology === m.id
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <ResultsPanel result={result} methodology={methodology} />
-            </div>
-          </aside>
-        </div>
-
-        <footer className="mt-10 border-t border-border pt-4 text-xs text-muted-foreground">
-          Self-contained prototype. Map, parcels, addresses and unit costs are
-          fictional placeholders; the allocation engine is production logic. Total
-          project figures shown are demo estimates (e.g.{" "}
-          {formatUSD(result.totalCost)} over {fundingPeriod} years).
-        </footer>
-      </main>
     </div>
   );
 }

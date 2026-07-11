@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -77,19 +78,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "RoadShare — Private Road Cost Sharing" },
+      { title: "RoadShare — Community Governance Intelligence" },
       {
         name: "description",
         content:
-          "Interactive prototype for fairly allocating private road maintenance costs across a neighborhood using along-road distance responsibility.",
+          "RoadShare connects the map, the properties, the documents, the law, the numbers, and the people so community decisions are easier to understand and harder to dispute.",
       },
       { name: "author", content: "RoadShare" },
-      { property: "og:title", content: "RoadShare — Private Road Cost Sharing" },
-      {
-        property: "og:description",
-        content:
-          "Allocate private road maintenance costs fairly. A live, interactive plat-map demo on the Cedar Hollow neighborhood.",
-      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
