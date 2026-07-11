@@ -199,3 +199,35 @@
 @utility map-shadow {
   filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.12));
 }
+
+/* Layered surface + topographic motif for premium marketing pages. */
+@utility topo-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--color-border) 55%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--color-border) 55%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+@utility surface-glow {
+  background:
+    radial-gradient(60% 60% at 15% 0%, color-mix(in oklab, var(--color-primary) 14%, transparent), transparent 60%),
+    radial-gradient(50% 50% at 100% 10%, color-mix(in oklab, var(--color-selected) 14%, transparent), transparent 60%);
+}
+
+@keyframes rs-reveal {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes rs-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
