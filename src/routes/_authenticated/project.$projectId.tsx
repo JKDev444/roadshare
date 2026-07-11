@@ -103,6 +103,18 @@ function ProjectPlanner() {
     toast.success("Allocation CSV exported");
   }
 
+  function exportEvidence() {
+    if (!result) return;
+    const html = buildEvidenceHtml({
+      communityName: community.data?.name ?? "Community",
+      project: p!,
+      lineItems: items.data ?? [],
+      result,
+    });
+    downloadFile(`${p!.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-evidence.html`, html, "text/html");
+    toast.success("Evidence package exported");
+  }
+
   return (
     <AppShell>
       <div className="mx-auto max-w-6xl space-y-6">
