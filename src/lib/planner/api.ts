@@ -110,7 +110,7 @@ export type AllocationRow = {
 
 /** Pure allocation computation. Returns per-parcel dollar amounts for the project. */
 export function computeAllocations(
-  project: Pick<Project, "total_cost" | "contingency_pct" | "reserve_target" | "base_amount" | "allocation_method">,
+  project: Pick<Project, "total_cost" | "contingency_pct" | "reserve_target" | "base_amount" | "allocation_method" | "entrance_x" | "entrance_y">,
   parcels: Parcel[],
   allocations: Allocation[],
 ): { rows: AllocationRow[]; target: number; allocated: number; unallocated: number } {
@@ -148,6 +148,13 @@ export function computeAllocations(
         return Number(r.parcel.frontage_ft) || 0;
       case "area":
         return Number(r.parcel.area_sqft) || 0;
+      case "distance": {
+        const ex = project.entrance_x != null ? Number(project.entrance_x) : 50;
+        const ey = project.entrance_y != null ? Number(project.entrance_y) : 92;
+        const dx = (Number(r.parcel.pos_x) || 0) - ex;
+        const dy = (Number(r.parcel.pos_y) || 0) - ey;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
       case "segment_benefit":
       case "custom":
       case "base_plus_use":
