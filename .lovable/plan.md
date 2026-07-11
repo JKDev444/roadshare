@@ -50,9 +50,12 @@ First backend phase — Lovable Cloud enabled.
 - ✅ Shareable evidence package (§2.8): downloadable HTML report with method/assumptions, cost breakdown, and per-parcel allocation.
 - ✅ Authenticated E2E re-verified: distance method computes per-parcel amounts, two scenarios saved & compared, evidence package exported.
 
-## Phase 6 — Document Vault 🔵🟣
-- Upload + storage, OCR abstraction, classification, in-app viewer, metadata, permissions (§10).
-- Human review workflow states (§10.4), AI outputs stored separately from verified facts.
+## Phase 6 — Document Vault 🔵🟣 ✅ DONE (authed E2E passed)
+- ✅ Upload to private storage (owner-scoped storage RLS), in-app viewer (image/PDF/text + open-in-tab), metadata (source, effective date, notes), owner-scoped permissions.
+- ✅ AI classification via Lovable AI Gateway (suggested type + summary + confidence) stored in separate `ai_*` columns — kept distinct from human-verified facts.
+- ✅ Human review workflow (§10.4): processing → needs review → verified / rejected, with verify/reject/delete actions and provenance logging.
+- ✅ Authenticated E2E verified: upload deed → AI classified as "deed" (100% conf, accurate summary) → needs review → verify as fact → appears under Verified filter.
+- ⏳ Deferred: full OCR for scanned PDFs/images (currently extracts text from text files; hooks in place for an OCR provider in Phase 13 data-integration work).
 
 ## Phase 7 — Amendment & Clause Graph 🔵🟣
 - Clause extraction + taxonomy (§10.3), effective-date lineage, supersession, conflict + missing-document detection (§2.2, §10.5), human-readable document timeline.
