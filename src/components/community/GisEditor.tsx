@@ -142,7 +142,7 @@ export function GisEditor({
           </button>
         </div>
 
-        <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setShowGuide(true)}>
+        <Button size="sm" variant="ghost" onClick={() => setShowGuide(true)}>
           <HelpCircle className="h-4 w-4" /> How it works
         </Button>
 
