@@ -299,7 +299,47 @@ export function GisEditor({
           </span>
         )}
       </div>
+
+      <Dialog open={showGuide} onOpenChange={(o) => (o ? setShowGuide(true) : closeGuide())}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Getting around the map editor</DialogTitle>
+            <DialogDescription>Three quick things and you're mapping like a pro.</DialogDescription>
+          </DialogHeader>
+          <ol className="space-y-4">
+            <GuideStep icon={PencilRuler} title="Draw a road" step={1}>
+              Hit <span className="font-semibold text-foreground">Draw road</span>, then click the map to drop points along the
+              route. Press <span className="font-semibold text-foreground">Finish road</span> when you're done (or Undo point to
+              step back).
+            </GuideStep>
+            <GuideStep icon={Move} title="Drag vertices & parcels" step={2}>
+              In <span className="font-semibold text-foreground">Select &amp; move</span>, click a road to reveal its points, then
+              drag any point to reshape it. Drag a parcel box to reposition it — lengths update automatically.
+            </GuideStep>
+            <GuideStep icon={Pencil} title="Edit segment attributes" step={3}>
+              With a segment selected, use the side panel to set its name, surface, maintenance responsibility, source, and
+              data-quality — every change is saved to the provenance log.
+            </GuideStep>
+          </ol>
+          <Button className="w-full" onClick={closeGuide}>Got it</Button>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+function GuideStep({ icon: Icon, title, step, children }: { icon: typeof Move; title: string; step: number; children: React.ReactNode }) {
+  return (
+    <li className="flex gap-3">
+      <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+        <Icon className="h-4 w-4" />
+        <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">{step}</span>
+      </span>
+      <div className="space-y-0.5">
+        <p className="text-sm font-semibold">{title}</p>
+        <p className="text-sm text-muted-foreground">{children}</p>
+      </div>
+    </li>
   );
 }
 
