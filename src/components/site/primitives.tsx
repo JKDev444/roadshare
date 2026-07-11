@@ -136,3 +136,40 @@ export function CTASection() {
     </Section>
   );
 }
+
+export interface ContentBlock {
+  heading: string;
+  body: string[];
+  bullets?: string[];
+}
+
+export function ContentPage({ blocks }: { blocks: ContentBlock[] }) {
+  return (
+    <Section>
+      <div className="mx-auto max-w-3xl space-y-12">
+        {blocks.map((b, i) => (
+          <Reveal key={b.heading} delay={i * 0.03}>
+            <div>
+              <h2 className="font-display text-2xl font-bold tracking-tight">{b.heading}</h2>
+              {b.body.map((p, j) => (
+                <p key={j} className="mt-3 text-muted-foreground">
+                  {p}
+                </p>
+              ))}
+              {b.bullets && (
+                <ul className="mt-4 space-y-2">
+                  {b.bullets.map((li) => (
+                    <li key={li} className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                      {li}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Reveal>
+        ))}
+      </div>
+    </Section>
+  );
+}
