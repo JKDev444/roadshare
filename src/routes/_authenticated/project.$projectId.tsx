@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, Download, Plus, Trash2, Wallet } from "lucide-react";
+import { ArrowLeft, Download, FileText, GitCompare, Layers, Plus, Trash2, Wallet } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
@@ -23,9 +23,16 @@ import {
   STATUS_LABEL,
   updateProject,
   upsertAllocation,
+  listScenarios,
+  saveScenario,
+  deleteScenario,
+  scenarioSummary,
+  buildEvidenceHtml,
+  downloadFile,
   type AllocationMethod,
   type ProjectInput,
   type ProjectStatus,
+  type Scenario,
 } from "@/lib/planner/api";
 
 export const Route = createFileRoute("/_authenticated/project/$projectId")({
