@@ -95,8 +95,11 @@ First backend phase — Lovable Cloud enabled.
 - ✅ Authenticated E2E verified: signup → seed Cedar Hollow → generate dossier → renders parcels, road geometry, change history, and all sections with real data.
 - ⏳ Deferred (needs Stripe): subscription plans, credits, usage metering (§16), billing UI — skipped per request to finish the app first.
 
-## Phase 12 — Portfolio & Enterprise 🔵🟣
-- Multi-community dashboards, templates, SSO, audit exports, white-label reports, public API + embeddable widgets (§4.4).
+## Phase 12 — Portfolio & Enterprise 🔵🟣 ✅ CORE DONE
+- ✅ Multi-community Portfolio dashboard (`/portfolio`): portfolio-wide totals (communities, parcels, roads, documents, open decisions) + per-community metric cards (parcels, roads, documents, clauses, decisions, surveys) with verified-parcel percentage.
+- ✅ Auditable per-community archive export: complete owner-scoped JSON archive (`roadshare.audit.v1`) covering every record table incl. project children via project_id, preserving append-only history — for backup, migration, or professional review.
+- ✅ Nav entry added; owner-scoped via existing RLS (no new tables). Typecheck clean.
+- ⏳ Deferred (need paid/enterprise services): SSO, white-label report theming, public API + embeddable widgets (§4.4).
 
 ## Phase 13 — Live Data Integrations 🟣
 - Replace sample data: parcel/geocoding, road data, cost/bid normalization, OCR provider, legal-source maintenance (§13). Architecture from earlier phases swaps sources without rebuild.
