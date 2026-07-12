@@ -658,6 +658,95 @@ export type Database = {
           },
         ]
       }
+      survey_responses: {
+        Row: {
+          answers: Json
+          community_id: string
+          created_at: string
+          household_label: string
+          id: string
+          survey_id: string
+        }
+        Insert: {
+          answers?: Json
+          community_id: string
+          created_at?: string
+          household_label: string
+          id?: string
+          survey_id: string
+        }
+        Update: {
+          answers?: Json
+          community_id?: string
+          created_at?: string
+          household_label?: string
+          id?: string
+          survey_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_responses_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_responses_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      surveys: {
+        Row: {
+          community_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          min_report_threshold: number
+          questions: Json
+          status: Database["public"]["Enums"]["survey_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          community_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          min_report_threshold?: number
+          questions?: Json
+          status?: Database["public"]["Enums"]["survey_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          community_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          min_report_threshold?: number
+          questions?: Json
+          status?: Database["public"]["Enums"]["survey_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "surveys_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -727,6 +816,7 @@ export type Database = {
         | "correspondence"
         | "other"
       project_status: "planning" | "bidding" | "funded" | "complete"
+      survey_status: "draft" | "open" | "closed"
       verification_status: "verified" | "unverified" | "disputed"
     }
     CompositeTypes: {
@@ -892,6 +982,7 @@ export const Constants = {
         "other",
       ],
       project_status: ["planning", "bidding", "funded", "complete"],
+      survey_status: ["draft", "open", "closed"],
       verification_status: ["verified", "unverified", "disputed"],
     },
   },
