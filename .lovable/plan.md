@@ -89,9 +89,11 @@ First backend phase — Lovable Cloud enabled.
 - ✅ Versioned published explanation (§13.3) and full audit trail — every state change and publish logged to the community record.
 - ✅ Miro-style design; nav entry already present; authenticated E2E verified: signup → seed Cedar Hollow → create decision → advance to voting → two household Approve votes meet quorum 2 → record outcome "Approve" → publish explanation v1.
 
-## Phase 11 — Professional Reports & Commerce 🔵🟣
-- Report generator for the 8 report types (§4.3, §14), PDF generation + delivery.
-- Stripe: subscription plans, credits, usage metering (§16), billing UI.
+## Phase 11 — Professional Reports & Commerce 🔵🟣 ✅ REPORTS DONE (authed E2E passed)
+- ✅ Report generator (`/reports`) covering 7 report types: full community dossier, community record summary, governing provisions, document vault index, Community Pulse, decision record, and cost-share projects.
+- ✅ Each report assembles the community's live record into a polished, print-ready HTML document (browser Print → Save as PDF), with Download + Preview actions, community switcher, and privacy-preserving Pulse aggregation carried through.
+- ✅ Authenticated E2E verified: signup → seed Cedar Hollow → generate dossier → renders parcels, road geometry, change history, and all sections with real data.
+- ⏳ Deferred (needs Stripe): subscription plans, credits, usage metering (§16), billing UI — skipped per request to finish the app first.
 
 ## Phase 12 — Portfolio & Enterprise 🔵🟣
 - Multi-community dashboards, templates, SSO, audit exports, white-label reports, public API + embeddable widgets (§4.4).

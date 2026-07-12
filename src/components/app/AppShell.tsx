@@ -5,6 +5,7 @@ import {
   FileText,
   LayoutDashboard,
   LogOut,
+  FileBarChart,
   Map as MapIcon,
   Menu,
   MessageSquare,
@@ -37,6 +38,7 @@ const NAV: NavLink[] = [
   { to: "/ask", label: "Ask My Community", icon: MessageSquareQuote },
   { to: "/pulse", label: "Community Pulse", icon: PieChart },
   { to: "/decisions", label: "Decision Rooms", icon: MessageSquare },
+  { to: "/reports", label: "Reports", icon: FileBarChart },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
