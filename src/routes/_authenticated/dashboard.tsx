@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpRight,
   FileText,
@@ -12,18 +13,12 @@ import { displayName, useSession } from "@/lib/auth/useSession";
 import { Button } from "@/components/ui/button";
 import { WelcomeWizard } from "@/components/onboarding/WelcomeWizard";
 import { GettingStarted } from "@/components/onboarding/GettingStarted";
+import { getDashboardStats } from "@/lib/onboarding/api";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — RoadShare" }, { name: "robots", content: "noindex" }] }),
   component: Dashboard,
 });
-
-const STATS = [
-  { label: "Active scenarios", value: "1", hint: "Cedar Hollow Road" },
-  { label: "Community records", value: "14", hint: "parcels tracked" },
-  { label: "Documents", value: "0", hint: "awaiting upload" },
-  { label: "Open decisions", value: "0", hint: "no active rooms" },
-];
 
 const QUICK = [
   {
@@ -56,6 +51,34 @@ function Dashboard() {
   const { user } = useSession();
   const name = displayName(user).split(" ")[0];
 
+  const { data: stats } = useQuery({
+    queryKey: ["dashboard", "stats"],
+    queryFn: getDashboardStats,
+  });
+
+  const cards = [
+    {
+      label: "Active scenarios",
+      value: stats?.scenarios ?? 0,
+      hint: (stats?.scenarios ?? 0) > 0 ? "cost models built" : "none yet",
+    },
+    {
+      label: "Community records",
+      value: stats?.parcels ?? 0,
+      hint: "parcels tracked",
+    },
+    {
+      label: "Documents",
+      value: stats?.documents ?? 0,
+      hint: (stats?.documents ?? 0) > 0 ? "in the vault" : "awaiting upload",
+    },
+    {
+      label: "Open decisions",
+      value: stats?.openDecisions ?? 0,
+      hint: (stats?.openDecisions ?? 0) > 0 ? "active rooms" : "no active rooms",
+    },
+  ];
+
   return (
     <AppShell>
       <WelcomeWizard />
@@ -72,7 +95,7 @@ function Dashboard() {
         <GettingStarted />
 
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {STATS.map((s) => (
+          {cards.map((s) => (
             <div key={s.label} className="rounded-xl border border-border bg-card p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {s.label}
@@ -112,14 +135,16 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-dashed border-border bg-card/50 p-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            The Cedar Hollow flagship scenario is ready to explore.
-          </p>
-          <Button className="mt-3" asChild>
-            <Link to="/tools/cedar-hollow">Open Cedar Hollow</Link>
-          </Button>
-        </div>
+        {(stats?.scenarios ?? 0) === 0 && (
+          <div className="rounded-xl border border-dashed border-border bg-card/50 p-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              Want to see a finished example first? Explore the Cedar Hollow sample scenario.
+            </p>
+            <Button className="mt-3" variant="outline" asChild>
+              <Link to="/tools/cedar-hollow">Open Cedar Hollow sample</Link>
+            </Button>
+          </div>
+        )}
       </div>
     </AppShell>
   );

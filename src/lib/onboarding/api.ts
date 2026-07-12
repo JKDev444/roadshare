@@ -85,6 +85,55 @@ async function count(
   return n ?? 0;
 }
 
+/** Live, per-user counts for the dashboard stat cards. */
+export type DashboardStats = {
+  scenarios: number;
+  parcels: number;
+  documents: number;
+  openDecisions: number;
+  latestCommunity: string | null;
+};
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+  const [scenarios, parcels, docs, openDecisions, latest] = await Promise.all([
+    count("projects"),
+    count("parcels"),
+    (async () => {
+      const { count: n, error } = await supabase
+        .from("documents")
+        .select("id", { count: "exact", head: true });
+      if (error) throw new Error(error.message);
+      return n ?? 0;
+    })(),
+    (async () => {
+      const { count: n, error } = await supabase
+        .from("decisions")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["discussion", "voting"]);
+      if (error) throw new Error(error.message);
+      return n ?? 0;
+    })(),
+    (async () => {
+      const { data, error } = await supabase
+        .from("communities")
+        .select("name")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return data?.name ?? null;
+    })(),
+  ]);
+
+  return {
+    scenarios,
+    parcels,
+    documents: docs,
+    openDecisions,
+    latestCommunity: latest,
+  };
+}
+
 /**
  * Derive checklist completion live from the user's real data (RLS scopes each
  * count to rows the user can see) plus the persisted report flag.
