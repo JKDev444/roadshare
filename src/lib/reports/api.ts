@@ -5,7 +5,7 @@ import { listClauses, categoryLabel, CLAUSE_STATUS, type Clause } from "@/lib/cl
 import { listDocuments, docTypeLabel, DOC_STATUS, type Document } from "@/lib/documents/api";
 import { listSurveys, listResponses, parseQuestions, STATUS_LABEL as SURVEY_STATUS_LABEL, type Survey } from "@/lib/pulse/api";
 import { listDecisions, STATUS_LABEL as DECISION_STATUS_LABEL, type Decision } from "@/lib/decisions/api";
-import { listProjects, computeAllocations, listLineItems, listAllocations, ALLOCATION_METHODS, STATUS_LABEL as PROJECT_STATUS_LABEL, type Project } from "@/lib/planner/api";
+import { listProjects, computeAllocations, listAllocations, ALLOCATION_METHODS, STATUS_LABEL as PROJECT_STATUS_LABEL, type Project } from "@/lib/planner/api";
 
 export type ReportType =
   | "dossier"
