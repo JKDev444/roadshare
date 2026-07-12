@@ -3,6 +3,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   FileText,
+  Building2,
   LayoutDashboard,
   LogOut,
   FileBarChart,
