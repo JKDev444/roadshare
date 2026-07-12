@@ -322,6 +322,39 @@ export type Database = {
           },
         ]
       }
+      onboarding_state: {
+        Row: {
+          checklist_dismissed: boolean
+          created_at: string
+          dismissed_hints: string[]
+          report_generated: boolean
+          updated_at: string
+          user_id: string
+          wizard_completed: boolean
+          wizard_skipped: boolean
+        }
+        Insert: {
+          checklist_dismissed?: boolean
+          created_at?: string
+          dismissed_hints?: string[]
+          report_generated?: boolean
+          updated_at?: string
+          user_id: string
+          wizard_completed?: boolean
+          wizard_skipped?: boolean
+        }
+        Update: {
+          checklist_dismissed?: boolean
+          created_at?: string
+          dismissed_hints?: string[]
+          report_generated?: boolean
+          updated_at?: string
+          user_id?: string
+          wizard_completed?: boolean
+          wizard_skipped?: boolean
+        }
+        Relationships: []
+      }
       parcels: {
         Row: {
           address: string | null
