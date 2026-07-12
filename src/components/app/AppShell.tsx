@@ -32,6 +32,7 @@ interface NavLink {
 
 const NAV: NavLink[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/portfolio", label: "Portfolio", icon: Building2 },
   { to: "/community", label: "Community Record", icon: Users },
   { to: "/map", label: "GIS & Roads", icon: MapIcon },
   { to: "/documents", label: "Documents", icon: FileText },
