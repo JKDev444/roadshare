@@ -51,6 +51,34 @@ function Dashboard() {
   const { user } = useSession();
   const name = displayName(user).split(" ")[0];
 
+  const { data: stats } = useQuery({
+    queryKey: ["dashboard", "stats"],
+    queryFn: getDashboardStats,
+  });
+
+  const cards = [
+    {
+      label: "Active scenarios",
+      value: stats?.scenarios ?? 0,
+      hint: (stats?.scenarios ?? 0) > 0 ? "cost models built" : "none yet",
+    },
+    {
+      label: "Community records",
+      value: stats?.parcels ?? 0,
+      hint: "parcels tracked",
+    },
+    {
+      label: "Documents",
+      value: stats?.documents ?? 0,
+      hint: (stats?.documents ?? 0) > 0 ? "in the vault" : "awaiting upload",
+    },
+    {
+      label: "Open decisions",
+      value: stats?.openDecisions ?? 0,
+      hint: (stats?.openDecisions ?? 0) > 0 ? "active rooms" : "no active rooms",
+    },
+  ];
+
   return (
     <AppShell>
       <WelcomeWizard />
@@ -67,7 +95,7 @@ function Dashboard() {
         <GettingStarted />
 
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {STATS.map((s) => (
+          {cards.map((s) => (
             <div key={s.label} className="rounded-xl border border-border bg-card p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {s.label}
