@@ -109,7 +109,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       const { count: n, error } = await supabase
         .from("decisions")
         .select("id", { count: "exact", head: true })
-        .eq("status", "open");
+        .in("status", ["discussion", "voting"]);
       if (error) throw new Error(error.message);
       return n ?? 0;
     })(),
