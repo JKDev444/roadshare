@@ -81,8 +81,13 @@ First backend phase — Lovable Cloud enabled.
 - ✅ Miro-style design; nav entry added; authenticated E2E verified: signup → seed Cedar Hollow → create/open survey (threshold 3) → 1 response shows suppression notice → 3 responses reveal aggregate rating distribution (avg 4.00).
 - ⏳ Deferred: scenario-linked surveys tied to specific planner scenarios (ties into Phase 11 reporting).
 
-## Phase 10 — Decision Rooms 🔵
-- Decision workflow + states (§13.1–13.2), evidence assembly, vote/quorum/notice tracking, full audit trail (§13.3), versioned published explanations.
+## Phase 10 — Decision Rooms 🔵 ✅ DONE (authed E2E passed)
+- ✅ `decisions` + `decision_votes` tables (workflow status draft/discussion/voting/decided/withdrawn, ballot options, quorum, assembled evidence jsonb, notice date, recorded outcome, versioned published explanation). Owner-scoped RLS + GRANTs; updated-at trigger.
+- ✅ Decision workflow tracker (§13.1): draft → discussion → voting → decided, with withdraw/reopen; options + quorum lock once voting starts to keep the ballot fair.
+- ✅ Evidence assembly (§13.2): attach verified clauses/documents/scenarios/survey results/records as an auditable basis for the outcome.
+- ✅ Vote/quorum/notice tracking: one vote per verified household, live tally with quorum gate, auto-stamped notice date when voting opens; outcome only recordable once quorum is met.
+- ✅ Versioned published explanation (§13.3) and full audit trail — every state change and publish logged to the community record.
+- ✅ Miro-style design; nav entry already present; authenticated E2E verified: signup → seed Cedar Hollow → create decision → advance to voting → two household Approve votes meet quorum 2 → record outcome "Approve" → publish explanation v1.
 
 ## Phase 11 — Professional Reports & Commerce 🔵🟣
 - Report generator for the 8 report types (§4.3, §14), PDF generation + delivery.
