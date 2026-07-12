@@ -29,6 +29,7 @@ import { Route as SolutionsAudienceRouteImport } from './routes/solutions.$audie
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedPulseRouteImport } from './routes/_authenticated/pulse'
 import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
 import { Route as AuthenticatedDocumentsRouteImport } from './routes/_authenticated/documents'
 import { Route as AuthenticatedDecisionsRouteImport } from './routes/_authenticated/decisions'
@@ -138,6 +139,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPulseRoute = AuthenticatedPulseRouteImport.update({
+  id: '/pulse',
+  path: '/pulse',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedMapRoute = AuthenticatedMapRouteImport.update({
   id: '/map',
   path: '/map',
@@ -206,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/decisions': typeof AuthenticatedDecisionsRoute
   '/documents': typeof AuthenticatedDocumentsRoute
   '/map': typeof AuthenticatedMapRoute
+  '/pulse': typeof AuthenticatedPulseRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$slug': typeof ProductSlugRoute
@@ -234,6 +241,7 @@ export interface FileRoutesByTo {
   '/decisions': typeof AuthenticatedDecisionsRoute
   '/documents': typeof AuthenticatedDocumentsRoute
   '/map': typeof AuthenticatedMapRoute
+  '/pulse': typeof AuthenticatedPulseRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$slug': typeof ProductSlugRoute
@@ -266,6 +274,7 @@ export interface FileRoutesById {
   '/_authenticated/decisions': typeof AuthenticatedDecisionsRoute
   '/_authenticated/documents': typeof AuthenticatedDocumentsRoute
   '/_authenticated/map': typeof AuthenticatedMapRoute
+  '/_authenticated/pulse': typeof AuthenticatedPulseRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$slug': typeof ProductSlugRoute
@@ -298,6 +307,7 @@ export interface FileRouteTypes {
     | '/decisions'
     | '/documents'
     | '/map'
+    | '/pulse'
     | '/settings'
     | '/auth/callback'
     | '/product/$slug'
@@ -326,6 +336,7 @@ export interface FileRouteTypes {
     | '/decisions'
     | '/documents'
     | '/map'
+    | '/pulse'
     | '/settings'
     | '/auth/callback'
     | '/product/$slug'
@@ -357,6 +368,7 @@ export interface FileRouteTypes {
     | '/_authenticated/decisions'
     | '/_authenticated/documents'
     | '/_authenticated/map'
+    | '/_authenticated/pulse'
     | '/_authenticated/settings'
     | '/auth/callback'
     | '/product/$slug'
@@ -528,6 +540,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/pulse': {
+      id: '/_authenticated/pulse'
+      path: '/pulse'
+      fullPath: '/pulse'
+      preLoaderRoute: typeof AuthenticatedPulseRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/map': {
       id: '/_authenticated/map'
       path: '/map'
@@ -601,6 +620,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDecisionsRoute: typeof AuthenticatedDecisionsRoute
   AuthenticatedDocumentsRoute: typeof AuthenticatedDocumentsRoute
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
+  AuthenticatedPulseRoute: typeof AuthenticatedPulseRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedCommunityIdRoute: typeof AuthenticatedCommunityIdRoute
   AuthenticatedProjectProjectIdRoute: typeof AuthenticatedProjectProjectIdRoute
@@ -614,6 +634,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDecisionsRoute: AuthenticatedDecisionsRoute,
   AuthenticatedDocumentsRoute: AuthenticatedDocumentsRoute,
   AuthenticatedMapRoute: AuthenticatedMapRoute,
+  AuthenticatedPulseRoute: AuthenticatedPulseRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedCommunityIdRoute: AuthenticatedCommunityIdRoute,
   AuthenticatedProjectProjectIdRoute: AuthenticatedProjectProjectIdRoute,

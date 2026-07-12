@@ -73,9 +73,13 @@ First backend phase — Lovable Cloud enabled.
 - ✅ Authenticated E2E verified: signup → seed Cedar Hollow → ask "who maintains the main road?" → cited answer ("shared [9]") at 100% confidence with Citations section.
 - ⏳ Deferred: downloadable professional-escalation package export (hooks in place; ties into Phase 11 report generation).
 
-## Phase 9 — Community Pulse 🔵
-- Survey builder, household-verified participation, scenario-specific feedback (§12.1).
-- Analysis outputs (§12.2) with strict privacy prohibitions (§12.3): no individual scoring/profiling, no sub-threshold subgroup analysis.
+## Phase 9 — Community Pulse 🔵 ✅ DONE (authed E2E passed)
+- ✅ `surveys` + `survey_responses` tables (inline jsonb questions, status draft/open/closed, per-survey privacy threshold, one response per household). Owner-scoped RLS + GRANTs; updated-at trigger.
+- ✅ Survey builder (single/multi choice, 1–5 rating, open text), open/close lifecycle that locks questions once live to keep responses comparable.
+- ✅ Household-verified participation: responses tie to verified parcels, one per household, with a participation roster (§12.1).
+- ✅ Privacy-preserving analysis (§12.2, §12.3): aggregate-only results, NO individual scoring/profiling, open text never quoted, and full result suppression until the household threshold is met (prevents small-n re-identification).
+- ✅ Miro-style design; nav entry added; authenticated E2E verified: signup → seed Cedar Hollow → create/open survey (threshold 3) → 1 response shows suppression notice → 3 responses reveal aggregate rating distribution (avg 4.00).
+- ⏳ Deferred: scenario-linked surveys tied to specific planner scenarios (ties into Phase 11 reporting).
 
 ## Phase 10 — Decision Rooms 🔵
 - Decision workflow + states (§13.1–13.2), evidence assembly, vote/quorum/notice tracking, full audit trail (§13.3), versioned published explanations.
