@@ -508,6 +508,59 @@ export type Database = {
           },
         ]
       }
+      qa_answers: {
+        Row: {
+          abstained: boolean
+          answer: string
+          citations: Json
+          community_id: string
+          confidence: number
+          created_at: string
+          created_by: string | null
+          high_risk: boolean
+          id: string
+          question: string
+          risk_reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          abstained?: boolean
+          answer?: string
+          citations?: Json
+          community_id: string
+          confidence?: number
+          created_at?: string
+          created_by?: string | null
+          high_risk?: boolean
+          id?: string
+          question: string
+          risk_reason?: string | null
+          updated_at?: string
+        }
+        Update: {
+          abstained?: boolean
+          answer?: string
+          citations?: Json
+          community_id?: string
+          confidence?: number
+          created_at?: string
+          created_by?: string | null
+          high_risk?: boolean
+          id?: string
+          question?: string
+          risk_reason?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_answers_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       record_events: {
         Row: {
           action: string

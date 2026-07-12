@@ -65,8 +65,13 @@ First backend phase — Lovable Cloud enabled.
 - ✅ Miro-style design; nav entry added; authenticated render verified (auto-confirm signup → seed Cedar Hollow → Clause Graph shows missing-provisions insight + empty timeline).
 - ⏳ Deferred: cross-document conflict scoring beyond same-category heuristic.
 
-## Phase 8 — Ask My Community (Cited Q&A) 🔵🟣
-- Evidence-first answer engine (§2.3, §11): required answer structure with citations, confidence, abstention, high-risk routing (§11.3), professional-escalation packages, answer history. Uses Lovable AI Gateway.
+## Phase 8 — Ask My Community (Cited Q&A) 🔵🟣 ✅ DONE (authed E2E passed)
+- ✅ `qa_answers` table (question, answer, confidence, abstained, high_risk + reason, citations JSON) with owner-scoped RLS + GRANTs and updated-at trigger.
+- ✅ Evidence-first answer engine via Lovable AI Gateway: assembles ONLY the community's verified record (community, verified clauses/documents, verified parcels/roads) into numbered evidence; the model must cite every claim with [n] references.
+- ✅ Confidence scoring (0–100%), honest abstention when evidence is insufficient (citations required or it abstains), and high-risk routing (legal/financial questions flagged with a professional-review recommendation).
+- ✅ Saved answer history per community with citations, delete, suggested prompts, Cmd/Ctrl+Enter submit, and a "not legal advice" disclaimer. Nav entry added; Miro-style design.
+- ✅ Authenticated E2E verified: signup → seed Cedar Hollow → ask "who maintains the main road?" → cited answer ("shared [9]") at 100% confidence with Citations section.
+- ⏳ Deferred: downloadable professional-escalation package export (hooks in place; ties into Phase 11 report generation).
 
 ## Phase 9 — Community Pulse 🔵
 - Survey builder, household-verified participation, scenario-specific feedback (§12.1).

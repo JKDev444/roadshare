@@ -8,6 +8,7 @@ import {
   Map as MapIcon,
   Menu,
   MessageSquare,
+  MessageSquareQuote,
   Route as RouteIcon,
   Scale,
   Settings,
@@ -32,6 +33,7 @@ const NAV: NavLink[] = [
   { to: "/map", label: "GIS & Roads", icon: MapIcon },
   { to: "/documents", label: "Documents", icon: FileText },
   { to: "/clauses", label: "Clause Graph", icon: Scale },
+  { to: "/ask", label: "Ask My Community", icon: MessageSquareQuote },
   { to: "/decisions", label: "Decision Rooms", icon: MessageSquare },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
