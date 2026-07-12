@@ -10,6 +10,8 @@ import {
 import { AppShell } from "@/components/app/AppShell";
 import { displayName, useSession } from "@/lib/auth/useSession";
 import { Button } from "@/components/ui/button";
+import { WelcomeWizard } from "@/components/onboarding/WelcomeWizard";
+import { GettingStarted } from "@/components/onboarding/GettingStarted";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — RoadShare" }, { name: "robots", content: "noindex" }] }),
@@ -56,6 +58,7 @@ function Dashboard() {
 
   return (
     <AppShell>
+      <WelcomeWizard />
       <div className="mx-auto max-w-6xl space-y-8">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
@@ -65,6 +68,8 @@ function Dashboard() {
             Your community governance workspace. Here's where things stand.
           </p>
         </div>
+
+        <GettingStarted />
 
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {STATS.map((s) => (

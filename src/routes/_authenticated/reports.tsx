@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { listCommunities } from "@/lib/community/api";
+import { updateOnboardingState } from "@/lib/onboarding/api";
 import {
   REPORT_TYPES,
   assembleReportData,
@@ -42,6 +43,10 @@ function ReportsPage() {
       const html = buildReportHtml(type, data);
       if (action === "open") openReport(html);
       else downloadReport(`${slug(data.community.name)}-${type}.html`, html);
+    },
+    onSuccess: () => {
+      // Mark the final onboarding step complete once a report is produced.
+      updateOnboardingState({ report_generated: true }).catch(() => {});
     },
     onError: (e: Error) => toast.error(e.message),
   });

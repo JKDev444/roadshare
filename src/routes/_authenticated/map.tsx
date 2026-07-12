@@ -5,6 +5,7 @@ import { ArrowRight, Map as MapIcon, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
 import { listCommunities } from "@/lib/community/api";
+import { CoachMark } from "@/components/onboarding/CoachMark";
 
 export const Route = createFileRoute("/_authenticated/map")({
   head: () => ({ meta: [{ title: "GIS & Roads — RoadShare" }, { name: "robots", content: "noindex" }] }),
@@ -23,6 +24,10 @@ function MapPage() {
             Draw, split, and correct private-road centerlines, then assign maintenance responsibility. Pick a community to open its editor.
           </p>
         </div>
+        <CoachMark id="map-index" title="Road geometry powers fair splits">
+          Pick a community to open its road editor. The lengths and frontage you draw here feed
+          the distance- and frontage-based cost allocations.
+        </CoachMark>
         {isLoading ? (
           <div className="h-32 animate-pulse rounded-2xl border border-border bg-card" />
         ) : communities && communities.length > 0 ? (
