@@ -70,7 +70,7 @@ export async function assembleReportData(communityId: string, type: ReportType):
     surveys = await Promise.all(
       list.map(async (survey) => {
         const responses = await listResponses(survey.id);
-        const households = new Set(responses.map((r) => r.parcel_id ?? r.id)).size;
+        const households = new Set(responses.map((r) => r.household_label ?? r.id)).size;
         return { survey, responseCount: responses.length, households };
       }),
     );
@@ -83,8 +83,8 @@ export async function assembleReportData(communityId: string, type: ReportType):
     const list = await listProjects(communityId);
     projects = await Promise.all(
       list.map(async (project) => {
-        const [lineItems, allocations] = await Promise.all([listLineItems(project.id), listAllocations(project.id)]);
-        const result = computeAllocations(project, parcels, lineItems, allocations);
+        const allocations = await listAllocations(project.id);
+        const result = computeAllocations(project, parcels, allocations);
         return { project, result };
       }),
     );
@@ -159,7 +159,7 @@ function sectionDocuments(d: ReportData): string {
   const rows = d.documents
     .map((doc) => {
       const st = DOC_STATUS[doc.status];
-      return `<tr><td>${esc(doc.title ?? doc.file_name ?? "Document")}</td><td>${esc(docTypeLabel(doc.doc_type))}</td><td>${statusTag(st.label, st.tone)}</td><td>${fmtDate(doc.effective_date)}</td><td>${esc(doc.source ?? "—")}</td></tr>`;
+      return `<tr><td>${esc(doc.title ?? "Document")}</td><td>${esc(docTypeLabel(doc.doc_type))}</td><td>${statusTag(st.label, st.tone)}</td><td>${fmtDate(doc.effective_date)}</td><td>${esc(doc.source ?? "—")}</td></tr>`;
     })
     .join("");
   return `<h2>Document vault</h2>
