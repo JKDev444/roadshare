@@ -35,6 +35,7 @@ import {
   listCommunities,
   seedCedarHollow,
 } from "@/lib/community/api";
+import { CoachMark } from "@/components/onboarding/CoachMark";
 
 export const Route = createFileRoute("/_authenticated/community/")({
   head: () => ({ meta: [{ title: "Community Record — RoadShare" }, { name: "robots", content: "noindex" }] }),
@@ -83,6 +84,11 @@ function CommunityIndex() {
             <CreateCommunityDialog />
           </div>
         </header>
+
+        <CoachMark id="community-index" title="This is the heart of RoadShare">
+          Create a community, then open its record to add households (parcels) and map the
+          roads. Every cost calculation and report is built from what you record here.
+        </CoachMark>
 
         {isLoading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
