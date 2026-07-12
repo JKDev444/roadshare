@@ -72,8 +72,7 @@ export async function exportCommunityArchive(communityId: string): Promise<{ fil
   const tables = [
     "communities", "parcels", "road_segments", "clauses", "documents",
     "surveys", "survey_responses", "decisions", "decision_votes",
-    "projects", "project_line_items", "project_scenarios", "project_allocations",
-    "qa_answers", "record_events",
+    "projects", "qa_answers", "record_events",
   ] as const;
 
   const archive: Record<string, unknown> = {
@@ -89,6 +88,14 @@ export async function exportCommunityArchive(communityId: string): Promise<{ fil
     const col = table === "communities" ? "id" : "community_id";
     const { data, error } = await supabase.from(table as any).select("*").eq(col, communityId);
     archive[table] = error ? { error: error.message } : data ?? [];
+  }
+
+  // Project children link via project_id, not community_id.
+  const projectIds = ((archive.projects as any[]) ?? []).map((p) => p.id).filter(Boolean);
+  for (const child of ["project_line_items", "project_scenarios", "project_allocations"] as const) {
+    if (projectIds.length === 0) { archive[child] = []; continue; }
+    const { data, error } = await supabase.from(child as any).select("*").in("project_id", projectIds);
+    archive[child] = error ? { error: error.message } : data ?? [];
   }
 
   const name = (archive.communities as any)?.[0]?.name ?? "community";
