@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpRight,
   FileText,
@@ -12,18 +13,12 @@ import { displayName, useSession } from "@/lib/auth/useSession";
 import { Button } from "@/components/ui/button";
 import { WelcomeWizard } from "@/components/onboarding/WelcomeWizard";
 import { GettingStarted } from "@/components/onboarding/GettingStarted";
+import { getDashboardStats } from "@/lib/onboarding/api";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — RoadShare" }, { name: "robots", content: "noindex" }] }),
   component: Dashboard,
 });
-
-const STATS = [
-  { label: "Active scenarios", value: "1", hint: "Cedar Hollow Road" },
-  { label: "Community records", value: "14", hint: "parcels tracked" },
-  { label: "Documents", value: "0", hint: "awaiting upload" },
-  { label: "Open decisions", value: "0", hint: "no active rooms" },
-];
 
 const QUICK = [
   {
