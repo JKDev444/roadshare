@@ -135,6 +135,119 @@ export type Database = {
         }
         Relationships: []
       }
+      decision_votes: {
+        Row: {
+          choice: string
+          comment: string | null
+          community_id: string
+          created_at: string
+          decision_id: string
+          household_label: string
+          id: string
+        }
+        Insert: {
+          choice: string
+          comment?: string | null
+          community_id: string
+          created_at?: string
+          decision_id: string
+          household_label: string
+          id?: string
+        }
+        Update: {
+          choice?: string
+          comment?: string | null
+          community_id?: string
+          created_at?: string
+          decision_id?: string
+          household_label?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decision_votes_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "decision_votes_decision_id_fkey"
+            columns: ["decision_id"]
+            isOneToOne: false
+            referencedRelation: "decisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      decisions: {
+        Row: {
+          community_id: string
+          created_at: string
+          created_by: string | null
+          decided_at: string | null
+          description: string | null
+          evidence: Json
+          id: string
+          notice_date: string | null
+          options: Json
+          outcome: string | null
+          question: string | null
+          quorum: number
+          rationale: string | null
+          rationale_version: number
+          status: Database["public"]["Enums"]["decision_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          community_id: string
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          description?: string | null
+          evidence?: Json
+          id?: string
+          notice_date?: string | null
+          options?: Json
+          outcome?: string | null
+          question?: string | null
+          quorum?: number
+          rationale?: string | null
+          rationale_version?: number
+          status?: Database["public"]["Enums"]["decision_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          community_id?: string
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          description?: string | null
+          evidence?: Json
+          id?: string
+          notice_date?: string | null
+          options?: Json
+          outcome?: string | null
+          question?: string | null
+          quorum?: number
+          rationale?: string | null
+          rationale_version?: number
+          status?: Database["public"]["Enums"]["decision_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decisions_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           ai_confidence: number | null
@@ -804,6 +917,12 @@ export type Database = {
         | "other"
       clause_status: "proposed" | "active" | "superseded" | "void"
       confidence_level: "high" | "medium" | "low"
+      decision_status:
+        | "draft"
+        | "discussion"
+        | "voting"
+        | "decided"
+        | "withdrawn"
       doc_status: "processing" | "needs_review" | "verified" | "rejected"
       doc_type:
         | "deed"
@@ -969,6 +1088,13 @@ export const Constants = {
       ],
       clause_status: ["proposed", "active", "superseded", "void"],
       confidence_level: ["high", "medium", "low"],
+      decision_status: [
+        "draft",
+        "discussion",
+        "voting",
+        "decided",
+        "withdrawn",
+      ],
       doc_status: ["processing", "needs_review", "verified", "rejected"],
       doc_type: [
         "deed",
