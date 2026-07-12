@@ -135,14 +135,16 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-dashed border-border bg-card/50 p-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            The Cedar Hollow flagship scenario is ready to explore.
-          </p>
-          <Button className="mt-3" asChild>
-            <Link to="/tools/cedar-hollow">Open Cedar Hollow</Link>
-          </Button>
-        </div>
+        {(stats?.scenarios ?? 0) === 0 && (
+          <div className="rounded-xl border border-dashed border-border bg-card/50 p-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              Want to see a finished example first? Explore the Cedar Hollow sample scenario.
+            </p>
+            <Button className="mt-3" variant="outline" asChild>
+              <Link to="/tools/cedar-hollow">Open Cedar Hollow sample</Link>
+            </Button>
+          </div>
+        )}
       </div>
     </AppShell>
   );
