@@ -1,70 +1,77 @@
-# Guided Onboarding for RoadShare
+## What's happening today
 
-## The problem (workflow audit)
+The wizard "skips to done" because it only has three screens: welcome → create community → success. Creating the community flips `wizard_completed = true`, so the guided flow ends at step 1 of a 6-step journey. Parcels and roads are hand-drawn on a blank canvas — a dealbreaker for non-tech users.
 
-A brand-new user signs in and lands on `/dashboard` — a wall of empty stat cards ("0 documents", "0 decisions") and an 11-item sidebar (Dashboard, Portfolio, Community Record, GIS & Roads, Documents, Clause Graph, Ask My Community, Community Pulse, Decision Rooms, Reports, Settings). Nothing explains where to start, what these mean, or that almost every screen stays empty until a **community** exists with **parcels** and **roads**. The core loop — *create community → add parcels/roads → build a cost scenario → gather input → decide → report* — is invisible. There's no welcome, no first step, no sense of progress.
-
-We'll fix this with three coordinated layers, all driven by real per-user progress.
+Your CCR upload (Heron Woods PUD, Clark County WA — 47 lots, 19.37 acres, association-maintained common areas) is exactly the kind of document a real user shows up with. It has almost every field we need to seed a community, and its plat page has the lot layout. That's our automation lever.
 
 ## What we'll build
 
-### 1. First-run welcome wizard (modal, on first dashboard visit)
-A 3-step overlay that appears once for a new user:
-- **Step 1 — Welcome:** what RoadShare does, the 6-stage workflow in plain language.
-- **Step 2 — Create your first community:** inline name/region/description form (reuses existing `createCommunity`). This is the primary "get to value" action. A secondary "Load the Cedar Hollow sample instead" link stays available for people who'd rather explore.
-- **Step 3 — What's next:** short map of the sidebar grouped by stage, and a "Go to my community" button.
+### 1. Fix the wizard — walk all 6 steps, don't skip
 
-Dismissible/skippable at any point; skipping still leaves the checklist visible so users can return.
+Turn `WelcomeWizard` into a real 6-station guided tour that stays open until each stage is either done or explicitly skipped. Each station has a mini-action inside the wizard AND a "Do this on the real page" button that navigates and keeps a floating "next step" coach open.
 
-### 2. Persistent "Getting Started" checklist (dashboard)
-A progress card at the top of `/dashboard` showing a live checklist with a completion bar:
-1. Create a community record ✓ when they have ≥1 community
-2. Add parcels (households) ✓ when any community has parcels
-3. Map the roads ✓ when any community has road segments
-4. Build a cost scenario ✓ when a project/scenario exists
-5. Gather community input ✓ when a survey or decision exists
-6. Generate a report ✓ when a report/decision record exists
+```text
+1. Community      → create it (form, or import from CCR — see below)
+2. Parcels        → import from CCR / paste addresses / spreadsheet
+3. Roads          → auto-suggested from CCR or drawn on the map with guide
+4. Cost scenario  → one-click "starter scenario" using the parcels
+5. Gather input   → create a first survey OR decision room from a template
+6. Report         → generate the starter report
+```
 
-Each item links straight to the right screen and shows a one-line "why this matters". The card auto-collapses to a slim "Getting started (5/6)" bar once dismissed or fully complete, and can be reopened.
+The wizard only marks `wizard_completed` when all 6 are done OR the user hits an explicit "Finish onboarding" at the end. Each step's completion is derived from the same live counts the dashboard checklist already uses, so no drift.
 
-### 3. Coach-mark hints on key screens
-Lightweight, dismissible inline callouts (not blocking popovers) on the first visit to Community Record, GIS & Roads, and the Cedar Hollow planner — each explaining the one action to take on that screen. Dismissed state is remembered per user.
+### 2. The CCR / plat import — the "magic" step for non-tech users
 
-## Data model (per-user persistence)
+New wizard action: **"Upload your CCR or plat PDF"**. This is the star of the show and it directly answers "how do users get parcels/roads in without drawing".
 
-New table `public.onboarding_state`, one row per user:
-- `user_id` (PK, references auth.users)
-- `wizard_completed` boolean
-- `wizard_skipped` boolean
-- `checklist_dismissed` boolean
-- `dismissed_hints` text[] (which coach-marks were closed)
-- standard `created_at` / `updated_at`
+Server function (`extractCcr.functions.ts`) that:
+- Accepts the PDF (via storage `documents` bucket, already exists)
+- Sends it to Lovable AI Gateway (`google/gemini-2.5-pro`, PDF file block) with a structured-extraction prompt
+- Returns a JSON draft: `{ community: { name, region, description }, lots: [{ label, address?, owner_name?, area_sqft? }], roads: [{ name, responsibility, surface? }], maintenance_summary, assessment_formula }`
+- User sees an **"AI drafted this from your CCR — review and accept"** preview screen with everything editable inline. Nothing writes to the DB until they hit "Looks right, create everything".
 
-RLS: users read/write only their own row (`auth.uid() = user_id`). Grants to `authenticated` + `service_role`. An `updated_at` trigger. Checklist *completion* is derived live from existing tables (communities, parcels, road_segments, projects, decisions/surveys, reports) — we only persist wizard/dismissal flags, so progress can never drift out of sync with real data.
+For the plat map page (geometry), a follow-up call to the same model with `modalities: ["image"]` extracts approximate lot positions on a 0–100 canvas, matching the existing `pos_x/pos_y` schema. Confidence is stamped as `medium` and verification as `unverified` so the provenance trail is honest.
 
-## Implementation outline
+Additional low-friction on-ramps offered on the same screen (so users have a path even without a CCR):
+- **Paste a list of owner addresses** → geocode via a free provider (Nominatim, no key) and normalize onto the plat canvas
+- **Upload a CSV** (owner, address, frontage, area) → bulk-insert parcels
+- **Skip / draw by hand** (current path, still available)
 
-**Backend**
-- Migration: create `onboarding_state` with grants, RLS, trigger.
+GeoJSON/KML import is deferred — the CCR path covers 90% of real users and reads as far more magical.
 
-**Data layer**
-- `src/lib/onboarding/api.ts` — get/create the user's onboarding row, update flags; plus a `getChecklistProgress()` that counts existing communities/parcels/segments/projects/decisions/reports in a few lightweight queries.
-- `src/lib/onboarding/useOnboarding.ts` — React Query hook exposing state + progress + mutations.
+### 3. Make it fun
 
-**UI**
-- `src/components/onboarding/WelcomeWizard.tsx` — the 3-step modal.
-- `src/components/onboarding/GettingStarted.tsx` — the dashboard checklist card.
-- `src/components/onboarding/CoachMark.tsx` — reusable dismissible inline hint.
-- Wire `WelcomeWizard` + `GettingStarted` into `src/routes/_authenticated/dashboard.tsx`.
-- Add `CoachMark` to `community.index.tsx`, `map.tsx`, and `tools.cedar-hollow.tsx`.
-- Optional: a persistent "Getting started" entry at the top of the sidebar in `AppShell.tsx` that links back to the dashboard checklist.
+- **Progress ring + step celebrations**: as each of the 6 stations completes, a confetti burst (framer-motion, ~600ms) and a friendly one-liner ("Community on the map. 5 to go.")
+- **Named milestones**: "First parcel logged", "Roads on paper", "Fair share calculated", "Neighbors invited", "Report shipped" — shown as small badges on the dashboard
+- **Encouraging copy** everywhere non-tech-friendly: no jargon in the wizard, plain-English descriptions ("who pays for what" instead of "cost allocation methodology")
+- **"Cedar Hollow demo mode"** button at the top of the wizard: "Not ready? Take a 90-second tour of a finished community first" — loads the sample without polluting the user's own data
+- Playful microcopy on the AI extract screen: "I read your CCR so you don't have to. Here's what I found — fix anything wrong."
 
-**Reuse**
-- Community creation reuses existing `createCommunity` / seed logic.
-- Styling uses existing design tokens and shadcn Dialog/Card/Button/Progress components — no new visual language.
+### 4. Everything is user-scoped and safe
 
-## Verification
-Run an automated Playwright pass: sign up fresh → wizard appears → create a community in the wizard → land on dashboard with checklist showing item 1 complete → add a parcel and confirm item 2 checks off → dismiss a coach-mark and reload to confirm it stays dismissed (per-user persistence) → confirm wizard does not reappear on next login.
+- Uses existing `onboarding_state` table (no schema change needed for the wizard fix)
+- CCR uploads go to the existing private `documents` bucket, RLS already scoped to the owner
+- All AI extraction is behind `requireSupabaseAuth` server functions — no service role, no leaked data
+- Import writes go through the existing `createCommunity` / `createParcel` / `createSegment` APIs so provenance events still get logged
 
-## Out of scope
-No Stripe/payments (per your earlier note). No changes to the core allocation engine or existing feature behavior — this is purely additive guidance.
+## Technical outline
+
+- `src/components/onboarding/WelcomeWizard.tsx` — expand to 6 stations, remove premature completion, add per-station navigate-and-return hand-off
+- `src/components/onboarding/CcrImportStep.tsx` (new) — upload UI + AI-draft review + accept/apply
+- `src/lib/onboarding/extractCcr.functions.ts` (new) — server fn: PDF → structured community/lots/roads JSON via Lovable AI
+- `src/lib/onboarding/extractPlat.functions.ts` (new) — server fn: plat image → approximate lot positions
+- `src/lib/onboarding/geocode.functions.ts` (new) — server fn: address list → coarse plat coordinates (Nominatim)
+- `src/lib/onboarding/csvParcels.ts` (new) — client CSV parser + bulk insert
+- `src/components/onboarding/Confetti.tsx` (new) — reusable celebration (framer-motion, no new deps)
+- `src/components/onboarding/GettingStarted.tsx` — surface milestone badges + re-open-wizard button
+- `src/routes/auth.tsx` — update `OnboardingPreview` to reflect the new 6-station flow (preview only)
+
+No database migrations. No new secrets — Lovable AI Gateway is already wired.
+
+## Out of scope for this pass
+
+- Real geographic map tiles / Mapbox integration (assisted schematic canvas stays)
+- Shapefile / KML uploads
+- County parcel-viewer API integrations (jurisdiction-specific, huge scope)
+- Reworking the GIS editor itself — only its onboarding hand-off changes
