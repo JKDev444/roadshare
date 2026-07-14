@@ -1,5 +1,123 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  createCommunity,
+  createParcel,
+  createSegment,
+  logEvent,
+  type Community,
+  type ParcelInput,
+  type Point,
+} from "@/lib/community/api";
+import type { CcrDraft } from "./extractCcr.functions";
+
+/** Auto-arrange N parcels in a grid on the 0..100 plat canvas. */
+function gridPositions(count: number): Point[] {
+  const cols = Math.max(2, Math.min(8, Math.ceil(Math.sqrt(count))));
+  const rows = Math.ceil(count / cols);
+  const marginX = 12;
+  const marginY = 12;
+  const spanX = 100 - marginX * 2;
+  const spanY = 100 - marginY * 2;
+  const dx = cols > 1 ? spanX / (cols - 1) : 0;
+  const dy = rows > 1 ? spanY / (rows - 1) : 0;
+  const out: Point[] = [];
+  for (let i = 0; i < count; i++) {
+    const c = i % cols;
+    const r = Math.floor(i / cols);
+    out.push({ x: marginX + c * dx, y: marginY + r * dy });
+  }
+  return out;
+}
+
+/** Create a community + its parcels + its roads from a reviewed CCR draft. */
+export async function applyCcrDraft(draft: CcrDraft): Promise<Community> {
+  if (!draft.community.name.trim()) throw new Error("Community name is required");
+
+  const community = await createCommunity({
+    name: draft.community.name.trim(),
+    region: draft.community.region ?? undefined,
+    description: draft.community.description ?? undefined,
+  });
+
+  const positions = gridPositions(draft.lots.length);
+  for (let i = 0; i < draft.lots.length; i++) {
+    const lot = draft.lots[i];
+    const pos = positions[i];
+    const input: ParcelInput = {
+      label: lot.label,
+      owner_name: lot.owner_name ?? undefined,
+      address: lot.address ?? undefined,
+      area_sqft: lot.area_sqft ?? undefined,
+      frontage_ft: lot.frontage_ft ?? undefined,
+      pos_x: pos.x,
+      pos_y: pos.y,
+      confidence: "medium",
+      verification: "unverified",
+      source: "CCR import",
+    };
+    // Best-effort: continue on error rather than aborting.
+    try {
+      await createParcel(community.id, input);
+    } catch (err) {
+      console.error("applyCcrDraft parcel", input.label, err);
+    }
+  }
+
+  // Give each named road a placeholder centerline so it appears on the map.
+  // The user refines geometry in the map editor.
+  const roads = draft.roads.slice(0, 20);
+  for (let i = 0; i < roads.length; i++) {
+    const y = 20 + (i * 60) / Math.max(1, roads.length - 1);
+    try {
+      await createSegment(community.id, {
+        name: roads[i].name,
+        responsibility: roads[i].responsibility,
+        surface: roads[i].surface ?? undefined,
+        geometry: [
+          { x: 10, y },
+          { x: 90, y },
+        ],
+        confidence: "medium",
+        verification: "unverified",
+        source: "CCR import",
+      });
+    } catch (err) {
+      console.error("applyCcrDraft segment", roads[i].name, err);
+    }
+  }
+
+  await logEvent(community.id, {
+    entity_type: "community",
+    entity_label: community.name,
+    action: "imported",
+    note: `AI-imported from CCR: ${draft.lots.length} lots, ${roads.length} roads.`,
+  });
+
+  return community;
+}
+
+/** Bulk-create parcels for an existing community from a parsed list. */
+export async function bulkCreateParcels(
+  communityId: string,
+  parcels: ParcelInput[],
+): Promise<number> {
+  const positions = gridPositions(parcels.length);
+  let created = 0;
+  for (let i = 0; i < parcels.length; i++) {
+    try {
+      await createParcel(communityId, {
+        ...parcels[i],
+        pos_x: parcels[i].pos_x ?? positions[i].x,
+        pos_y: parcels[i].pos_y ?? positions[i].y,
+      });
+      created++;
+    } catch (err) {
+      console.error("bulkCreateParcels", err);
+    }
+  }
+  return created;
+}
 
 export type OnboardingState = Database["public"]["Tables"]["onboarding_state"]["Row"];
 
