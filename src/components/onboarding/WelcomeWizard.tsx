@@ -138,17 +138,17 @@ export function WelcomeWizard() {
               onCommunityCreated={(cid) => {
                 invalidate();
                 toast.success("Community on the map ✨");
-                navigate({ to: "/community/$id", params: { id: cid } });
+                navigate({ to: "/community/$id", params: { id: cid }, search: { tab: "overview" } });
                 minimize();
               }}
               onCcrApplied={(cid) => {
                 invalidate();
                 toast.success("CCR imported — check what we drafted!");
-                navigate({ to: "/community/$id", params: { id: cid } });
+                navigate({ to: "/community/$id", params: { id: cid }, search: { tab: "overview" } });
                 minimize();
               }}
               onParcelsAdded={() => { invalidate(); }}
-              onOpenPage={(to) => { minimize(); navigate({ to }); }}
+              onOpenPage={(to) => { minimize(); void navigate({ to } as never); }}
             />
           )}
         </DialogContent>
