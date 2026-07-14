@@ -302,7 +302,7 @@ function CommunityStation({ onCommunityCreated, onCcrApplied }: StationCommon) {
         hint="I'll read it and draft your community, lots, and roads — you review before anything's saved."
       >
         <CcrImportStep
-          onApply={(d) => apply.mutateAsync(d)}
+          onApply={async (d) => { await apply.mutateAsync(d); }}
           onCancel={() => setMode("choice")}
           applying={apply.isPending}
         />
