@@ -2,35 +2,81 @@ import { useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
-  Check,
+  CheckCircle2,
+  ClipboardPaste,
   FileBarChart,
   Map as MapIcon,
   MessageSquare,
+  PartyPopper,
   Route as RouteIcon,
   Scale,
+  Sparkles,
   Users,
+  Wand2,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-const WORKFLOW = [
-  { icon: Users, title: "Community & households", body: "Record the road group and every parcel that shares it." },
-  { icon: MapIcon, title: "Map the roads", body: "Draw centerlines and assign maintenance responsibility." },
-  { icon: Scale, title: "Allocate costs fairly", body: "Compare distance, frontage, and equal splits with live numbers." },
-  { icon: MessageSquare, title: "Gather input & decide", body: "Run surveys and evidence-backed decision rooms." },
-  { icon: FileBarChart, title: "Deliver a report", body: "Board-ready, cited reports for owners and lenders." },
+type Station = {
+  icon: LucideIcon;
+  title: string;
+  hint: string;
+  milestone: string;
+  demo: string;
+};
+
+const STATIONS: Station[] = [
+  {
+    icon: Users,
+    title: "Create your community",
+    hint: "Pick the fastest starting point. Upload a CCR and AI drafts everything, or type it in.",
+    milestone: "Community on the map",
+    demo: "Upload CCR / plat PDF · Type it in · Load a sample",
+  },
+  {
+    icon: Users,
+    title: "Add the households",
+    hint: "Who lives on this road? Parcels drive every fair-share calculation.",
+    milestone: "First parcels logged",
+    demo: "Paste a spreadsheet · Add one by one",
+  },
+  {
+    icon: MapIcon,
+    title: "Map the roads",
+    hint: "Click two points and you've got a road. Assign who maintains what.",
+    milestone: "Roads on paper",
+    demo: "Open the map editor",
+  },
+  {
+    icon: Scale,
+    title: "Build a cost scenario",
+    hint: "Compare distance, frontage, and equal splits — the numbers write themselves.",
+    milestone: "Fair share calculated",
+    demo: "Model a resurfacing, grading, or plow project",
+  },
+  {
+    icon: MessageSquare,
+    title: "Gather neighbor input",
+    hint: "Run a quick survey or open a decision room. Every response is stamped and cited.",
+    milestone: "Neighbors invited",
+    demo: "Send a survey · Open a decision room",
+  },
+  {
+    icon: FileBarChart,
+    title: "Ship your first report",
+    hint: "Board-ready. Cited. The kind lenders and county clerks quietly nod at.",
+    milestone: "Report shipped",
+    demo: "Generate a starter report",
+  },
 ];
 
 /**
@@ -44,17 +90,13 @@ export function OnboardingPreview({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [step, setStep] = useState(0);
-  const [name, setName] = useState("");
-  const [region, setRegion] = useState("");
-  const [description, setDescription] = useState("");
+  const [step, setStep] = useState(0); // 0..STATIONS.length (last = finish)
 
-  function reset() {
-    setStep(0);
-    setName("");
-    setRegion("");
-    setDescription("");
-  }
+  function reset() { setStep(0); }
+
+  const isFinish = step >= STATIONS.length;
+  const current = STATIONS[Math.min(step, STATIONS.length - 1)];
+  const Icon = current.icon;
 
   return (
     <Dialog
@@ -65,142 +107,124 @@ export function OnboardingPreview({
       }}
     >
       <DialogContent className="max-w-lg">
-        <div className="mb-1 flex items-center gap-2.5">
+        <div className="mb-3 flex items-center gap-2.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
             <RouteIcon className="h-4 w-4" />
           </span>
-          <span className="font-display text-base font-bold tracking-tight">RoadShare</span>
+          <div className="min-w-0">
+            <p className="font-display text-sm font-bold tracking-tight leading-none">RoadShare tour</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              {isFinish ? "All 6 stations complete" : `Step ${step + 1} of ${STATIONS.length}`}
+            </p>
+          </div>
           <span className="ml-auto rounded-md bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Preview
           </span>
-          <span className="flex gap-1.5">
-            {[0, 1, 2].map((i) => (
+          <span className="flex gap-1">
+            {STATIONS.map((_, i) => (
               <span
                 key={i}
                 className={cn(
-                  "h-1.5 w-6 rounded-full transition-colors",
-                  i <= step ? "bg-primary" : "bg-muted",
+                  "h-1.5 w-4 rounded-full transition-colors",
+                  i < step ? "bg-primary" : i === step && !isFinish ? "bg-primary/60" : "bg-muted",
                 )}
               />
             ))}
           </span>
         </div>
 
-        {step === 0 && (
+        {!isFinish ? (
           <>
             <DialogHeader>
-              <DialogTitle>Welcome to RoadShare</DialogTitle>
-              <DialogDescription>
-                RoadShare turns a messy shared-road problem into a fair, documented decision.
-                Here's the whole workflow, start to finish.
-              </DialogDescription>
+              <DialogTitle className="flex items-center gap-2 font-display text-xl">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Icon className="h-4 w-4" />
+                </span>
+                {current.title}
+              </DialogTitle>
+              <DialogDescription>{current.hint}</DialogDescription>
             </DialogHeader>
-            <ol className="mt-2 space-y-2.5">
-              {WORKFLOW.map((w) => (
-                <li key={w.title} className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <w.icon className="h-4 w-4" />
-                  </span>
-                  <div>
-                    <p className="text-sm font-medium">{w.title}</p>
-                    <p className="text-xs text-muted-foreground">{w.body}</p>
+
+            {step === 0 ? (
+              <div className="mt-2 space-y-2">
+                <div className="flex items-start gap-3 rounded-xl border-2 border-primary/40 bg-primary/5 p-3">
+                  <Wand2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <div className="text-xs">
+                    <p className="font-semibold">Upload my CCR or plat PDF <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-primary">Fastest</span></p>
+                    <p className="mt-0.5 text-muted-foreground">AI drafts your community, lots, and roads. You review before it saves.</p>
                   </div>
-                </li>
-              ))}
-            </ol>
-            <DialogFooter className="mt-4 flex-row justify-between sm:justify-between">
-              <Button variant="ghost" onClick={() => onOpenChange(false)}>
-                Close
-              </Button>
-              <Button onClick={() => setStep(1)}>
-                Get started <ArrowRight className="h-4 w-4" />
-              </Button>
-            </DialogFooter>
-          </>
-        )}
+                </div>
+                <div className="flex items-start gap-3 rounded-xl border border-border p-3">
+                  <Users className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div className="text-xs">
+                    <p className="font-semibold">Type it in myself</p>
+                    <p className="mt-0.5 text-muted-foreground">Name it, keep moving.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  Or take a 90-second tour of a finished sample community.
+                </div>
+              </div>
+            ) : step === 1 ? (
+              <div className="mt-2 space-y-2">
+                <div className="flex items-start gap-3 rounded-xl border-2 border-primary/40 bg-primary/5 p-3 text-xs">
+                  <ClipboardPaste className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <div>
+                    <p className="font-semibold">Paste a spreadsheet</p>
+                    <p className="mt-0.5 text-muted-foreground">Copy owners & addresses. Bulk-added.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 rounded-xl border border-border p-3 text-xs">
+                  <Users className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="font-semibold">Add them one by one</p>
+                    <p className="mt-0.5 text-muted-foreground">Open the community page. The tour waits for you.</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-2 rounded-xl border border-border bg-muted/30 p-4 text-xs text-muted-foreground">
+                {current.demo}
+              </div>
+            )}
 
-        {step === 1 && (
-          <>
-            <DialogHeader>
-              <DialogTitle>Create your first community</DialogTitle>
-              <DialogDescription>
-                Name the road group. You'll add parcels and map roads next.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="mt-1 space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="p-name">Community name</Label>
-                <Input
-                  id="p-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Cedar Hollow Road"
-                  autoFocus
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="p-region">Region (optional)</Label>
-                <Input
-                  id="p-region"
-                  value={region}
-                  onChange={(e) => setRegion(e.target.value)}
-                  placeholder="County, State"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="p-desc">Description (optional)</Label>
-                <Textarea
-                  id="p-desc"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={2}
-                  placeholder="A short note about this road group."
-                />
-              </div>
+            <div className="mt-4 flex items-center justify-between">
+              <Button variant="ghost" onClick={() => (step === 0 ? onOpenChange(false) : setStep((s) => s - 1))}>
+                {step === 0 ? "Close" : (<><ArrowLeft className="h-4 w-4" /> Back</>)}
+              </Button>
+              <Button onClick={() => setStep((s) => s + 1)}>
+                {step === STATIONS.length - 1 ? "See finish" : "Continue"} <ArrowRight className="h-4 w-4" />
+              </Button>
             </div>
-            <DialogFooter className="mt-4 flex-row justify-between sm:justify-between">
-              <Button variant="ghost" onClick={() => setStep(0)}>
-                <ArrowLeft className="h-4 w-4" /> Back
-              </Button>
-              <Button onClick={() => setStep(2)}>
-                Continue <ArrowRight className="h-4 w-4" />
-              </Button>
-            </DialogFooter>
           </>
-        )}
-
-        {step === 2 && (
+        ) : (
           <>
             <DialogHeader>
-              <DialogTitle>You're all set</DialogTitle>
+              <DialogTitle className="flex items-center gap-2 font-display text-xl">
+                <PartyPopper className="h-5 w-5 text-primary" />
+                You did the whole thing 🎉
+              </DialogTitle>
               <DialogDescription>
-                In the real flow we'd create "{name.trim() || "your community"}" and take you
-                straight to its record. A checklist on your dashboard tracks the rest.
+                In the real flow, each of these unlocks with a small confetti burst.
               </DialogDescription>
             </DialogHeader>
-            <ol className="mt-2 space-y-2.5">
-              {WORKFLOW.map((w, i) => (
-                <li key={w.title} className="flex items-center gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary">
-                    {i + 1}
-                  </span>
-                  <p className="text-sm">{w.title}</p>
+            <ol className="mt-2 space-y-2">
+              {STATIONS.map((s) => (
+                <li key={s.title} className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-3">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">{s.milestone}</span>
                 </li>
               ))}
             </ol>
-            <DialogFooter className="mt-4 flex-row justify-between sm:justify-between">
-              <Button variant="ghost" onClick={() => setStep(1)}>
+            <div className="mt-4 flex items-center justify-between">
+              <Button variant="ghost" onClick={() => setStep(STATIONS.length - 1)}>
                 <ArrowLeft className="h-4 w-4" /> Back
               </Button>
-              <Button
-                onClick={() => {
-                  reset();
-                  onOpenChange(false);
-                }}
-              >
-                <Check className="h-4 w-4" /> Finish preview
+              <Button onClick={() => { reset(); onOpenChange(false); }}>
+                <CheckCircle2 className="h-4 w-4" /> Finish preview
               </Button>
-            </DialogFooter>
+            </div>
           </>
         )}
       </DialogContent>
