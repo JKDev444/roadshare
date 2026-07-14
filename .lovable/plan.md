@@ -1,77 +1,91 @@
-## What's happening today
+I agree with your assessment: the current onboarding is too much like a tour. The onboarding should only do the minimum needed to get a new, non-technical client started: create their community record, get parcels/lots in, get roads/common-maintenance basics in, then land them in the app with clear next actions.
 
-The wizard "skips to done" because it only has three screens: welcome → create community → success. Creating the community flips `wizard_completed = true`, so the guided flow ends at step 1 of a 6-step journey. Parcels and roads are hand-drawn on a blank canvas — a dealbreaker for non-tech users.
-
-Your CCR upload (Heron Woods PUD, Clark County WA — 47 lots, 19.37 acres, association-maintained common areas) is exactly the kind of document a real user shows up with. It has almost every field we need to seed a community, and its plat page has the lot layout. That's our automation lever.
-
-## What we'll build
-
-### 1. Fix the wizard — walk all 6 steps, don't skip
-
-Turn `WelcomeWizard` into a real 6-station guided tour that stays open until each stage is either done or explicitly skipped. Each station has a mini-action inside the wizard AND a "Do this on the real page" button that navigates and keeps a floating "next step" coach open.
+## Proposed onboarding flow
 
 ```text
-1. Community      → create it (form, or import from CCR — see below)
-2. Parcels        → import from CCR / paste addresses / spreadsheet
-3. Roads          → auto-suggested from CCR or drawn on the map with guide
-4. Cost scenario  → one-click "starter scenario" using the parcels
-5. Gather input   → create a first survey OR decision room from a template
-6. Report         → generate the starter report
+1. Start setup
+   Choose one path:
+   - Upload CC&R / plat PDF (recommended)
+   - Enter manually
+   - Try sample community
+
+2. Review what we found
+   One friendly review screen:
+   - Community name / location
+   - Lots or parcels found
+   - Roads / common areas found
+   - Maintenance rules / assessment formula found
+   User can edit obvious mistakes before saving.
+
+3. Finish setup
+   Save community + parcels + roads.
+   Show a simple success screen:
+   - “Your community is ready”
+   - Primary button: “Open my community”
+   - Secondary next actions outside onboarding: build scenario, invite neighbors, create report
 ```
 
-The wizard only marks `wizard_completed` when all 6 are done OR the user hits an explicit "Finish onboarding" at the end. Each step's completion is derived from the same live counts the dashboard checklist already uses, so no drift.
+## What will be removed from onboarding
 
-### 2. The CCR / plat import — the "magic" step for non-tech users
+- Remove “Build a cost scenario” as a required onboarding step.
+- Remove “Gather neighbor input” as a required onboarding step.
+- Remove “Ship a report” as a required onboarding step.
+- Keep those as post-onboarding dashboard actions, because they are real workflows, not first-run setup.
 
-New wizard action: **"Upload your CCR or plat PDF"**. This is the star of the show and it directly answers "how do users get parcels/roads in without drawing".
+## CC&R upload fix
 
-Server function (`extractCcr.functions.ts`) that:
-- Accepts the PDF (via storage `documents` bucket, already exists)
-- Sends it to Lovable AI Gateway (`google/gemini-2.5-pro`, PDF file block) with a structured-extraction prompt
-- Returns a JSON draft: `{ community: { name, region, description }, lots: [{ label, address?, owner_name?, area_sqft? }], roads: [{ name, responsibility, surface? }], maintenance_summary, assessment_formula }`
-- User sees an **"AI drafted this from your CCR — review and accept"** preview screen with everything editable inline. Nothing writes to the DB until they hit "Looks right, create everything".
+I will fix the upload path so it works as a real setup action, not a preview idea:
 
-For the plat map page (geometry), a follow-up call to the same model with `modalities: ["image"]` extracts approximate lot positions on a 0–100 canvas, matching the existing `pos_x/pos_y` schema. Confidence is stamped as `medium` and verification as `unverified` so the provenance trail is honest.
+- Repair the server-side AI request to use the correct Lovable AI Gateway pattern and headers.
+- Add clear upload states: selected file, reading, extracting, review-ready, failed.
+- Surface specific errors instead of a vague “couldn’t read PDF.”
+- Keep the PDF extraction behind signed-in onboarding only.
+- Test with a real CC&R PDF path and verify it produces a review screen before saying it works.
 
-Additional low-friction on-ramps offered on the same screen (so users have a path even without a CCR):
-- **Paste a list of owner addresses** → geocode via a free provider (Nominatim, no key) and normalize onto the plat canvas
-- **Upload a CSV** (owner, address, frontage, area) → bulk-insert parcels
-- **Skip / draw by hand** (current path, still available)
+## Parcels and roads automation
 
-GeoJSON/KML import is deferred — the CCR path covers 90% of real users and reads as far more magical.
+For a non-technical client, the best practical version is:
 
-### 3. Make it fun
+- First automate from the CC&R / plat PDF when possible.
+  - Extract lot numbers, community name, roads, maintenance language, and cost-sharing language.
+  - Create starter parcels and road records automatically.
+  - Mark them as “Needs review” rather than pretending they are survey-grade GIS.
 
-- **Progress ring + step celebrations**: as each of the 6 stations completes, a confetti burst (framer-motion, ~600ms) and a friendly one-liner ("Community on the map. 5 to go.")
-- **Named milestones**: "First parcel logged", "Roads on paper", "Fair share calculated", "Neighbors invited", "Report shipped" — shown as small badges on the dashboard
-- **Encouraging copy** everywhere non-tech-friendly: no jargon in the wizard, plain-English descriptions ("who pays for what" instead of "cost allocation methodology")
-- **"Cedar Hollow demo mode"** button at the top of the wizard: "Not ready? Take a 90-second tour of a finished community first" — loads the sample without polluting the user's own data
-- Playful microcopy on the AI extract screen: "I read your CCR so you don't have to. Here's what I found — fix anything wrong."
+- Add a “County parcel data” helper after the initial save, not as a blocker.
+  - Real GIS parcel integrations vary by county, so onboarding should not depend on a county API working.
+  - The app can guide users to upload/export a parcel CSV or paste a parcel list.
+  - Later, we can add county-specific integrations where data is available.
 
-### 4. Everything is user-scoped and safe
+- Make the manual fallback painless.
+  - “Add lot numbers only” should be enough to start.
+  - Owners, addresses, frontage, and exact road geometry can be filled in later.
 
-- Uses existing `onboarding_state` table (no schema change needed for the wizard fix)
-- CCR uploads go to the existing private `documents` bucket, RLS already scoped to the owner
-- All AI extraction is behind `requireSupabaseAuth` server functions — no service role, no leaked data
-- Import writes go through the existing `createCommunity` / `createParcel` / `createSegment` APIs so provenance events still get logged
+## UI/UX changes
 
-## Technical outline
+- Rename the modal from “RoadShare tour” to “Set up your community.”
+- Use plain-client language, not feature language.
+- Add one fun progress moment after the setup is actually saved.
+- Keep celebration light and useful, not distracting.
+- Dashboard should show next recommended actions after onboarding:
+  - Create a cost scenario
+  - Invite neighbors / start a decision
+  - Generate a report
 
-- `src/components/onboarding/WelcomeWizard.tsx` — expand to 6 stations, remove premature completion, add per-station navigate-and-return hand-off
-- `src/components/onboarding/CcrImportStep.tsx` (new) — upload UI + AI-draft review + accept/apply
-- `src/lib/onboarding/extractCcr.functions.ts` (new) — server fn: PDF → structured community/lots/roads JSON via Lovable AI
-- `src/lib/onboarding/extractPlat.functions.ts` (new) — server fn: plat image → approximate lot positions
-- `src/lib/onboarding/geocode.functions.ts` (new) — server fn: address list → coarse plat coordinates (Nominatim)
-- `src/lib/onboarding/csvParcels.ts` (new) — client CSV parser + bulk insert
-- `src/components/onboarding/Confetti.tsx` (new) — reusable celebration (framer-motion, no new deps)
-- `src/components/onboarding/GettingStarted.tsx` — surface milestone badges + re-open-wizard button
-- `src/routes/auth.tsx` — update `OnboardingPreview` to reflect the new 6-station flow (preview only)
+## Technical implementation
 
-No database migrations. No new secrets — Lovable AI Gateway is already wired.
+- Refactor `WelcomeWizard` from 6 stations to a focused 3-step setup flow.
+- Keep/rework `CcrImportStep`, but make it robust and testable.
+- Fix `extractCcr.functions.ts` to call Lovable AI correctly and return useful failure messages.
+- Keep `applyCcrDraft`, but improve review/apply behavior and confidence labeling.
+- Update `/auth` ONBOARDING preview so it mirrors the real simplified setup instead of showing a tour.
+- Update dashboard checklist so advanced workflows are “Next steps,” not onboarding gates.
 
-## Out of scope for this pass
+## Verification before I call it done
 
-- Real geographic map tiles / Mapbox integration (assisted schematic canvas stays)
-- Shapefile / KML uploads
-- County parcel-viewer API integrations (jurisdiction-specific, huge scope)
-- Reworking the GIS editor itself — only its onboarding hand-off changes
+- Test signed-in onboarding end-to-end.
+- Test CC&R PDF upload through the real UI.
+- Verify extracted data reaches the review screen.
+- Verify “Create everything” creates a community, parcels, and roads.
+- Verify onboarding completes only after setup is saved.
+- Verify dashboard shows post-onboarding next actions.
+- Check browser console and network errors during the flow.
