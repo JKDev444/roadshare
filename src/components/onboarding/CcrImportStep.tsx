@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { extractCcr } from "@/lib/onboarding/extractCcr.functions";
-import type { CcrDraft } from "@/lib/onboarding/extractCcr.functions";
+import type { CcrDraft } from "@/lib/onboarding/ccrDraft";
 
 async function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -35,29 +35,41 @@ export function CcrImportStep({
   const extract = useServerFn(extractCcr);
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<CcrDraft | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(file: File) {
+    setError(null);
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("PDF is over 10MB. Try a smaller export.");
+      const message = "PDF is over 10MB. Try a smaller export.";
+      setError(message);
+      toast.error(message);
       return;
     }
     if (!file.type.includes("pdf") && !file.name.toLowerCase().endsWith(".pdf")) {
-      toast.error("Please upload a PDF.");
+      const message = "Please upload a PDF.";
+      setError(message);
+      toast.error(message);
       return;
     }
     setBusy(true);
+    setFileName(file.name);
     try {
       const dataUrl = await fileToDataUrl(file);
       const result = await extract({ data: { filename: file.name, dataUrl } });
       if (!result.community.name && result.lots.length === 0) {
-        toast.error("Couldn't read that PDF. Try another file or type it in manually.");
+        const message = "I couldn't find setup details in that PDF. Try another file or type it in manually.";
+        setError(message);
+        toast.error(message);
         return;
       }
       setDraft(result);
       toast.success("Draft ready — take a look below.");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Extraction failed");
+      const message = err instanceof Error ? err.message : "Extraction failed";
+      setError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }
@@ -69,14 +81,20 @@ export function CcrImportStep({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            const f = e.dataTransfer.files?.[0];
+            if (f) void handleFile(f);
+          }}
           disabled={busy}
           className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 px-4 py-8 text-center transition-colors hover:border-primary hover:bg-primary/10 disabled:opacity-60"
         >
           {busy ? (
             <>
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <p className="text-sm font-medium">Reading your PDF…</p>
-              <p className="text-xs text-muted-foreground">This takes ~20 seconds.</p>
+              <p className="text-sm font-medium">Reading {fileName ?? "your PDF"}…</p>
+              <p className="text-xs text-muted-foreground">Finding lots, roads, and maintenance rules.</p>
             </>
           ) : (
             <>
@@ -85,11 +103,16 @@ export function CcrImportStep({
               </span>
               <p className="text-sm font-semibold">Drop your CCR or plat PDF here</p>
               <p className="text-xs text-muted-foreground">
-                I'll read it and draft your community, lots, and roads for you.
+                Or click to choose a file. You'll review everything before it saves.
               </p>
             </>
           )}
         </button>
+        {error && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            {error}
+          </div>
+        )}
         <input
           ref={inputRef}
           type="file"
@@ -137,7 +160,7 @@ function DraftReview({
     <div className="space-y-3">
       <div className="flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-xs text-primary">
         <FileText className="h-3.5 w-3.5" />
-        <span>I read your CCR so you don't have to. Fix anything wrong, then apply.</span>
+        <span>I found a starter setup. Review it, then create your community.</span>
       </div>
 
       <div className="space-y-1.5">
@@ -229,7 +252,7 @@ function DraftReview({
         </Button>
         <Button size="sm" onClick={() => onApply(draft)} disabled={applying || !draft.community.name.trim()}>
           {applying && <Loader2 className="h-4 w-4 animate-spin" />}
-          Looks right, create everything <ArrowRight className="h-4 w-4" />
+          Looks right, finish setup <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
     </div>

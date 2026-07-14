@@ -9,7 +9,7 @@ import {
   type ParcelInput,
   type Point,
 } from "@/lib/community/api";
-import type { CcrDraft } from "./extractCcr.functions";
+import type { CcrDraft } from "./ccrDraft";
 
 /** Auto-arrange N parcels in a grid on the 0..100 plat canvas. */
 function gridPositions(count: number): Point[] {
@@ -121,7 +121,7 @@ export async function bulkCreateParcels(
 
 export type OnboardingState = Database["public"]["Tables"]["onboarding_state"]["Row"];
 
-/** The six stages of the RoadShare workflow, tracked on the dashboard checklist. */
+/** Minimum first-run setup, plus advanced workflow flags for dashboard prompts. */
 export type ChecklistProgress = {
   community: boolean;
   parcels: boolean;
@@ -253,8 +253,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 }
 
 /**
- * Derive checklist completion live from the user's real data (RLS scopes each
- * count to rows the user can see) plus the persisted report flag.
+  * Derive setup completion from the user's real data. Scenarios, decisions,
+  * and reports are advanced next actions, not onboarding gates.
  */
 export async function getChecklistProgress(reportGenerated: boolean): Promise<ChecklistProgress> {
   const [communities, parcels, roads, projects, surveys, decisions] = await Promise.all([
@@ -274,6 +274,6 @@ export async function getChecklistProgress(reportGenerated: boolean): Promise<Ch
     input: surveys > 0 || decisions > 0,
     report: reportGenerated,
   };
-  const completed = Object.values(flags).filter(Boolean).length;
-  return { ...flags, completed, total: 6 };
+  const completed = [flags.community, flags.parcels, flags.roads].filter(Boolean).length;
+  return { ...flags, completed, total: 3 };
 }
