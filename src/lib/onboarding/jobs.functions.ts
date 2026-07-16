@@ -81,16 +81,12 @@ async function setStage(
 }
 
 /** Fire-and-forget processing kicked off from createJob. Runs staged extraction
- *  and writes progress. Any thrown error is captured on the job row so the
- *  client sees a clean failure state. */
-async function runProcessing(jobId: string, userToken: string) {
-  const { createClient } = await import("@supabase/supabase-js");
-  const url = process.env.SUPABASE_URL!;
-  const key = process.env.SUPABASE_PUBLISHABLE_KEY!;
-  const supabase = createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: { headers: { Authorization: `Bearer ${userToken}` } },
-  });
+ *  and writes progress. Uses the admin client because it runs *after* the
+ *  authenticated response, when the caller's bearer token is no longer in
+ *  scope. Access is confined to the job row we created for `userId`. */
+async function runProcessing(jobId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const supabase = supabaseAdmin;
 
   try {
     const { data: job } = await supabase
@@ -334,12 +330,7 @@ export const createJob = createServerFn({ method: "POST" })
     // client can move to the processing screen. Cloudflare Workers may cut
     // background promises after the response, but the client polls status and
     // will call `resumeJob` if the job appears stalled.
-    const bearer = context.claims?.access_token as string | undefined;
-    // Access token comes from the auth middleware context.
-    const token = (context as unknown as { accessToken?: string }).accessToken ?? bearer ?? "";
-    if (token) {
-      void runProcessing(jobId, token);
-    }
+    void runProcessing(jobId);
 
     return { jobId };
   });
@@ -403,8 +394,7 @@ export const resumeJob = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!job) return { ok: false };
     if (job.status !== "processing" && job.status !== "uploading") return { ok: true };
-    const token = (context as unknown as { accessToken?: string }).accessToken ?? "";
-    if (token) void runProcessing(data.jobId, token);
+    void runProcessing(data.jobId);
     return { ok: true };
   });
 
