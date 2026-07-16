@@ -1,38 +1,38 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  ArrowRight,
-  CheckCircle2,
-  Loader2,
-  PartyPopper,
-  Pencil,
-  Route as RouteIcon,
-  Sparkles,
-  Wand2,
-} from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { Route as RouteIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { CcrImportStep } from "./CcrImportStep";
-import { Confetti } from "./Confetti";
 import { useOnboarding } from "@/lib/onboarding/useOnboarding";
 import { applyCcrDraft } from "@/lib/onboarding/api";
-import { buildManualCcrDraft, type CcrDraft } from "@/lib/onboarding/ccrDraft";
+import { coerceCcrDraft, type CcrDraft } from "@/lib/onboarding/ccrDraft";
+import { createJob, listActiveJob, dismissJob, type OnboardingJobRow } from "@/lib/onboarding/jobs.functions";
 
-type Path = "choose" | "upload" | "manual" | "sample";
+import { BasicInfoStep, type BasicInfo } from "./steps/BasicInfoStep";
+import { DocsQuestionStep } from "./steps/DocsQuestionStep";
+import { UploadStep } from "./steps/UploadStep";
+import { NoDocsStep, type NoDocsResult } from "./steps/NoDocsStep";
+import { ProcessingStep } from "./steps/ProcessingStep";
+import { SuccessSummaryStep } from "./steps/SuccessSummaryStep";
+import { FailureStep } from "./steps/FailureStep";
+import { ReviewWorkspace } from "./steps/ReviewWorkspace";
+
+type Step =
+  | "welcome"
+  | "basic"
+  | "docsQ"
+  | "upload"
+  | "nodocs"
+  | "processing"
+  | "success"
+  | "failure"
+  | "review"
+  | "sample";
 
 const SAMPLE_DRAFT: CcrDraft = {
   community: {
@@ -46,433 +46,372 @@ const SAMPLE_DRAFT: CcrDraft = {
     address: null,
     area_sqft: null,
     frontage_ft: null,
+    provenance: "sample" as const,
   })),
   roads: [
-    { name: "Cedar Hollow Lane", responsibility: "shared", surface: "gravel" },
-    { name: "Aspen Court", responsibility: "shared", surface: "gravel" },
+    { name: "Cedar Hollow Lane", responsibility: "shared", surface: "gravel", provenance: "sample" as const, has_geometry: true },
+    { name: "Aspen Court", responsibility: "shared", surface: "gravel", provenance: "sample" as const, has_geometry: true },
   ],
   maintenance_summary:
     "All 12 lot owners share the cost of grading and snow removal equally.",
   assessment_formula: "Equal 1/12 share per lot",
+  meta: {
+    community_found: true,
+    region_found: true,
+    addresses_found: 0,
+    lot_refs_found: 12,
+    roads_found: 2,
+    maintenance_found: true,
+    formula_found: true,
+    missing_exhibits: [],
+    documents_processed: 0,
+  },
 };
 
-/** New-user setup gate. Opens automatically until the user has a community,
- *  or until they explicitly skip. Three focused steps: pick path → review → done. */
-export function WelcomeWizard({ initialPath }: { initialPath?: Extract<Path, "upload"> }) {
-  const { state, progress, update, isUpdating } = useOnboarding();
+/** Main onboarding wizard. State-machine walk-through per RoadShare spec. */
+export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
+  const { state, progress, update } = useOnboarding();
   const navigate = useNavigate();
   const qc = useQueryClient();
+
+  const createJobFn = useServerFn(createJob);
+  const listActiveJobFn = useServerFn(listActiveJob);
+  const dismissJobFn = useServerFn(dismissJob);
 
   const hasCommunity = progress?.community ?? false;
   const skipped = state?.wizard_skipped ?? false;
   const completed = state?.wizard_completed ?? false;
 
-  const shouldOpen = !!state && !hasCommunity && !skipped && !completed;
+  const shouldOpen = forceOpen || (!!state && !hasCommunity && !skipped && !completed);
   const [openOverride, setOpenOverride] = useState<boolean | null>(null);
   const open = openOverride ?? shouldOpen;
 
-  const [path, setPath] = useState<Path>("choose");
+  const [step, setStep] = useState<Step>("welcome");
+  const [basicInfo, setBasicInfo] = useState<BasicInfo | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [jobFilenames, setJobFilenames] = useState<string[]>([]);
+  const [finishedJob, setFinishedJob] = useState<OnboardingJobRow | null>(null);
+  const [draft, setDraft] = useState<CcrDraft | null>(null);
   const [applying, setApplying] = useState(false);
-  const [celebrate, setCelebrate] = useState(false);
-  const [finished, setFinished] = useState<{ name: string; id: string } | null>(null);
+  const [creatingJob, setCreatingJob] = useState(false);
+  const [focusUnresolved, setFocusUnresolved] = useState(false);
 
+  // Resume any in-flight job when the wizard opens.
   useEffect(() => {
-    if (initialPath && open && path === "choose" && !finished) {
-      setPath(initialPath);
-    }
-  }, [finished, initialPath, open, path]);
+    if (!open || jobId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const job = await listActiveJobFn();
+        if (cancelled || !job) return;
+        setJobId(job.id);
+        setJobFilenames(job.filenames);
+        if (job.status === "succeeded" && job.result) {
+          setDraft(coerceCcrDraft(job.result));
+          setFinishedJob(job);
+          setStep("success");
+        } else if (job.status === "failed") {
+          setFinishedJob(job);
+          setStep("failure");
+        } else if (job.status === "cancelled") {
+          // ignore
+        } else {
+          setStep("processing");
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, jobId, listActiveJobFn]);
 
   function close(markSkip = false) {
     setOpenOverride(false);
     if (markSkip && !completed) update({ wizard_skipped: true });
     setTimeout(() => {
-      setPath("choose");
-      setFinished(null);
+      setStep("welcome");
+      setBasicInfo(null);
+      setJobId(null);
+      setJobFilenames([]);
+      setFinishedJob(null);
+      setDraft(null);
+      setFocusUnresolved(false);
     }, 200);
   }
 
-  async function handleApply(draft: CcrDraft) {
-    if (applying) return;
-    setApplying(true);
+  const applyDraft = useCallback(
+    async (d: CcrDraft) => {
+      if (applying) return;
+      setApplying(true);
+      try {
+        const community = await applyCcrDraft(d);
+        if (jobId) await dismissJobFn({ data: { jobId } });
+        await qc.invalidateQueries({ queryKey: ["onboarding", "progress"] });
+        await qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
+        update({ wizard_completed: true, wizard_skipped: false });
+        toast.success(`${community.name} is ready`);
+        setOpenOverride(false);
+        setTimeout(() => {
+          void navigate({
+            to: "/community/$id",
+            params: { id: community.id },
+            search: { tab: "roads" },
+          });
+        }, 100);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Something went wrong.");
+      } finally {
+        setApplying(false);
+      }
+    },
+    [applying, dismissJobFn, jobId, navigate, qc, update],
+  );
+
+  async function submitUpload(files: { file: File; dataUrl: string }[]) {
+    if (creatingJob) return;
+    setCreatingJob(true);
     try {
-      const community = await applyCcrDraft(draft);
-      await qc.invalidateQueries({ queryKey: ["onboarding", "progress"] });
-      await qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
-      update({ wizard_completed: true, wizard_skipped: false });
-      setCelebrate(true);
-      setFinished({ name: community.name, id: community.id });
-      toast.success(`${community.name} is ready 🎉`);
+      const res = await createJobFn({
+        data: {
+          files: files.map((f) => ({ filename: f.file.name, dataUrl: f.dataUrl })),
+        },
+      });
+      setJobId(res.jobId);
+      setJobFilenames(files.map((f) => f.file.name));
+      setStep("processing");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong.");
+      toast.error(err instanceof Error ? err.message : "Upload failed.");
     } finally {
-      setApplying(false);
+      setCreatingJob(false);
     }
   }
 
-  const step = finished ? 3 : path === "choose" ? 1 : 2;
+  function handleNoDocs(r: NoDocsResult) {
+    if (!basicInfo) return;
+    // Build a draft directly from the collected info + user-entered addresses.
+    const communityName =
+      basicInfo.communityName ||
+      (basicInfo.city ? `${basicInfo.city} Road Group` : "My Road Group");
+    const region =
+      [basicInfo.city, basicInfo.state].filter(Boolean).join(", ") || null;
+    let lots: CcrDraft["lots"] = [];
+    if (r.kind === "addresses") {
+      lots = r.items.map((it) => ({
+        label: it.label,
+        address: it.address ?? null,
+        provenance: "entered" as const,
+      }));
+    } else if (r.kind === "manual") {
+      lots = r.items.map((it, i) => ({
+        label: it.label || (it.lot ? `Lot ${it.lot}` : `Lot ${i + 1}`),
+        address: it.address || null,
+        provenance: "entered" as const,
+      }));
+    }
+    // Include the starting address as first lot when going the "no docs" path.
+    if (basicInfo.startingAddress) {
+      lots = [
+        { label: "Lot 1", address: basicInfo.startingAddress, provenance: "entered" as const },
+        ...lots.map((l, i) => ({ ...l, label: `Lot ${i + 2}` })),
+      ];
+    }
+    const d: CcrDraft = {
+      community: {
+        name: communityName,
+        region,
+        description: null,
+      },
+      lots,
+      roads: [],
+      maintenance_summary: null,
+      assessment_formula: null,
+      meta: {
+        community_found: !!basicInfo.communityName,
+        region_found: !!region,
+        addresses_found: lots.filter((l) => l.address).length,
+        lot_refs_found: lots.length,
+        roads_found: 0,
+        maintenance_found: false,
+        formula_found: false,
+        missing_exhibits: [],
+        documents_processed: 0,
+      },
+    };
+    setDraft(d);
+    setStep("review");
+  }
 
   return (
     <Dialog open={open} onOpenChange={(v) => (v ? setOpenOverride(true) : close(false))}>
-      <DialogContent className="max-w-lg overflow-hidden">
-        <Confetti show={celebrate} />
+      <DialogContent className={cn("max-w-2xl overflow-hidden", step === "review" && "max-w-4xl")}>
         <div className="mb-3 flex items-center gap-2.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
             <RouteIcon className="h-4 w-4" />
           </span>
           <div className="min-w-0">
             <p className="font-display text-sm font-bold leading-none tracking-tight">
-              Set up your community
+              Set up your road group
             </p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              {finished ? "You're all set" : `Step ${step} of 3`}
+              {step === "welcome" ? "Welcome" : step === "review" ? "Review your workspace" : "Setup"}
             </p>
           </div>
-          <span className="ml-auto flex gap-1">
-            {[1, 2, 3].map((i) => (
-              <span
-                key={i}
-                className={cn(
-                  "h-1.5 w-6 rounded-full transition-colors",
-                  i < step ? "bg-primary" : i === step ? "bg-primary/60" : "bg-muted",
-                )}
-              />
-            ))}
-          </span>
         </div>
 
-        {finished ? (
-          <FinishedView
-            name={finished.name}
-            onOpen={() => {
-              close(false);
-              void navigate({ to: "/community/$id", params: { id: finished.id }, search: { tab: "roads" } });
-            }}
-            onDashboard={() => close(false)}
-          />
-        ) : path === "choose" ? (
-          <ChoosePath
-            onPick={setPath}
-            onSkip={() => close(true)}
-          />
-        ) : path === "upload" ? (
-          <Section
-            title="Upload your CCR or plat"
-            hint="AI drafts your community, lots, and roads. You review everything before it saves."
-            onBack={() => setPath("choose")}
-          >
-            <CcrImportStep
-              onApply={handleApply}
-              onCancel={() => setPath("choose")}
+        <div className="max-h-[80vh] overflow-y-auto pr-1">
+          {step === "welcome" && (
+            <WelcomeScreen
+              onStart={() => setStep("basic")}
+              onSample={() => {
+                setDraft(SAMPLE_DRAFT);
+                setJobFilenames([]);
+                setStep("review");
+              }}
+              onLater={() => close(true)}
+            />
+          )}
+
+          {step === "basic" && (
+            <BasicInfoStep
+              initial={basicInfo ?? undefined}
+              onContinue={(info) => {
+                setBasicInfo(info);
+                setStep("docsQ");
+              }}
+              onNoAddress={(info) => {
+                setBasicInfo(info);
+                setStep("docsQ");
+              }}
+              onBack={() => setStep("welcome")}
+            />
+          )}
+
+          {step === "docsQ" && (
+            <DocsQuestionStep
+              onAnswer={(a) => setStep(a === "yes" ? "upload" : "nodocs")}
+              onBack={() => setStep("basic")}
+            />
+          )}
+
+          {step === "upload" && (
+            <UploadStep
+              onSubmit={submitUpload}
+              onSkip={() => setStep("nodocs")}
+              submitting={creatingJob}
+            />
+          )}
+
+          {step === "nodocs" && (
+            <NoDocsStep
+              state={basicInfo?.state}
+              onSubmit={handleNoDocs}
+              onUploadInstead={() => setStep("upload")}
+              onBack={() => setStep("docsQ")}
+              submitting={applying}
+            />
+          )}
+
+          {step === "processing" && jobId && (
+            <ProcessingStep
+              jobId={jobId}
+              filenames={jobFilenames}
+              onSucceeded={(job) => {
+                setFinishedJob(job);
+                if (job.result) setDraft(coerceCcrDraft(job.result));
+                setStep("success");
+              }}
+              onFailed={(job) => {
+                setFinishedJob(job);
+                setStep("failure");
+              }}
+              onLeave={() => close(false)}
+            />
+          )}
+
+          {step === "success" && draft && (
+            <SuccessSummaryStep
+              draft={draft}
+              filenames={finishedJob?.filenames ?? jobFilenames}
+              onReviewImportant={() => {
+                setFocusUnresolved(true);
+                setStep("review");
+              }}
+              onReviewAll={() => {
+                setFocusUnresolved(false);
+                setStep("review");
+              }}
+              onUploadAnother={() => setStep("upload")}
+              onSaveForLater={() => close(false)}
+            />
+          )}
+
+          {step === "failure" && finishedJob && (
+            <FailureStep
+              job={finishedJob}
+              onRetry={() => setStep("upload")}
+              onReplace={() => setStep("upload")}
+              onContinueWithout={() => setStep("nodocs")}
+              onSaveForLater={() => close(false)}
+            />
+          )}
+
+          {step === "review" && draft && (
+            <ReviewWorkspace
+              draft={draft}
+              filenames={finishedJob?.filenames ?? jobFilenames}
+              onChange={setDraft}
+              onFinish={applyDraft}
+              onSaveForLater={() => close(false)}
               applying={applying}
-              autoOpen
+              focusUnresolved={focusUnresolved}
             />
-          </Section>
-        ) : path === "sample" ? (
-          <Section
-            title="Use the Cedar Hollow sample"
-            hint="A 12-lot private-road community with placeholder roads. Great for a quick spin — you can delete it later."
-            onBack={() => setPath("choose")}
-          >
-            <SamplePreview />
-            <div className="mt-4 flex items-center justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setPath("choose")} disabled={applying}>
-                Back
-              </Button>
-              <Button size="sm" onClick={() => handleApply(SAMPLE_DRAFT)} disabled={applying}>
-                {applying && <Loader2 className="h-4 w-4 animate-spin" />}
-                Create sample community <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </Section>
-        ) : (
-          <Section
-            title="Type it in yourself"
-            hint="Name your road group and (optionally) list your lots and roads. You can flesh things out later."
-            onBack={() => setPath("choose")}
-          >
-            <ManualForm
-              onSubmit={handleApply}
-              onCancel={() => setPath("choose")}
-              applying={applying || isUpdating}
-            />
-          </Section>
-        )}
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-function ChoosePath({ onPick, onSkip }: { onPick: (p: Path) => void; onSkip: () => void }) {
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle className="font-display text-xl">Let's build your starter workspace</DialogTitle>
-        <DialogDescription>
-          Upload your CCR/plat if you have it. I’ll draft the lots and roads, then you approve before anything saves.
-        </DialogDescription>
-      </DialogHeader>
-
-      <div className="mt-3 space-y-2">
-        <button
-          type="button"
-          onClick={() => onPick("upload")}
-          className="flex w-full items-start gap-3 rounded-xl border-2 border-primary/40 bg-primary/5 p-3 text-left transition-colors hover:border-primary hover:bg-primary/10"
-        >
-          <Wand2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-          <div className="min-w-0">
-            <p className="flex items-center gap-2 text-sm font-semibold">
-              Upload my CCR or plat PDF
-              <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-primary">
-                Fastest
-              </span>
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Best path: AI reads the document and builds a reviewable starter map and lot list.
-            </p>
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onPick("manual")}
-          className="flex w-full items-start gap-3 rounded-xl border border-border bg-background p-3 text-left transition-colors hover:border-primary/40"
-        >
-          <Pencil className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold">Type it in myself</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Use this if you do not have a CCR handy. Lots and roads can be added now or later.
-            </p>
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onPick("sample")}
-          className="flex w-full items-start gap-3 rounded-xl border border-dashed border-border p-3 text-left transition-colors hover:border-primary/40"
-        >
-          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold">Try the Cedar Hollow sample</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              A finished 12-lot workspace for exploring the app without entering your own data.
-            </p>
-          </div>
-        </button>
-      </div>
-
-      <div className="mt-4 flex items-center justify-end">
-        <Button variant="ghost" size="sm" onClick={onSkip}>
-          I'll do this later
-        </Button>
-      </div>
-    </>
-  );
-}
-
-function Section({
-  title,
-  hint,
-  onBack,
-  children,
+function WelcomeScreen({
+  onStart,
+  onSample,
+  onLater,
 }: {
-  title: string;
-  hint: string;
-  onBack: () => void;
-  children: React.ReactNode;
+  onStart: () => void;
+  onSample: () => void;
+  onLater: () => void;
 }) {
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle className="font-display text-xl">{title}</DialogTitle>
-        <DialogDescription>{hint}</DialogDescription>
-      </DialogHeader>
-      <div className="mt-3">{children}</div>
-      <div className="mt-2">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4" /> Choose a different way
-        </Button>
-      </div>
-    </>
-  );
-}
-
-function ManualForm({
-  onSubmit,
-  onCancel,
-  applying,
-}: {
-  onSubmit: (draft: CcrDraft) => void | Promise<void>;
-  onCancel: () => void;
-  applying?: boolean;
-}) {
-  const [name, setName] = useState("");
-  const [region, setRegion] = useState("");
-  const [description, setDescription] = useState("");
-  const [lotText, setLotText] = useState("");
-  const [roadText, setRoadText] = useState("");
-
-  const canSubmit = name.trim().length > 1;
-
-  return (
-    <div className="space-y-3">
-      <div className="space-y-1.5">
-        <Label htmlFor="m-name" className="text-xs">
-          Community name <span className="text-destructive">*</span>
-        </Label>
-        <Input
-          id="m-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Cedar Hollow Road Group"
-          autoFocus
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="m-region" className="text-xs">Region (optional)</Label>
-        <Input
-          id="m-region"
-          value={region}
-          onChange={(e) => setRegion(e.target.value)}
-          placeholder="e.g. Larimer County, CO"
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="m-desc" className="text-xs">One-line description (optional)</Label>
-        <Textarea
-          id="m-desc"
-          rows={2}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="A quick sentence about your road group"
-        />
-      </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="m-lots" className="text-xs">Lots (optional)</Label>
-          <Textarea
-            id="m-lots"
-            rows={3}
-            value={lotText}
-            onChange={(e) => setLotText(e.target.value)}
-            placeholder={"One per line\nLot 1\nLot 2\nLot 3"}
-          />
-          <p className="text-[11px] text-muted-foreground">One label per line or comma-separated.</p>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="m-roads" className="text-xs">Roads (optional)</Label>
-          <Textarea
-            id="m-roads"
-            rows={3}
-            value={roadText}
-            onChange={(e) => setRoadText(e.target.value)}
-            placeholder={"One per line\nCedar Hollow Ln\nAspen Ct"}
-          />
-          <p className="text-[11px] text-muted-foreground">You'll draw the actual paths in the map editor.</p>
-        </div>
-      </div>
-      <div className="flex items-center justify-end gap-2 pt-1">
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={applying}>
-          Cancel
-        </Button>
-        <Button
-          size="sm"
-          disabled={!canSubmit || applying}
-          onClick={() =>
-            onSubmit(
-              buildManualCcrDraft({ name, region, description, lotText, roadText }),
-            )
-          }
-        >
-          {applying && <Loader2 className="h-4 w-4 animate-spin" />}
-          Create my community <ArrowRight className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function SamplePreview() {
-  const summary = useMemo(
-    () => ({
-      lots: SAMPLE_DRAFT.lots.length,
-      roads: SAMPLE_DRAFT.roads.length,
-    }),
-    [],
-  );
-  return (
-    <div className="space-y-2 text-xs">
-      <div className="rounded-lg border border-border bg-muted/30 p-3">
-        <p className="font-semibold text-foreground">{SAMPLE_DRAFT.community.name}</p>
-        <p className="mt-0.5 text-muted-foreground">{SAMPLE_DRAFT.community.region}</p>
-        <p className="mt-1 text-muted-foreground">{SAMPLE_DRAFT.community.description}</p>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <SampleStat label="Lots" value={summary.lots} />
-        <SampleStat label="Roads" value={summary.roads} />
-      </div>
-      <p className="rounded-lg bg-muted/50 p-2 text-muted-foreground">
-        <strong className="text-foreground">Who maintains what: </strong>
-        {SAMPLE_DRAFT.maintenance_summary}
-      </p>
-    </div>
-  );
-}
-
-function SampleStat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-lg border border-border bg-background px-3 py-2">
-      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-0.5 font-display text-xl font-semibold">{value}</p>
-    </div>
-  );
-}
-
-function FinishedView({
-  name,
-  onOpen,
-  onDashboard,
-}: {
-  name: string;
-  onOpen: () => void;
-  onDashboard: () => void;
-}) {
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2 font-display text-xl">
-          <PartyPopper className="h-5 w-5 text-primary" />
-          {name} is on the map 🎉
-        </DialogTitle>
-        <DialogDescription>
-          Your starter workspace is ready. Next, review the imported roads and lots before building scenarios.
-        </DialogDescription>
-      </DialogHeader>
-      <ul className="mt-3 space-y-2 text-sm">
-        <NextItem title="Review the road map" note="Imported roads start as editable lines marked Needs review." />
-        <NextItem title="Confirm the lot list" note="Check labels, addresses, and owners before cost calculations." />
-        <NextItem title="Build a scenario later" note="Scenarios, neighbor input, and reports are next actions, not onboarding blockers." />
-      </ul>
-      <div className="mt-4 flex items-center justify-end gap-2">
-        <Button variant="ghost" size="sm" onClick={onDashboard}>
-          Back to dashboard
-        </Button>
-        <Button size="sm" onClick={onOpen}>
-          Open GIS review <ArrowRight className="h-4 w-4" />
-        </Button>
-      </div>
-    </>
-  );
-}
-
-function NextItem({ title, note }: { title: string; note: string }) {
-  return (
-    <li className="flex items-start gap-3 rounded-xl border border-border bg-muted/30 p-3">
-      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+    <div className="space-y-4 py-2">
       <div>
-        <p className="font-medium">{title}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{note}</p>
+        <h1 className="font-display text-2xl font-bold">Let's set up your road group</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          We'll help you identify the properties, roads, and any rules that explain how
+          maintenance costs should be shared. You can change anything later.
+        </p>
       </div>
-    </li>
+
+      <ul className="space-y-2 rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+        <li>You'll answer a few quick questions about your community.</li>
+        <li>If you have documents (CC&amp;R, plat, road agreement), we'll read them for you.</li>
+        <li>If you don't, we'll help you enter the properties by hand.</li>
+      </ul>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+        <Button variant="ghost" size="sm" onClick={onLater}>
+          I'll finish this later
+        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={onSample}>
+            <Sparkles className="h-4 w-4" /> Explore the Cedar Hollow Sample
+          </Button>
+          <Button size="sm" onClick={onStart}>
+            Get Started
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
