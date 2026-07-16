@@ -139,7 +139,7 @@ export function WelcomeWizard() {
             name={finished.name}
             onOpen={() => {
               close(false);
-              void navigate({ to: "/community/$id", params: { id: finished.id } });
+              void navigate({ to: "/community/$id", params: { id: finished.id }, search: { tab: "roads" } });
             }}
             onDashboard={() => close(false)}
           />
@@ -199,9 +199,9 @@ function ChoosePath({ onPick, onSkip }: { onPick: (p: Path) => void; onSkip: () 
   return (
     <>
       <DialogHeader>
-        <DialogTitle className="font-display text-xl">Let's get your road group on the map</DialogTitle>
+        <DialogTitle className="font-display text-xl">Let's build your starter workspace</DialogTitle>
         <DialogDescription>
-          Pick the way that sounds easiest. You can change anything later.
+          Upload your CCR/plat if you have it. I’ll draft the lots and roads, then you approve before anything saves.
         </DialogDescription>
       </DialogHeader>
 
@@ -220,7 +220,7 @@ function ChoosePath({ onPick, onSkip }: { onPick: (p: Path) => void; onSkip: () 
               </span>
             </p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              AI reads it and drafts everything. You review before it saves. Nothing goes live without your OK.
+              Best path: AI reads the document and builds a reviewable starter map and lot list.
             </p>
           </div>
         </button>
@@ -234,7 +234,7 @@ function ChoosePath({ onPick, onSkip }: { onPick: (p: Path) => void; onSkip: () 
           <div className="min-w-0">
             <p className="text-sm font-semibold">Type it in myself</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Name your road group and add any lots or roads you already know. 60 seconds tops.
+              Use this if you do not have a CCR handy. Lots and roads can be added now or later.
             </p>
           </div>
         </button>
@@ -248,7 +248,7 @@ function ChoosePath({ onPick, onSkip }: { onPick: (p: Path) => void; onSkip: () 
           <div className="min-w-0">
             <p className="text-sm font-semibold">Try the Cedar Hollow sample</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              A finished 12-lot community. Poke around, then swap it for yours.
+              A finished 12-lot workspace for exploring the app without entering your own data.
             </p>
           </div>
         </button>
@@ -438,20 +438,20 @@ function FinishedView({
           {name} is on the map 🎉
         </DialogTitle>
         <DialogDescription>
-          Nice work. Here's what's waiting for you when you're ready — no pressure, do it in any order.
+          Your starter workspace is ready. Next, review the imported roads and lots before building scenarios.
         </DialogDescription>
       </DialogHeader>
       <ul className="mt-3 space-y-2 text-sm">
-        <NextItem title="Fine-tune your roads on the map" note="Drag points, split segments, assign who maintains what." />
-        <NextItem title="Build your first cost scenario" note="Try distance vs. frontage vs. equal split — the numbers write themselves." />
-        <NextItem title="Invite neighbors to weigh in" note="Send a quick survey or open a decision room when you're ready." />
+        <NextItem title="Review the road map" note="Imported roads start as editable lines marked Needs review." />
+        <NextItem title="Confirm the lot list" note="Check labels, addresses, and owners before cost calculations." />
+        <NextItem title="Build a scenario later" note="Scenarios, neighbor input, and reports are next actions, not onboarding blockers." />
       </ul>
       <div className="mt-4 flex items-center justify-end gap-2">
         <Button variant="ghost" size="sm" onClick={onDashboard}>
           Back to dashboard
         </Button>
         <Button size="sm" onClick={onOpen}>
-          Open my community <ArrowRight className="h-4 w-4" />
+          Open GIS review <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
     </>

@@ -32,50 +32,26 @@ const STEPS: Step[] = [
   {
     key: "community",
     icon: Users,
-    title: "Create a community record",
-    why: "Everything in RoadShare hangs off a community — your road group.",
+    title: "Create your workspace",
+    why: "Upload a CCR/plat, type the basics, or load a sample community.",
     to: "/community",
-    cta: "New community",
+    cta: "Open community",
   },
   {
     key: "parcels",
     icon: Users,
-    title: "Add the households (parcels)",
-    why: "Who shares the road? Parcels drive every fair-share calculation.",
+    title: "Review the lots",
+    why: "Confirm the lots or households pulled from the CCR before using them for calculations.",
     to: "/community",
-    cta: "Add parcels",
+    cta: "Review lots",
   },
   {
     key: "roads",
     icon: MapIcon,
-    title: "Map the roads",
-    why: "Road geometry sets distance and frontage used to split costs.",
+    title: "Review the road map",
+    why: "Imported roads start as editable map lines so you can refine the actual geometry.",
     to: "/map",
     cta: "Open map",
-  },
-  {
-    key: "scenario",
-    icon: Scale,
-    title: "Build a cost scenario",
-    why: "Model a project and compare allocation methods with live numbers.",
-    to: "/tools/cedar-hollow",
-    cta: "Build scenario",
-  },
-  {
-    key: "input",
-    icon: MessageSquare,
-    title: "Gather community input",
-    why: "Run a survey or open a decision room so neighbors weigh in.",
-    to: "/decisions",
-    cta: "Start a decision",
-  },
-  {
-    key: "report",
-    icon: FileBarChart,
-    title: "Generate a report",
-    why: "Produce a board-ready, cited report for owners and lenders.",
-    to: "/reports",
-    cta: "Open reports",
   },
 ];
 
@@ -125,7 +101,7 @@ export function GettingStarted() {
         <div className="min-w-0">
           <h2 className="font-display text-lg font-semibold">Getting started</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Six steps from an empty workspace to a defensible community decision.
+            Start with the minimum: workspace, lots, and roads. Scenarios and reports come after.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
