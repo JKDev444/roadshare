@@ -1,6 +1,6 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Sparkles, Upload, FileText, ArrowRight } from "lucide-react";
+import { Loader2, Sparkles, Upload, FileText, ArrowRight, FileUp } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -27,10 +27,12 @@ export function CcrImportStep({
   onApply,
   onCancel,
   applying,
+  autoOpen,
 }: {
   onApply: (draft: CcrDraft) => void | Promise<void>;
   onCancel: () => void;
   applying?: boolean;
+  autoOpen?: boolean;
 }) {
   const extract = useServerFn(extractCcr);
   const [busy, setBusy] = useState(false);
@@ -38,6 +40,12 @@ export function CcrImportStep({
   const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!autoOpen || draft || busy) return;
+    const id = window.setTimeout(() => inputRef.current?.click(), 150);
+    return () => window.clearTimeout(id);
+  }, [autoOpen, busy, draft]);
 
   async function handleFile(file: File) {
     setError(null);
@@ -78,17 +86,14 @@ export function CcrImportStep({
   if (!draft) {
     return (
       <div className="space-y-3">
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
+        <div
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();
             const f = e.dataTransfer.files?.[0];
             if (f) void handleFile(f);
           }}
-          disabled={busy}
-          className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 px-4 py-8 text-center transition-colors hover:border-primary hover:bg-primary/10 disabled:opacity-60"
+          className="flex w-full flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 px-4 py-8 text-center transition-colors hover:border-primary hover:bg-primary/10"
         >
           {busy ? (
             <>
@@ -101,13 +106,23 @@ export function CcrImportStep({
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <Upload className="h-5 w-5" />
               </span>
-              <p className="text-sm font-semibold">Drop your CCR or plat PDF here</p>
+              <p className="text-sm font-semibold">Upload your CCR or plat PDF</p>
               <p className="text-xs text-muted-foreground">
-                Or click to choose a file. You'll review everything before it saves.
+                I’ll pull out the community, lot list, named roads, and maintenance language for review.
               </p>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => inputRef.current?.click()}
+                disabled={busy}
+                className="mt-1"
+              >
+                <FileUp className="h-4 w-4" /> Choose PDF file
+              </Button>
+              <p className="text-[11px] text-muted-foreground">You can also drop the file here.</p>
             </>
           )}
-        </button>
+        </div>
         {error && (
           <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
             {error}
@@ -160,7 +175,7 @@ function DraftReview({
     <div className="space-y-3">
       <div className="flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-xs text-primary">
         <FileText className="h-3.5 w-3.5" />
-        <span>I found a starter setup. Review it, then create your community.</span>
+        <span>I found a starter setup. Imported lots and roads will be marked Needs review.</span>
       </div>
 
       <div className="space-y-1.5">
@@ -252,7 +267,7 @@ function DraftReview({
         </Button>
         <Button size="sm" onClick={() => onApply(draft)} disabled={applying || !draft.community.name.trim()}>
           {applying && <Loader2 className="h-4 w-4 animate-spin" />}
-          Looks right, finish setup <ArrowRight className="h-4 w-4" />
+          Create workspace <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
     </div>

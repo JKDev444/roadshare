@@ -8,7 +8,6 @@ import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { OnboardingPreview } from "@/components/onboarding/OnboardingPreview";
 import { cn } from "@/lib/utils";
 
 function sanitizeRedirect(value: string | undefined): string {
@@ -47,7 +46,6 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -202,22 +200,10 @@ function AuthPage() {
           .
         </p>
 
-        <div className="mt-4 text-center">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full font-semibold tracking-wide"
-            onClick={() => setPreviewOpen(true)}
-          >
-            ONBOARDING
-          </Button>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Preview the new-user walkthrough — no account needed.
-          </p>
-        </div>
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          New users start by uploading a CCR or plat PDF, typing the basics, or loading a sample workspace.
+        </p>
       </div>
-
-      <OnboardingPreview open={previewOpen} onOpenChange={setPreviewOpen} />
     </div>
   );
 }
