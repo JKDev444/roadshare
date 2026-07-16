@@ -1,91 +1,65 @@
-I agree with your assessment: the current onboarding is too much like a tour. The onboarding should only do the minimum needed to get a new, non-technical client started: create their community record, get parcels/lots in, get roads/common-maintenance basics in, then land them in the app with clear next actions.
+## What went wrong
 
-## Proposed onboarding flow
+The screenshots are showing the old unauthenticated **RoadShare tour** from the sign-in page, not the real signed-in setup wizard. That preview still has fake steps and non-clickable placeholders, so it promises upload, spreadsheet paste, map editing, scenarios, neighbor input, and reports without actually doing them. That is the core problem.
+
+The real onboarding should not be a tour. It should help a new user create the minimum useful workspace as fast as possible.
+
+## New onboarding experience
+
+I will replace the preview/tour with a functional, simple setup flow:
 
 ```text
-1. Start setup
-   Choose one path:
-   - Upload CC&R / plat PDF (recommended)
-   - Enter manually
-   - Try sample community
+Start
+  -> Upload CCR / plat PDF
+      -> AI extracts community, lots/parcels, roads, maintenance rules
+      -> User reviews and edits
+      -> Create workspace
+      -> Open community/GIS review
 
-2. Review what we found
-   One friendly review screen:
-   - Community name / location
-   - Lots or parcels found
-   - Roads / common areas found
-   - Maintenance rules / assessment formula found
-   User can edit obvious mistakes before saving.
+  -> Or type it manually
+      -> Community name + optional lot/road list
+      -> Create workspace
 
-3. Finish setup
-   Save community + parcels + roads.
-   Show a simple success screen:
-   - “Your community is ready”
-   - Primary button: “Open my community”
-   - Secondary next actions outside onboarding: build scenario, invite neighbors, create report
+  -> Or try sample
+      -> Create sample workspace
 ```
 
-## What will be removed from onboarding
+## What I will change
 
-- Remove “Build a cost scenario” as a required onboarding step.
-- Remove “Gather neighbor input” as a required onboarding step.
-- Remove “Ship a report” as a required onboarding step.
-- Keep those as post-onboarding dashboard actions, because they are real workflows, not first-run setup.
+1. **Remove the broken 6-step tour from the auth page**
+   - Delete the misleading “ONBOARDING” preview button or replace it with a clear “Preview setup flow” that uses the real functional setup UI.
+   - Remove fake steps for map editor, scenario, neighbor input, and report from the onboarding preview.
 
-## CC&R upload fix
+2. **Make CCR upload obvious and usable**
+   - The first screen will have a real primary button: **Upload CCR / plat PDF**.
+   - Clicking it immediately opens the file picker.
+   - Drag-and-drop remains available, but not hidden as the only interaction.
+   - The user sees clear states: uploading, reading, draft ready, or failed.
 
-I will fix the upload path so it works as a real setup action, not a preview idea:
+3. **Stop requiring spreadsheet, map, scenarios, neighbor input, and reports during onboarding**
+   - Spreadsheet paste becomes an optional post-setup tool, only if the CCR did not include enough parcel/lot data.
+   - GIS/map refinement becomes a post-setup review step, not a blocker.
+   - Cost scenarios, neighbor input, and reports become dashboard next actions after setup.
 
-- Repair the server-side AI request to use the correct Lovable AI Gateway pattern and headers.
-- Add clear upload states: selected file, reading, extracting, review-ready, failed.
-- Surface specific errors instead of a vague “couldn’t read PDF.”
-- Keep the PDF extraction behind signed-in onboarding only.
-- Test with a real CC&R PDF path and verify it produces a review screen before saying it works.
+4. **Tie onboarding to GIS in a realistic way**
+   - From CCR/plat extraction, automatically create lots/parcels and named roads where available.
+   - Mark imported geometry/data as **Needs review** so users understand it is a starter map, not a finalized survey.
+   - After setup, send the user to the community/GIS review screen to refine parcels and road lines.
 
-## Parcels and roads automation
+5. **Update the getting-started checklist**
+   - Replace “six steps” with a short post-onboarding checklist:
+     - Review imported lots
+     - Review road map
+     - Build first cost scenario
+   - Neighbor input and reports stay visible as later actions, not first-run requirements.
 
-For a non-technical client, the best practical version is:
+6. **Test before calling it done**
+   - Verify the auth-page onboarding preview no longer shows fake 6-step content.
+   - Verify upload path displays an actual file picker/button.
+   - Verify manual setup creates a community.
+   - Verify sample setup creates a usable community.
+   - Check console/network errors during the flow.
 
-- First automate from the CC&R / plat PDF when possible.
-  - Extract lot numbers, community name, roads, maintenance language, and cost-sharing language.
-  - Create starter parcels and road records automatically.
-  - Mark them as “Needs review” rather than pretending they are survey-grade GIS.
+## Result
 
-- Add a “County parcel data” helper after the initial save, not as a blocker.
-  - Real GIS parcel integrations vary by county, so onboarding should not depend on a county API working.
-  - The app can guide users to upload/export a parcel CSV or paste a parcel list.
-  - Later, we can add county-specific integrations where data is available.
-
-- Make the manual fallback painless.
-  - “Add lot numbers only” should be enough to start.
-  - Owners, addresses, frontage, and exact road geometry can be filled in later.
-
-## UI/UX changes
-
-- Rename the modal from “RoadShare tour” to “Set up your community.”
-- Use plain-client language, not feature language.
-- Add one fun progress moment after the setup is actually saved.
-- Keep celebration light and useful, not distracting.
-- Dashboard should show next recommended actions after onboarding:
-  - Create a cost scenario
-  - Invite neighbors / start a decision
-  - Generate a report
-
-## Technical implementation
-
-- Refactor `WelcomeWizard` from 6 stations to a focused 3-step setup flow.
-- Keep/rework `CcrImportStep`, but make it robust and testable.
-- Fix `extractCcr.functions.ts` to call Lovable AI correctly and return useful failure messages.
-- Keep `applyCcrDraft`, but improve review/apply behavior and confidence labeling.
-- Update `/auth` ONBOARDING preview so it mirrors the real simplified setup instead of showing a tour.
-- Update dashboard checklist so advanced workflows are “Next steps,” not onboarding gates.
-
-## Verification before I call it done
-
-- Test signed-in onboarding end-to-end.
-- Test CC&R PDF upload through the real UI.
-- Verify extracted data reaches the review screen.
-- Verify “Create everything” creates a community, parcels, and roads.
-- Verify onboarding completes only after setup is saved.
-- Verify dashboard shows post-onboarding next actions.
-- Check browser console and network errors during the flow.
+The user sees one easy promise: **“Upload your CCR/plat and we’ll build the starting workspace for you.”** Everything else becomes optional refinement after the workspace exists.
