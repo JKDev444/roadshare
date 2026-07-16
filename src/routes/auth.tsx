@@ -88,6 +88,7 @@ function AuthPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
+      window.sessionStorage.setItem("roadshare-post-auth-redirect", dest);
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email,
@@ -105,7 +106,6 @@ function AuthPage() {
       }
       const { data } = await supabase.auth.getSession();
       if (data.session) {
-        window.sessionStorage.setItem("roadshare-post-auth-redirect", dest);
         await router.invalidate();
         navigate({ to: dest });
       } else {
