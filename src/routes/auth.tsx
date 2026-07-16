@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate, useRouter, Link } from "@tanstack/react-router";
-import { Loader2, Route as RouteIcon } from "lucide-react";
+import { Loader2, Route as RouteIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { OnboardingPreview } from "@/components/onboarding/OnboardingPreview";
 
 function sanitizeRedirect(value: string | undefined): string {
   if (!value) return "/dashboard";
@@ -46,6 +47,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -203,6 +205,21 @@ function AuthPage() {
         <p className="mt-4 text-center text-xs text-muted-foreground">
           New users start by uploading a CCR or plat PDF, typing the basics, or loading a sample workspace.
         </p>
+
+        <div className="mt-4 flex justify-center">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setPreviewOpen(true)}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            <Sparkles className="mr-1.5 h-3.5 w-3.5 text-primary" />
+            Preview onboarding
+          </Button>
+        </div>
+
+        <OnboardingPreview open={previewOpen} onOpenChange={setPreviewOpen} />
       </div>
     </div>
   );
