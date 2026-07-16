@@ -158,6 +158,7 @@ export function WelcomeWizard() {
               onApply={handleApply}
               onCancel={() => setPath("choose")}
               applying={applying}
+              autoOpen
             />
           </Section>
         ) : path === "sample" ? (

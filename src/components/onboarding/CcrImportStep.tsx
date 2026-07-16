@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Sparkles, Upload, FileText, ArrowRight, FileUp } from "lucide-react";
 import { toast } from "sonner";
@@ -27,10 +27,12 @@ export function CcrImportStep({
   onApply,
   onCancel,
   applying,
+  autoOpen,
 }: {
   onApply: (draft: CcrDraft) => void | Promise<void>;
   onCancel: () => void;
   applying?: boolean;
+  autoOpen?: boolean;
 }) {
   const extract = useServerFn(extractCcr);
   const [busy, setBusy] = useState(false);
@@ -38,6 +40,12 @@ export function CcrImportStep({
   const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!autoOpen || draft || busy) return;
+    const id = window.setTimeout(() => inputRef.current?.click(), 150);
+    return () => window.clearTimeout(id);
+  }, [autoOpen, busy, draft]);
 
   async function handleFile(file: File) {
     setError(null);
