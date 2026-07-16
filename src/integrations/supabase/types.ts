@@ -322,6 +322,54 @@ export type Database = {
           },
         ]
       }
+      onboarding_jobs: {
+        Row: {
+          document_paths: string[]
+          error_message: string | null
+          filenames: string[]
+          finished_at: string | null
+          id: string
+          progress: number
+          result: Json | null
+          stage: string | null
+          stage_index: number
+          started_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          document_paths?: string[]
+          error_message?: string | null
+          filenames?: string[]
+          finished_at?: string | null
+          id?: string
+          progress?: number
+          result?: Json | null
+          stage?: string | null
+          stage_index?: number
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          document_paths?: string[]
+          error_message?: string | null
+          filenames?: string[]
+          finished_at?: string | null
+          id?: string
+          progress?: number
+          result?: Json | null
+          stage?: string | null
+          stage_index?: number
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       onboarding_state: {
         Row: {
           checklist_dismissed: boolean
