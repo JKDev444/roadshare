@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -58,7 +58,7 @@ const SAMPLE_DRAFT: CcrDraft = {
 
 /** New-user setup gate. Opens automatically until the user has a community,
  *  or until they explicitly skip. Three focused steps: pick path → review → done. */
-export function WelcomeWizard() {
+export function WelcomeWizard({ initialPath }: { initialPath?: Extract<Path, "upload"> }) {
   const { state, progress, update, isUpdating } = useOnboarding();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -75,6 +75,12 @@ export function WelcomeWizard() {
   const [applying, setApplying] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
   const [finished, setFinished] = useState<{ name: string; id: string } | null>(null);
+
+  useEffect(() => {
+    if (initialPath && open && path === "choose" && !finished) {
+      setPath(initialPath);
+    }
+  }, [finished, initialPath, open, path]);
 
   function close(markSkip = false) {
     setOpenOverride(false);

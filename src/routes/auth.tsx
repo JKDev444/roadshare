@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate, useRouter, Link } from "@tanstack/react-router";
-import { Loader2, Route as RouteIcon, Sparkles } from "lucide-react";
+import { FileUp, Loader2, Route as RouteIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { OnboardingPreview } from "@/components/onboarding/OnboardingPreview";
 
 function sanitizeRedirect(value: string | undefined): string {
   if (!value) return "/dashboard";
@@ -47,7 +46,12 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
+
+  function startOnboarding() {
+    setMode("signup");
+    navigate({ to: "/auth", search: { redirect: "/dashboard?onboarding=upload" }, replace: true });
+    toast.info("Create an account or sign in, then the real PDF upload opens next.");
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -202,24 +206,25 @@ function AuthPage() {
           .
         </p>
 
-        <p className="mt-4 text-center text-xs text-muted-foreground">
-          New users start by uploading a CCR or plat PDF, typing the basics, or loading a sample workspace.
-        </p>
-
-        <div className="mt-4 flex justify-center">
+        <div className="mt-5 rounded-2xl border border-primary/25 bg-primary/5 p-4 text-center">
+          <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <FileUp className="h-4 w-4" />
+          </div>
+          <p className="mt-2 text-sm font-semibold">New here? Start with your CCR or plat PDF.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Sign in first, then RoadShare opens the actual setup screen with a real file picker.
+          </p>
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="sm"
-            onClick={() => setPreviewOpen(true)}
-            className="text-xs text-muted-foreground hover:text-foreground"
+            onClick={startOnboarding}
+            className="mt-3"
           >
-            <Sparkles className="mr-1.5 h-3.5 w-3.5 text-primary" />
-            Preview onboarding
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            Start onboarding
           </Button>
         </div>
-
-        <OnboardingPreview open={previewOpen} onOpenChange={setPreviewOpen} />
       </div>
     </div>
   );
