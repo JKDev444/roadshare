@@ -3,10 +3,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
-  FileBarChart,
   Map as MapIcon,
-  MessageSquare,
-  Scale,
   Users,
   X,
 } from "lucide-react";

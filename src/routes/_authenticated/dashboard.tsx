@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpRight,
   FileText,
+  HardHat,
   Map as MapIcon,
   MessageSquare,
   Users,
@@ -22,28 +23,28 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 const QUICK = [
   {
-    to: "/tools/cedar-hollow",
-    title: "Build a cost scenario",
-    body: "Model road-cost allocation across the neighborhood with multiple methodologies.",
+    to: "/map",
+    title: "Review GIS & roads",
+    body: "Open your imported road map, drag starter lines into place, and confirm responsibility.",
     icon: MapIcon,
   },
   {
     to: "/community",
-    title: "Community record",
-    body: "Track parcels, owners, and source confidence in one shared ledger.",
+    title: "Review lots",
+    body: "Confirm parcels, owners, and source confidence before using them in calculations.",
     icon: Users,
+  },
+  {
+    to: "/tools/cedar-hollow",
+    title: "Build a cost scenario",
+    body: "Once the starter map looks right, compare equal, distance, and frontage splits.",
+    icon: HardHat,
   },
   {
     to: "/documents",
     title: "Document vault",
     body: "Store deeds, agreements, and amendments with classification and review.",
     icon: FileText,
-  },
-  {
-    to: "/decisions",
-    title: "Decision rooms",
-    body: "Run evidence-backed votes with quorum tracking and an audit trail.",
-    icon: MessageSquare,
   },
 ] as const;
 
