@@ -5,7 +5,6 @@ import {
   FileText,
   HardHat,
   Map as MapIcon,
-  MessageSquare,
   Users,
 } from "lucide-react";
 
