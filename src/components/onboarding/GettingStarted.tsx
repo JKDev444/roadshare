@@ -3,7 +3,11 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  FileText,
+  HardHat,
   Map as MapIcon,
+  MessageSquare,
+  Send,
   Users,
   X,
 } from "lucide-react";
@@ -25,30 +29,59 @@ type Step = {
   cta: string;
 };
 
-const STEPS: Step[] = [
-  {
-    key: "community",
-    icon: Users,
-    title: "Create your workspace",
-    why: "Upload a CCR/plat, type the basics, or load a sample community.",
-    to: "/community",
-    cta: "Open community",
-  },
+// Primary three tasks — always shown until each is complete.
+const PRIMARY: Step[] = [
   {
     key: "parcels",
     icon: Users,
-    title: "Review the lots",
-    why: "Confirm the lots or households pulled from the CCR before using them for calculations.",
+    title: "Confirm the properties",
+    why: "Cost calculations use these properties. A quick pass now prevents surprises later.",
     to: "/community",
-    cta: "Review lots",
+    cta: "Review properties",
   },
   {
     key: "roads",
     icon: MapIcon,
     title: "Review the road map",
-    why: "Imported roads start as editable map lines so you can refine the actual geometry.",
+    why: "Drop the starter road lines onto the actual road so distance-based scenarios work.",
     to: "/map",
     cta: "Open map",
+  },
+  {
+    key: "scenario",
+    icon: HardHat,
+    title: "Build a first scenario",
+    why: "See what different cost-sharing rules mean for each property before talking to neighbors.",
+    to: "/tools/cedar-hollow",
+    cta: "Start a scenario",
+  },
+];
+
+// Follow-on tasks unlocked once a scenario exists.
+const FOLLOWUP: Step[] = [
+  {
+    key: "report",
+    icon: FileText,
+    title: "Create a report",
+    why: "Export a shareable summary of your scenario for the board or your neighbors.",
+    to: "/tools/cedar-hollow",
+    cta: "Generate report",
+  },
+  {
+    key: "input",
+    icon: Send,
+    title: "Invite neighbors",
+    why: "Send a link so neighbors can weigh in before a decision is finalized.",
+    to: "/community",
+    cta: "Invite",
+  },
+  {
+    key: "input",
+    icon: MessageSquare,
+    title: "Gather feedback",
+    why: "Run a short survey or open a decision room to hear from the road group.",
+    to: "/community",
+    cta: "Open decision room",
   },
 ];
 
@@ -92,13 +125,24 @@ export function GettingStarted() {
     );
   }
 
+  // Choose which trio to show. Until community exists, hide the checklist —
+  // the WelcomeWizard is doing that job.
+  if (!progress.community) return null;
+
+  const showFollowup = progress.scenario;
+  const steps = showFollowup ? FOLLOWUP : PRIMARY;
+
   return (
     <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h2 className="font-display text-lg font-semibold">Getting started</h2>
+          <h2 className="font-display text-lg font-semibold">
+            {showFollowup ? "Next up" : "Getting started"}
+          </h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Start with the minimum: workspace, lots, and roads. Scenarios and reports come after.
+            {showFollowup
+              ? "Now that you have a scenario, share it with your community."
+              : "Three quick things to finish setting up your road group."}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -130,7 +174,7 @@ export function GettingStarted() {
 
       {!collapsed && (
         <ol className="mt-5 space-y-2">
-          {STEPS.map((step, i) => {
+          {steps.map((step, i) => {
             const complete = progress[step.key];
             const Icon = step.icon;
             return (

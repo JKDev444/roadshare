@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate, useRouter, Link } from "@tanstack/react-router";
-import { FileUp, Loader2, Route as RouteIcon, Sparkles } from "lucide-react";
+import { Loader2, Route as RouteIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -46,12 +46,6 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
-  function startOnboarding() {
-    setMode("signup");
-    navigate({ to: "/auth", search: { redirect: "/dashboard?onboarding=upload" }, replace: true });
-    toast.info("Create an account or sign in, then the real PDF upload opens next.");
-  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -209,23 +203,10 @@ function AuthPage() {
         </p>
 
         <div className="mt-5 rounded-2xl border border-primary/25 bg-primary/5 p-4 text-center">
-          <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <FileUp className="h-4 w-4" />
-          </div>
-          <p className="mt-2 text-sm font-semibold">New here? Start with your CCR or plat PDF.</p>
+          <p className="text-sm font-semibold">New here?</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Sign in first, then RoadShare opens the actual setup screen with a real file picker.
+            Create an account or sign in. We'll walk you through setting up your road group step by step — no CC&amp;R required.
           </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={startOnboarding}
-            className="mt-3"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            Start onboarding
-          </Button>
         </div>
       </div>
     </div>

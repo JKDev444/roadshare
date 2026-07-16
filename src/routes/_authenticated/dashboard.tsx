@@ -16,9 +16,6 @@ import { GettingStarted } from "@/components/onboarding/GettingStarted";
 import { getDashboardStats } from "@/lib/onboarding/api";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    onboarding: search.onboarding === "upload" ? "upload" : undefined,
-  }),
   head: () => ({ meta: [{ title: "Dashboard — RoadShare" }, { name: "robots", content: "noindex" }] }),
   component: Dashboard,
 });
@@ -51,7 +48,6 @@ const QUICK = [
 ] as const;
 
 function Dashboard() {
-  const { onboarding } = Route.useSearch();
   const { user } = useSession();
   const name = displayName(user).split(" ")[0];
 
@@ -85,7 +81,7 @@ function Dashboard() {
 
   return (
     <AppShell>
-      <WelcomeWizard initialPath={onboarding === "upload" ? "upload" : undefined} />
+      <WelcomeWizard />
       <div className="mx-auto max-w-6xl space-y-8">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">

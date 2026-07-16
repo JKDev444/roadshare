@@ -10,14 +10,30 @@ export type CcrDraft = {
     owner_name?: string | null;
     area_sqft?: number | null;
     frontage_ft?: number | null;
+    provenance?: "extracted" | "entered" | "confirmed" | "sample" | "unresolved";
+    source_doc?: string | null;
+    source_page?: number | null;
   }>;
   roads: Array<{
     name: string;
     responsibility: "shared" | "private" | "public" | "association";
     surface?: string | null;
+    provenance?: "extracted" | "entered" | "confirmed" | "sample" | "unresolved";
+    has_geometry?: boolean;
   }>;
   maintenance_summary: string | null;
   assessment_formula: string | null;
+  meta?: {
+    community_found?: boolean;
+    region_found?: boolean;
+    addresses_found?: number;
+    lot_refs_found?: number;
+    roads_found?: number;
+    maintenance_found?: boolean;
+    formula_found?: boolean;
+    missing_exhibits?: string[];
+    documents_processed?: number;
+  };
 };
 
 export const EMPTY_CCR_DRAFT: CcrDraft = {
