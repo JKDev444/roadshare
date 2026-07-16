@@ -13,6 +13,13 @@ function AuthCallback() {
   const navigate = useNavigate();
   const [error, setError] = useState(false);
 
+  function finishSignIn() {
+    const stored = window.sessionStorage.getItem("roadshare-post-auth-redirect");
+    window.sessionStorage.removeItem("roadshare-post-auth-redirect");
+    const target = stored?.startsWith("/") && !stored.startsWith("//") ? stored : "/dashboard";
+    navigate({ to: target });
+  }
+
   useEffect(() => {
     let active = true;
     let attempts = 0;
@@ -21,7 +28,7 @@ function AuthCallback() {
       const { data } = await supabase.auth.getSession();
       if (!active) return;
       if (data.session) {
-        navigate({ to: "/dashboard" });
+        finishSignIn();
         return;
       }
       attempts += 1;
@@ -33,7 +40,7 @@ function AuthCallback() {
     };
 
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session && active) navigate({ to: "/dashboard" });
+      if (session && active) finishSignIn();
     });
 
     check();

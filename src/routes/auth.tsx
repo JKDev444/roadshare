@@ -66,6 +66,7 @@ function AuthPage() {
   async function handleGoogle() {
     setSubmitting(true);
     try {
+      window.sessionStorage.setItem("roadshare-post-auth-redirect", dest);
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin + "/auth/callback",
       });
@@ -104,6 +105,7 @@ function AuthPage() {
       }
       const { data } = await supabase.auth.getSession();
       if (data.session) {
+        window.sessionStorage.setItem("roadshare-post-auth-redirect", dest);
         await router.invalidate();
         navigate({ to: dest });
       } else {
