@@ -142,13 +142,8 @@ export const dcadPointLookup = createServerFn({ method: "POST" })
     const dLat = radius / 111_111;
     const dLng = radius / (111_111 * Math.max(0.2, Math.cos((data.lat * Math.PI) / 180)));
     const params = new URLSearchParams({
-      geometry: JSON.stringify({
-        xmin: data.lng - dLng,
-        ymin: data.lat - dLat,
-        xmax: data.lng + dLng,
-        ymax: data.lat + dLat,
-        spatialReference: { wkid: 4326 },
-      }),
+      // Comma-envelope form is the most broadly compatible with ArcGIS servers.
+      geometry: `${data.lng - dLng},${data.lat - dLat},${data.lng + dLng},${data.lat + dLat}`,
       geometryType: "esriGeometryEnvelope",
       inSR: "4326",
       spatialRel: "esriSpatialRelIntersects",
