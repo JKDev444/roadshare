@@ -219,7 +219,9 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
       }));
     }
     // Include the starting address as first lot when going the "no docs" path.
-    if (basicInfo.startingAddress) {
+    // Skip for the map path — the user already selected parcels visually, which
+    // usually already includes their own address.
+    if (basicInfo.startingAddress && r.kind !== "map") {
       lots = [
         { label: "Lot 1", address: basicInfo.startingAddress, provenance: "entered" as const },
         ...lots.map((l, i) => ({ ...l, label: `Lot ${i + 2}` })),
