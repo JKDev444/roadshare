@@ -8,6 +8,7 @@ import {
   type ParcelInput,
   type Point,
 } from "@/lib/community/api";
+import { createParcel } from "@/lib/community/api";
 import type { CcrDraft } from "./ccrDraft";
 
 /** Auto-arrange N parcels in a grid on the 0..100 plat canvas. */
