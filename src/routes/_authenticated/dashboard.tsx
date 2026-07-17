@@ -17,6 +17,7 @@ import { getDashboardStats } from "@/lib/onboarding/api";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — RoadShare" }, { name: "robots", content: "noindex" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({ welcome: s.welcome === "1" || s.welcome === 1 || s.welcome === true ? true : undefined }),
   component: Dashboard,
 });
 
@@ -50,6 +51,7 @@ const QUICK = [
 function Dashboard() {
   const { user } = useSession();
   const name = displayName(user).split(" ")[0];
+  const { welcome } = Route.useSearch();
 
   const { data: stats } = useQuery({
     queryKey: ["dashboard", "stats"],
@@ -81,7 +83,7 @@ function Dashboard() {
 
   return (
     <AppShell>
-      <WelcomeWizard />
+      <WelcomeWizard forceOpen={welcome} />
       <div className="mx-auto max-w-6xl space-y-8">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
