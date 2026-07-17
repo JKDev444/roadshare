@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { listCommunities, listParcels } from "@/lib/community/api";
+import { checkScenarioReadiness } from "@/lib/onboarding/readiness";
 import {
   castVote,
   createDecision,
@@ -83,6 +84,11 @@ function DecisionsPage() {
   const cid = communityId || communities.data?.[0]?.id || "";
 
   const decisions = useQuery({ queryKey: ["decisions", cid], queryFn: () => listDecisions(cid), enabled: !!cid });
+  const readiness = useQuery({
+    queryKey: ["scenario-readiness", cid],
+    queryFn: () => checkScenarioReadiness(cid),
+    enabled: !!cid,
+  });
 
   const selected = useMemo(
     () => decisions.data?.find((d) => d.id === selectedId) ?? decisions.data?.[0] ?? null,
@@ -113,6 +119,30 @@ function DecisionsPage() {
         {communities.isLoading ? null : (communities.data?.length ?? 0) === 0 ? (
           <EmptyState icon={Gavel} title="Create a community first" body="Decisions belong to a community. Add one from the Community Record page." />
         ) : (
+          <>
+            {readiness.data && !readiness.data.ok && (
+              <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                <div className="flex-1">
+                  <p className="font-medium">Finish setup before running a decision</p>
+                  <ul className="mt-1 list-disc pl-4 text-xs opacity-90">
+                    {readiness.data.reasons.map((r) => <li key={r}>{r}</li>)}
+                  </ul>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {readiness.data.parcels < 2 && (
+                      <Button asChild size="sm" variant="outline">
+                        <Link to="/community/$id" params={{ id: cid }} search={{ tab: "properties" }}>Add properties</Link>
+                      </Button>
+                    )}
+                    {readiness.data.roads < 1 && (
+                      <Button asChild size="sm" variant="outline">
+                        <Link to="/community/$id" params={{ id: cid }} search={{ tab: "roads" }}>Add roads</Link>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
             <DecisionList
               communityId={cid}
@@ -127,6 +157,7 @@ function DecisionsPage() {
               <EmptyState icon={Vote} title="No decision selected" body="Create a decision to begin assembling evidence and collecting votes." />
             )}
           </div>
+          </>
         )}
       </div>
     </AppShell>
