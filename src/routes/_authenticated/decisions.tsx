@@ -601,8 +601,15 @@ function ExplanationTab({ decision, communityId }: { decision: Decision; communi
   return (
     <div className="space-y-4">
       {blockedByUnresolved && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
-          Resolve the {readiness?.unresolved} property record{readiness?.unresolved === 1 ? "" : "s"} still missing an address before publishing this decision — the report should not cite unconfirmed properties.
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
+          <span>
+            Resolve the {readiness?.unresolved} property record{readiness?.unresolved === 1 ? "" : "s"} still missing an address before publishing this decision — the report should not cite unconfirmed properties.
+          </span>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/community/$id" params={{ id: communityId }} search={{ tab: "properties" }}>
+              Review properties
+            </Link>
+          </Button>
         </div>
       )}
       {decision.status === "decided" && decision.outcome && (
