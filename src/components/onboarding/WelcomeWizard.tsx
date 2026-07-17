@@ -36,9 +36,9 @@ type Step =
 
 const SAMPLE_DRAFT: CcrDraft = {
   community: {
-    name: "Cedar Hollow Road Group",
+    name: "Cedar Hollow (Sample)",
     region: "Larimer County, CO",
-    description: "12-lot private road community with a shared gravel lane and cul-de-sac.",
+    description: "Sample workspace — 12-lot private road community with a shared gravel lane and cul-de-sac. Safe to delete anytime.",
   },
   lots: Array.from({ length: 12 }).map((_, i) => ({
     label: `Lot ${i + 1}`,
