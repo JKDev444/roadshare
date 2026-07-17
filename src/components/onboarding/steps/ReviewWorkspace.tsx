@@ -192,10 +192,19 @@ function SummarySection({
       {unresolved > 0 && (
         <div className="flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm">
           <p>We need your help with {unresolved} item{unresolved === 1 ? "" : "s"}.</p>
-          <Button size="sm" onClick={() => onJump("items")}>Review Important Items <ArrowRight className="h-4 w-4" /></Button>
+          <Button size="sm" variant="outline" onClick={() => onJump("items")}>Review Important Items <ArrowRight className="h-4 w-4" /></Button>
         </div>
       )}
       <p className="text-xs text-muted-foreground">Uploaded: {filenames.length ? filenames.join(", ") : "None"}</p>
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">Ready when you are</p>
+          <p className="text-xs text-muted-foreground">You can create the workspace now and keep editing later.</p>
+        </div>
+        <Button size="sm" onClick={() => onJump("finish")}>
+          Create workspace <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }
@@ -474,11 +483,11 @@ function FinishSection({
       </div>
       <ul className="space-y-1 text-sm">
         <li>Community: <strong>{draft.community.name || "Untitled"}</strong></li>
-        <li>Confirmed properties: {confirmed} of {draft.lots.length}</li>
+        <li>Properties added: {draft.lots.length}{confirmed > 0 ? ` (${confirmed} confirmed)` : ""}</li>
         <li>Roads: {draft.roads.length}</li>
         <li>Documents: {filenames.length}</li>
         {unresolved > 0 && (
-          <li className="text-amber-700 dark:text-amber-400">{unresolved} propert{unresolved === 1 ? "y" : "ies"} still need addresses.</li>
+          <li className="text-muted-foreground">{unresolved} propert{unresolved === 1 ? "y" : "ies"} can still get an address later — that's fine.</li>
         )}
       </ul>
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
