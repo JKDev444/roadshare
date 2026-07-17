@@ -5,16 +5,21 @@ import {
   Check,
   Loader2,
   MapPin,
-  Sparkles,
-  ZoomIn,
+  Pencil,
   RotateCcw,
 } from "lucide-react";
 import L from "leaflet";
+import "leaflet-draw";
 import "leaflet/dist/leaflet.css";
+import "leaflet-draw/dist/leaflet.draw.css";
 
 import { Button } from "@/components/ui/button";
 import { searchAddresses } from "@/lib/onboarding/nominatim";
-import { regridPointLookup, type RegridParcel } from "@/lib/onboarding/regrid.functions";
+import {
+  dcadPointLookup,
+  dcadPolygonLookup,
+  type DcadParcel,
+} from "@/lib/onboarding/dcad.functions";
 import type { BasicInfo } from "./BasicInfoStep";
 
 export type MapPickResult = {
@@ -30,9 +35,13 @@ export type MapPickResult = {
 type Status = "geocoding" | "fetching" | "ready" | "error" | "empty";
 
 /**
- * Interactive map step. Geocodes the user's starting address, then loads parcel
- * polygons from Regrid within a radius. The user clicks polygons to include or
- * exclude parcels, then confirms the selection.
+ * Interactive map step (Dallas County / DCAD).
+ *
+ * Flow:
+ *   1. Geocode the starting address, load nearby DCAD parcels.
+ *   2. User can click any parcel to toggle it,
+ *      OR use the draw tool (top-right) to lasso a whole area — every parcel
+ *      inside gets auto-selected, then fine-tune by clicking.
  */
 export function MapPickStep({
   basicInfo,
@@ -45,19 +54,21 @@ export function MapPickStep({
   onSubmit: (r: MapPickResult) => void | Promise<void>;
   submitting?: boolean;
 }) {
-  const regridFn = useServerFn(regridPointLookup);
+  const pointFn = useServerFn(dcadPointLookup);
+  const polygonFn = useServerFn(dcadPolygonLookup);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
+  const drawLayerRef = useRef<L.FeatureGroup | null>(null);
   const centerMarkerRef = useRef<L.CircleMarker | null>(null);
 
   const [status, setStatus] = useState<Status>("geocoding");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
-  const [radius, setRadius] = useState(400); // meters
-  const [parcels, setParcels] = useState<RegridParcel[]>([]);
+  const [parcels, setParcels] = useState<DcadParcel[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [hasDrawn, setHasDrawn] = useState(false);
 
   // 1) Geocode starting address once
   useEffect(() => {
@@ -70,7 +81,11 @@ export function MapPickStep({
         return;
       }
       try {
-        const hits = await searchAddresses(address, { state: basicInfo.state });
+        // Include the city so the geocoder doesn't match a same-named street in
+        // another Texas city (e.g. "Jackson St" exists in both Dallas and Houston).
+        const cityState = [basicInfo.city, basicInfo.state].filter(Boolean).join(", ");
+        const q = cityState ? `${address}, ${cityState}` : address;
+        const hits = await searchAddresses(q, { state: basicInfo.state || undefined });
         if (cancelled) return;
         if (hits.length === 0) {
           setStatus("error");
@@ -91,12 +106,12 @@ export function MapPickStep({
     };
   }, [basicInfo.startingAddress, basicInfo.state]);
 
-  // 2) Initialize Leaflet once center is known
+  // 2) Initialize Leaflet + Leaflet.draw once center is known
   useEffect(() => {
     if (!center || !containerRef.current || mapRef.current) return;
     const map = L.map(containerRef.current, {
       center: [center.lat, center.lng],
-      zoom: 18,
+      zoom: 17,
       zoomControl: true,
       scrollWheelZoom: true,
     });
@@ -105,7 +120,29 @@ export function MapPickStep({
       maxZoom: 19,
     }).addTo(map);
     layerRef.current = L.layerGroup().addTo(map);
-    // Marker for the starting address
+
+    // FeatureGroup that holds the user-drawn polygon; required by Leaflet.draw.
+    const drawn = new L.FeatureGroup().addTo(map);
+    drawLayerRef.current = drawn;
+
+    const drawControl = new L.Control.Draw({
+      position: "topright",
+      edit: { featureGroup: drawn, remove: true, edit: false },
+      draw: {
+        polygon: {
+          allowIntersection: false,
+          showArea: false,
+          shapeOptions: { color: "#0ea5e9", weight: 3 },
+        },
+        rectangle: { shapeOptions: { color: "#0ea5e9", weight: 3 } } as L.DrawOptions.RectangleOptions,
+        polyline: false,
+        circle: false,
+        marker: false,
+        circlemarker: false,
+      },
+    });
+    map.addControl(drawControl);
+
     centerMarkerRef.current = L.circleMarker([center.lat, center.lng], {
       radius: 6,
       color: "#f59e0b",
@@ -118,33 +155,79 @@ export function MapPickStep({
       map.remove();
       mapRef.current = null;
       layerRef.current = null;
+      drawLayerRef.current = null;
       centerMarkerRef.current = null;
     };
   }, [center]);
 
-  // 3) Fetch parcels whenever center or radius changes
-  const fetchParcels = useCallback(
-    async (c: { lat: number; lng: number }, r: number) => {
+  // 3) Fetch parcels around the starting address
+  const fetchNearPoint = useCallback(
+    async (c: { lat: number; lng: number }) => {
       setStatus("fetching");
       setErrorMsg(null);
       try {
-        const res = await regridFn({ data: { lat: c.lat, lng: c.lng, radius: r, limit: 200 } });
+        const res = await pointFn({ data: { lat: c.lat, lng: c.lng, radius: 300, limit: 300 } });
         setParcels(res.parcels);
+        setSelected(new Set());
+        setHasDrawn(false);
         setStatus(res.parcels.length === 0 ? "empty" : "ready");
       } catch (err) {
         setStatus("error");
         setErrorMsg(err instanceof Error ? err.message : "Failed to load parcels.");
       }
     },
-    [regridFn],
+    [pointFn],
   );
 
   useEffect(() => {
     if (!center) return;
-    void fetchParcels(center, radius);
-  }, [center, radius, fetchParcels]);
+    void fetchNearPoint(center);
+  }, [center, fetchNearPoint]);
 
-  // 4) Render parcel polygons whenever parcels/selection change
+  // 4) Wire up Leaflet.draw events → run polygon query, bulk-select matches
+  useEffect(() => {
+    const map = mapRef.current;
+    const drawn = drawLayerRef.current;
+    if (!map || !drawn) return;
+
+    const onCreated = async (event: L.LeafletEvent) => {
+      const e = event as L.DrawEvents.Created;
+      drawn.clearLayers();
+      drawn.addLayer(e.layer);
+      const geo = (e.layer as L.Polygon).toGeoJSON();
+      const ring: number[][] =
+        geo.geometry.type === "Polygon"
+          ? (geo.geometry.coordinates[0] as number[][])
+          : [];
+      if (ring.length < 4) return;
+      setStatus("fetching");
+      setErrorMsg(null);
+      try {
+        const res = await polygonFn({
+          data: { polygon: { type: "Polygon", coordinates: [ring] }, limit: 500 },
+        });
+        setParcels(res.parcels);
+        setSelected(new Set(res.parcels.map((p) => p.id)));
+        setHasDrawn(true);
+        setStatus(res.parcels.length === 0 ? "empty" : "ready");
+      } catch (err) {
+        setStatus("error");
+        setErrorMsg(err instanceof Error ? err.message : "Failed to load parcels in the drawn area.");
+      }
+    };
+    const onDeleted = () => {
+      if (center) void fetchNearPoint(center);
+    };
+
+    map.on(L.Draw.Event.CREATED, onCreated);
+    map.on(L.Draw.Event.DELETED, onDeleted);
+    return () => {
+      map.off(L.Draw.Event.CREATED, onCreated);
+      map.off(L.Draw.Event.DELETED, onDeleted);
+    };
+  }, [polygonFn, fetchNearPoint, center]);
+
+  // 5) Render parcel polygons whenever parcels/selection change
   useEffect(() => {
     const map = mapRef.current;
     const layer = layerRef.current;
@@ -153,7 +236,6 @@ export function MapPickStep({
     if (parcels.length === 0) return;
     for (const p of parcels) {
       const isSel = selected.has(p.id);
-      // Convert GeoJSON to Leaflet-friendly latlng arrays
       const rings =
         p.geometry.type === "Polygon"
           ? [p.geometry.coordinates]
@@ -178,7 +260,6 @@ export function MapPickStep({
       });
       poly.addTo(layer);
     }
-    // Fit bounds on first load only (when nothing is selected yet)
     if (selected.size === 0) {
       const bounds = L.latLngBounds([]);
       layer.eachLayer((child) => {
@@ -194,15 +275,12 @@ export function MapPickStep({
     [parcels, selected],
   );
 
-  function selectAll() {
-    setSelected(new Set(parcels.map((p) => p.id)));
-  }
   function clearAll() {
     setSelected(new Set());
   }
-  function expandRadius() {
-    setRadius((r) => Math.min(1500, Math.round(r * 1.75)));
-    setSelected(new Set());
+  function resetView() {
+    drawLayerRef.current?.clearLayers();
+    if (center) void fetchNearPoint(center);
   }
 
   async function confirm() {
@@ -223,12 +301,12 @@ export function MapPickStep({
       <div>
         <h2 className="font-display text-lg font-semibold">Pick your neighbors on the map</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          We loaded parcels near <span className="font-medium">{basicInfo.startingAddress || "your address"}</span>.
-          Tap each home on your private road to include it. Skip ones that aren't part of the group.
+          Use the <Pencil className="inline h-3 w-3" /> pencil (top-right) to draw around your community —
+          every parcel inside gets selected. Then click any parcel to add or remove it.
+          Dallas County data via DCAD.
         </p>
       </div>
 
-      {/* Map container */}
       <div className="relative overflow-hidden rounded-xl border border-border bg-muted">
         <div ref={containerRef} className="h-[420px] w-full" />
         {(status === "geocoding" || status === "fetching") && (
@@ -243,36 +321,31 @@ export function MapPickStep({
         )}
       </div>
 
-      {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
             <Check className="h-3 w-3" />
             {selected.size} selected
           </span>
-          <span className="text-muted-foreground">of {parcels.length} nearby</span>
-          <span className="text-muted-foreground">· radius {radius}m</span>
+          <span className="text-muted-foreground">of {parcels.length} shown</span>
+          {hasDrawn && <span className="text-muted-foreground">· from your drawn area</span>}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          <Button variant="outline" size="sm" onClick={selectAll} disabled={parcels.length === 0}>
-            <Sparkles className="h-3.5 w-3.5" /> Select all
-          </Button>
           <Button variant="outline" size="sm" onClick={clearAll} disabled={selected.size === 0}>
-            <RotateCcw className="h-3.5 w-3.5" /> Clear
+            <RotateCcw className="h-3.5 w-3.5" /> Clear selection
           </Button>
-          <Button variant="outline" size="sm" onClick={expandRadius} disabled={radius >= 1500}>
-            <ZoomIn className="h-3.5 w-3.5" /> Widen search
+          <Button variant="outline" size="sm" onClick={resetView}>
+            Reset map
           </Button>
         </div>
       </div>
 
-      {/* Empty / error message */}
       {status === "empty" && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-          <p className="font-medium">No parcels found here.</p>
+          <p className="font-medium">No parcels found in that area.</p>
           <p className="mt-0.5">
-            Regrid's sandbox coverage is limited. On a paid API plan, this will populate every nearby parcel.
-            For now, use "Widen search," or go back and paste addresses instead.
+            DCAD covers Dallas County only right now. Try a different address inside Dallas County, or
+            go back and paste addresses instead.
           </p>
         </div>
       )}
@@ -282,7 +355,6 @@ export function MapPickStep({
         </div>
       )}
 
-      {/* Selected preview */}
       {selectedList.length > 0 && (
         <div className="max-h-32 overflow-y-auto rounded-lg border border-border bg-card p-2">
           <ul className="space-y-1">
