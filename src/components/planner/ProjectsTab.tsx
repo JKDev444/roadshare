@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowRight, HardHat, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, HardHat, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,7 @@ import {
   money,
   STATUS_LABEL,
 } from "@/lib/planner/api";
+import { checkScenarioReadiness } from "@/lib/onboarding/readiness";
 
 const STATUS_TONE: Record<string, string> = {
   planning: "bg-secondary text-secondary-foreground",
@@ -47,9 +48,14 @@ const STATUS_TONE: Record<string, string> = {
 export function ProjectsTab({ communityId }: { communityId: string }) {
   const qc = useQueryClient();
   const { data: projects, isLoading } = useQuery({ queryKey: ["projects", communityId], queryFn: () => listProjects(communityId) });
+  const { data: readiness } = useQuery({
+    queryKey: ["scenario-readiness", communityId],
+    queryFn: () => checkScenarioReadiness(communityId),
+  });
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["projects", communityId] });
     qc.invalidateQueries({ queryKey: ["events", communityId] });
+    qc.invalidateQueries({ queryKey: ["scenario-readiness", communityId] });
   };
   const del = useMutation({
     mutationFn: (p: { id: string; name: string }) => deleteProject(p.id, communityId, p.name),
@@ -59,9 +65,25 @@ export function ProjectsTab({ communityId }: { communityId: string }) {
 
   return (
     <div className="space-y-4">
+      {readiness && !readiness.ok && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <p className="font-medium">Finish setup before creating a scenario</p>
+            <ul className="mt-1 list-disc pl-4 text-xs opacity-90">
+              {readiness.reasons.map((r) => <li key={r}>{r}</li>)}
+            </ul>
+          </div>
+        </div>
+      )}
+      {readiness && readiness.ok && readiness.unresolved > 0 && (
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2 text-xs text-amber-800 dark:text-amber-200">
+          {readiness.unresolved} propert{readiness.unresolved === 1 ? "y" : "ies"} still need an address or confirmation before you publish an allocation.
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">{projects?.length ?? 0} project{(projects?.length ?? 0) === 1 ? "" : "s"}</p>
-        <NewProjectDialog communityId={communityId} onSaved={invalidate} />
+        <NewProjectDialog communityId={communityId} onSaved={invalidate} disabled={!readiness?.ok} disabledReason={readiness?.reasons?.[0]} />
       </div>
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2">{[0, 1].map((i) => <div key={i} className="h-36 animate-pulse rounded-2xl border border-border bg-card" />)}</div>
@@ -106,14 +128,14 @@ export function ProjectsTab({ communityId }: { communityId: string }) {
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"><HardHat className="h-7 w-7" /></span>
           <h2 className="mt-5 font-display text-xl font-bold">Plan your first project</h2>
           <p className="mt-2 max-w-md text-sm text-muted-foreground">Add a road project, enter costs and bids, then split the total across parcels with the allocation engine.</p>
-          <div className="mt-6"><NewProjectDialog communityId={communityId} onSaved={invalidate} /></div>
+          <div className="mt-6"><NewProjectDialog communityId={communityId} onSaved={invalidate} disabled={!readiness?.ok} disabledReason={readiness?.reasons?.[0]} /></div>
         </div>
       )}
     </div>
   );
 }
 
-function NewProjectDialog({ communityId, onSaved }: { communityId: string; onSaved: () => void }) {
+function NewProjectDialog({ communityId, onSaved, disabled, disabledReason }: { communityId: string; onSaved: () => void; disabled?: boolean; disabledReason?: string }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -127,7 +149,7 @@ function NewProjectDialog({ communityId, onSaved }: { communityId: string; onSav
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button><Plus className="h-4 w-4" /> New project</Button>
+        <Button disabled={disabled} title={disabled ? disabledReason : undefined}><Plus className="h-4 w-4" /> New project</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
