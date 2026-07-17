@@ -68,17 +68,40 @@ export function ProjectsTab({ communityId }: { communityId: string }) {
       {readiness && !readiness.ok && (
         <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <div>
+          <div className="flex-1">
             <p className="font-medium">Finish setup before creating a scenario</p>
             <ul className="mt-1 list-disc pl-4 text-xs opacity-90">
               {readiness.reasons.map((r) => <li key={r}>{r}</li>)}
             </ul>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {readiness.parcels < 2 && (
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/community/$id" params={{ id: communityId }} search={{ tab: "parcels" }}>
+                    Add properties <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              )}
+              {readiness.roads < 1 && (
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/community/$id" params={{ id: communityId }} search={{ tab: "roads" }}>
+                    Add roads <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       )}
       {readiness && readiness.ok && readiness.unresolved > 0 && (
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2 text-xs text-amber-800 dark:text-amber-200">
-          {readiness.unresolved} propert{readiness.unresolved === 1 ? "y" : "ies"} still need an address or confirmation before you publish an allocation.
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2 text-xs text-amber-800 dark:text-amber-200">
+          <span>
+            {readiness.unresolved} propert{readiness.unresolved === 1 ? "y" : "ies"} still need an address or confirmation before you publish an allocation.
+          </span>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/community/$id" params={{ id: communityId }} search={{ tab: "parcels" }}>
+              Review properties <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </Button>
         </div>
       )}
       <div className="flex items-center justify-between">
