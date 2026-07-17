@@ -265,7 +265,7 @@ function PasteList({
         placeholder={"101 Cedar Hollow Lane\n105 Cedar Hollow Lane\n109 Cedar Hollow Lane"}
         autoFocus
       />
-      <p className="text-xs text-muted-foreground">{parsed.length} property{parsed.length === 1 ? "" : "ies"} detected.</p>
+      <p className="text-xs text-muted-foreground">{parsed.length} {parsed.length === 1 ? "property" : "properties"} detected.</p>
 
       <div className="flex items-center justify-between pt-1">
         <Button variant="ghost" size="sm" onClick={onCancel}>Back</Button>
@@ -275,7 +275,7 @@ function PasteList({
           disabled={parsed.length === 0 || submitting}
         >
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-          Add {parsed.length} property{parsed.length === 1 ? "" : "ies"} <ArrowRight className="h-4 w-4" />
+          Add {parsed.length} {parsed.length === 1 ? "property" : "properties"} <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
     </div>
