@@ -102,18 +102,13 @@ async function queryDcad(params: URLSearchParams): Promise<DcadParcel[]> {
   params.set("f", "geojson");
   params.set("where", "1=1");
   const url = `${DCAD_LAYER}?${params.toString()}`;
-  const res = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "RoadShare/1.0 (+https://roadshare.app)",
-    },
-  });
+  const res = await fetch(url);
   const text = await res.text();
   if (!res.ok) {
     console.error(`[dcad] ${res.status}: ${text.slice(0, 300)}`);
     throw new Error(`Dallas parcel service failed (${res.status}).`);
   }
-  console.log(`[dcad] ok ${res.status} bytes=${text.length} url=${url.slice(0, 200)}`);
+  console.log(`[dcad] ok ${res.status} ct=${res.headers.get("content-type")} bytes=${text.length} snip=${text.slice(0, 220)}`);
   let json: { features?: DcadFeature[] };
   try {
     json = JSON.parse(text) as { features?: DcadFeature[] };
