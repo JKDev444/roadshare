@@ -81,7 +81,11 @@ export function MapPickStep({
         return;
       }
       try {
-        const hits = await searchAddresses(address, { state: basicInfo.state || "TX" });
+        // Include the city so the geocoder doesn't match a same-named street in
+        // another Texas city (e.g. "Jackson St" exists in both Dallas and Houston).
+        const cityState = [basicInfo.city, basicInfo.state].filter(Boolean).join(", ");
+        const q = cityState ? `${address}, ${cityState}` : address;
+        const hits = await searchAddresses(q, { state: basicInfo.state || undefined });
         if (cancelled) return;
         if (hits.length === 0) {
           setStatus("error");
