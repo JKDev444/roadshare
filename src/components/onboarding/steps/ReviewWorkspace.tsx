@@ -202,7 +202,7 @@ function SummarySection({
           <p className="text-xs text-muted-foreground">You can create the workspace now and keep editing later.</p>
         </div>
         <Button size="sm" onClick={() => onJump("finish")}>
-          Create workspace <ArrowRight className="h-4 w-4" />
+          Continue to Finish <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
     </div>
