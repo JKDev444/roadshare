@@ -1,75 +1,80 @@
+# Plan: Make mapping + community page easy and fun
 
-# Replace Regrid with Dallas County GIS (DCAD)
+## Big picture
 
-Swap the parcel data source in the map-picker step from Regrid to the Dallas Central Appraisal District (DCAD) ArcGIS FeatureServer — free, public, no token, real parcel geometry + APN + owner + situs address for all of Dallas County.
+Four coordinated changes, in this order so nothing lands broken:
 
-Selection UX becomes **draw first, then fine-tune by clicking**: user draws a polygon (or drops a radius) to bulk-select every parcel inside, then clicks individual parcels to add/remove them before continuing.
+1. **Swap Leaflet/OSM tiles for Mapbox Streets** (vibrant, matches Cedar Hollow).
+2. **Auto-detect roads from OpenStreetMap** when the user lassos a neighborhood, so the "Draw road" step goes away for most people.
+3. **Collapse community page** from 5 tabs (Overview / Property layer / Road geometry / Projects / Provenance) down to **3: Map · Properties · Projects**, with Provenance moved to a small "history" popover.
+4. **Playful visual refresh** (rounded cards, warm accents, bounce toasts, celebratory micro-interactions) across the onboarding + community pages, keeping current semantic tokens.
 
-## Data source
+Existing DCAD parcel lookup (free, Dallas-only) stays as-is — that part works.
 
-**DCAD Parcels FeatureServer** (ArcGIS REST). Query endpoint returns GeoJSON directly:
+## 1. Mapbox integration
 
-```
-GET {DCAD_PARCELS_URL}/query
-  ?where=1=1
-  &geometry=<envelope-or-polygon>
-  &geometryType=esriGeometryPolygon
-  &spatialRel=esriSpatialRelIntersects
-  &outFields=ACCOUNT_NUM,OWNER_NAME,SITUS_ADDRESS,SITUS_CITY,SITUS_ZIP,ACREAGE
-  &returnGeometry=true
-  &outSR=4326
-  &f=geojson
-```
+- **Prereq (asks user):** connect the Mapbox connector so we get a public token (`VITE_LOVABLE_CONNECTOR_MAPBOX_PUBLIC_TOKEN`). Free tier is plenty; no server calls needed for tiles.
+- Replace Leaflet with **`mapbox-gl` + `@mapbox/mapbox-gl-draw`** in `MapPickStep.tsx` and the community "Map" tab.
+- Base style: `mapbox://styles/mapbox/streets-v12` with a small custom overlay: rounded parcel polygons, primary-color fills for selected (`#0ea5e9`), warm amber for unselected (`#f59e0b`), soft glow on hover.
+- Bigger map canvas: on the community page and map-picker, expand to a **near-full-viewport map** (calc height minus header) with the sidebar collapsible so users can go big when a neighborhood is huge.
+- Draw tool: Mapbox Draw's polygon/rectangle controls (much better UX than Leaflet.draw). Add a "Lasso" quick button in the toolbar so it's obvious how to select an area.
 
-The exact FeatureServer URL will be confirmed during implementation (DCAD publishes it at dcad.org / dallascad.org open data; if the official DCAD server rate-limits or CORS-blocks, fall back to Dallas County's ArcGIS Hub parcel layer). No API key required. Called from a server function so CORS and rate limits are absorbed server-side.
+## 2. Auto-detect roads (Overpass API)
 
-## What changes
+New server function `detectRoadsInPolygon` in `src/lib/onboarding/osm.functions.ts`:
 
-### Backend — new server functions in `src/lib/onboarding/dcad.functions.ts`
-- `searchParcelsByPolygon({ polygon })` — takes a GeoJSON polygon drawn by the user, queries DCAD by spatial intersect, returns array of `{ apn, owner, address, city, zip, acreage, geometry }`.
-- `searchParcelsNearPoint({ lat, lon, radiusMeters })` — convenience wrapper for the initial "here's where you are" view; builds an envelope and calls the same endpoint.
-- Lightweight in-memory cache keyed by rounded bbox to avoid re-hitting DCAD on small map nudges.
+- Input: the drawn GeoJSON polygon.
+- Query Overpass for `way["highway"]` inside the polygon (free, no key).
+- Return road segments as GeoJSON LineStrings with name + highway class.
+- Onboarding: after parcels are picked, show a **"Roads we found"** panel with checkboxes ("Include this road", "Private / Shared / Public" chip per road, default Shared). One-click "Include all", one-click "Skip roads for now".
+- Roads get persisted alongside parcels during `createCommunity`. They land on the community's Map tab as editable segments — the user can still tweak names/labels/classifications after.
+- If Overpass returns nothing (rural), fall back to the current "Draw road" tool with a friendly explainer.
 
-### Frontend — `src/components/onboarding/steps/MapPickStep.tsx` (rewrite)
-- Base map: keep Google Maps JS (already wired via connector) OR switch to Leaflet + OSM tiles (free, no key). **Recommend Leaflet** to remove any dependency on the Google browser key for this step and to get free polygon-draw tooling.
-- Add **Leaflet.draw** for polygon + rectangle drawing.
-- Flow on the step:
-  1. Map centers on a Dallas default (or the user's typed address, geocoded via the existing Google Maps gateway).
-  2. User draws a polygon → we call `searchParcelsByPolygon` → all intersecting DCAD parcels render as amber polygons and are marked selected by default.
-  3. User clicks any parcel to toggle it in/out of the selection (bright cyan = selected, amber = deselected).
-  4. Sidebar list shows selected parcels with address + owner + APN and a running count.
-  5. "Continue" button is disabled until at least one parcel is selected; it hands the selected parcels to the existing `applyCcrDraft` batch insert.
+## 3. Community page — 3 tabs
 
-### Cleanup
-- Remove the Regrid code path: `src/lib/onboarding/regrid.functions.ts`, `REGRID_API_TOKEN` references (leave the secret in place for now, mark it unused).
-- Remove the Regrid trial-exhausted error handling and the "try the address list instead" fallback banner from the map step (no longer relevant since DCAD has no quota).
-- Keep the paste-an-address-list path exactly as-is as a secondary option.
+Rework `src/routes/_authenticated/community.$id.tsx`:
 
-## Technical details
+- **Map** (default) — parcels + roads on one Mapbox canvas. Tools sidebar: layer toggles (parcels / roads / satellite), select-move / draw-road / draw-parcel. This absorbs today's Overview + Property layer + Road geometry.
+- **Properties** — the list table of parcels with owner, address, verification status. Bulk verify.
+- **Projects** — unchanged (existing ProjectsTab).
+- **Provenance** — becomes a small clock-icon button on the top-right that opens a slide-over showing the audit trail. Not a tab anymore.
+- Empty states get rewritten with a single obvious CTA each ("Add roads on the map →").
 
-- **DCAD data quality:** DCAD is the authoritative parcel source for Dallas County — every parcel has APN (ACCOUNT_NUM), owner name, situs address, situs city, ZIP, acreage, and clean polygon geometry. Coverage is 100% of Dallas County (residential + commercial + vacant).
-- **Scope:** Dallas County only. If a user draws a polygon outside Dallas County, DCAD returns zero features; we show a "No parcels found — this data source currently covers Dallas County only" hint. Multi-county support is a follow-up (Tarrant County TAD, Collin CAD, etc. all publish similar ArcGIS endpoints — same code shape, different URLs).
-- **Data mapping to our `parcels` table:** APN → `apn`, OWNER_NAME → `owner_name`, SITUS_ADDRESS/CITY/ZIP → `situs_address` / `city` / `zip`, geometry → `geometry` (existing JSONB), ACREAGE → `acreage` if column exists (otherwise dropped). Confirmed against current `parcels` schema during implementation.
-- **Rate limiting:** DCAD's ArcGIS server has generous limits for anonymous reads, but we still cap per-query result count at 500 parcels and warn the user if their drawn polygon returns more (asks them to narrow the area).
-- **New deps:** `leaflet`, `react-leaflet`, `leaflet-draw`, `@types/leaflet`, `@types/leaflet-draw`. All MIT-licensed, all client-side.
-- **Testing:** Same Playwright E2E as before — open wizard → basics → map step → draw polygon around a Dallas block → verify parcels appear → click to deselect one → continue → verify community + parcels created in DB → verify count matches selected. Non-tech UX review answered at the end.
+## 4. Playful visual refresh
 
-```text
-User draws polygon
-        │
-        ▼
-searchParcelsByPolygon(polygon)  ──▶  DCAD FeatureServer
-        │                                      │
-        │◀─────────  GeoJSON FeatureCollection ─┘
-        ▼
-Render on map + selection sidebar
-        │
-   click to toggle
-        ▼
-applyCcrDraft(selectedParcels)  ──▶  batch insert into parcels
-```
+Scoped to onboarding + community, not the marketing site:
 
-## Out of scope for this plan
-- Non-Dallas counties (follow-up).
-- Owner-based search / APN lookup (follow-up — DCAD supports it, easy add later).
-- Removing the `REGRID_API_TOKEN` secret entirely (leave for now in case we want it back for national coverage).
+- **Type + color:** keep semantic tokens; introduce a fresh accent palette in `styles.css`: `--color-fun-1` (#22c55e), `--color-fun-2` (#facc15), `--color-fun-3` (#3b82f6). Larger, rounded card radii (`rounded-3xl`), soft dual-tone gradients on hero panels.
+- **Motion:** framer-motion for wizard step transitions (slide + fade), a confetti burst on community creation (component already exists — wire it), micro-bounce on primary CTAs.
+- **Toasts:** replace plain sonner toasts with playful copy + emoji ("🎉 JK Hollow is ready").
+- **Empty states:** friendly illustrations (simple SVGs, no external deps) instead of grey boxes.
+- **Progress:** the wizard gets a rounded progress dot row at the top, not just a header.
+
+## Technical notes
+
+- Mapbox package: `bun add mapbox-gl @mapbox/mapbox-gl-draw` + types.
+- Overpass endpoint: `https://overpass-api.de/api/interpreter` — free, rate-limited; called from a server function to avoid CORS.
+- `createCommunity` API extends to accept `roads: Array<{name, class, geometry}>` — existing parcel path is unchanged.
+- Provenance data still stored & readable; only the surface moves.
+- No DB migrations required — road_segments table already exists.
+
+## What I will NOT touch this pass
+
+- Marketing site look (already good).
+- DCAD lookup (works).
+- Auth flow, onboarding jobs table, decisions gating (all recently fixed).
+- Regrid code (already removed).
+
+## Testing plan
+
+After each of the 4 phases lands, drive Playwright end-to-end against your live session:
+
+1. Onboarding: basics → map pick → auto-detected roads → community created; screenshot each step.
+2. Community page: verify 3 tabs render, map is full-height, parcel + road layers toggle, provenance slide-over opens.
+3. Report red flags + answer the "non-tech user" questions honestly before you test.
+
+## One thing I need from you
+
+**Connect Mapbox** (I'll trigger the connector prompt as the first build-mode action). Free public token is fine; the connector stores it as an env var and I never see the raw value.
+
+Once connected, I'll execute phases 1 → 4 in order and test between each.
