@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { displayName, initials, useSession } from "@/lib/auth/useSession";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useOnboardingResetEasterEgg } from "./useOnboardingResetEasterEgg";
 
 interface NavLink {
   to: string;
@@ -48,6 +49,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user } = useSession();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  useOnboardingResetEasterEgg();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
 
