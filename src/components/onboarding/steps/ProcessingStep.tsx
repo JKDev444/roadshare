@@ -77,6 +77,8 @@ export function ProcessingStep({
   const stageIndex = job?.stage_index ?? 0;
   const progress = job?.progress ?? 0;
   const startedAt = job?.started_at ?? new Date().toISOString();
+  const currentStage = JOB_STAGES[Math.min(stageIndex, JOB_STAGES.length - 1)];
+  const docCount = filenames.length;
 
   return (
     <div className="space-y-4">
@@ -87,7 +89,7 @@ export function ProcessingStep({
         <div>
           <h2 className="font-display text-xl font-semibold">Reading your documents</h2>
           <p className="text-xs text-muted-foreground">
-            RoadShare is building your starting workspace. Longer or scanned documents may take a few minutes.
+            {currentStage} — step {Math.min(stageIndex + 1, JOB_STAGES.length)} of {JOB_STAGES.length}. {docCount === 1 ? "1 document" : `${docCount} documents`}. Longer or scanned documents may take a few minutes.
           </p>
         </div>
       </div>

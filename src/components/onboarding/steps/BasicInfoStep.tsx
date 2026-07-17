@@ -114,7 +114,7 @@ export function BasicInfoStep({
             onClick={() => onContinue({ communityName, city, state, startingAddress })}
             disabled={!startingAddress.trim() && !city.trim() && !communityName.trim()}
           >
-            Find My Road <ArrowRight className="h-4 w-4" />
+            Continue <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
       </div>

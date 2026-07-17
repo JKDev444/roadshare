@@ -36,9 +36,9 @@ type Step =
 
 const SAMPLE_DRAFT: CcrDraft = {
   community: {
-    name: "Cedar Hollow Road Group",
+    name: "Cedar Hollow (Sample)",
     region: "Larimer County, CO",
-    description: "12-lot private road community with a shared gravel lane and cul-de-sac.",
+    description: "Sample workspace — 12-lot private road community with a shared gravel lane and cul-de-sac. Safe to delete anytime.",
   },
   lots: Array.from({ length: 12 }).map((_, i) => ({
     label: `Lot ${i + 1}`,
@@ -405,7 +405,7 @@ function WelcomeScreen({
         </Button>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={onSample}>
-            <Sparkles className="h-4 w-4" /> Explore the Cedar Hollow Sample
+            <Sparkles className="h-4 w-4" /> Load Cedar Hollow (Sample)
           </Button>
           <Button size="sm" onClick={onStart}>
             Get Started
