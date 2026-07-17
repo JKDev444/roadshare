@@ -13,7 +13,6 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import { searchAddresses } from "@/lib/onboarding/nominatim";
 import { regridPointLookup, type RegridParcel } from "@/lib/onboarding/regrid.functions";
 import type { BasicInfo } from "./BasicInfoStep";
@@ -317,6 +316,3 @@ export function MapPickStep({
     </div>
   );
 }
-
-// Kept for compatibility with strict eslint import-if-used rule
-void toast;
