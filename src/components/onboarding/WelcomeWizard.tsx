@@ -209,6 +209,14 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
         address: it.address || null,
         provenance: "entered" as const,
       }));
+    } else if (r.kind === "map") {
+      lots = r.items.map((it) => ({
+        label: it.label,
+        address: it.address ?? null,
+        owner_name: it.owner_name ?? null,
+        area_sqft: it.area_sqft ?? null,
+        provenance: "entered" as const,
+      }));
     }
     // Include the starting address as first lot when going the "no docs" path.
     if (basicInfo.startingAddress) {
@@ -303,9 +311,10 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
             />
           )}
 
-          {step === "nodocs" && (
+          {step === "nodocs" && basicInfo && (
             <NoDocsStep
               state={basicInfo?.state}
+              basicInfo={basicInfo}
               onSubmit={handleNoDocs}
               onUploadInstead={() => setStep("upload")}
               onBack={() => setStep("docsQ")}
