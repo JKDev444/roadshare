@@ -35,9 +35,9 @@ const QUICK = [
     icon: Users,
   },
   {
-    to: "/tools/cedar-hollow",
+    to: "/community",
     title: "Build a cost scenario",
-    body: "Once the starter map looks right, compare equal, distance, and frontage splits.",
+    body: "Open your community, add a project, and compare equal, distance, and frontage splits.",
     icon: HardHat,
   },
   {
