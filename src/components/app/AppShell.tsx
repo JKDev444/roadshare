@@ -149,7 +149,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
           <div className="flex-1" />
           <Button size="sm" asChild>
-            <Link to="/tools/cedar-hollow">New scenario</Link>
+            <Link to="/community">New project</Link>
           </Button>
         </header>
         <main className="flex-1 p-4 lg:p-8">{children}</main>
