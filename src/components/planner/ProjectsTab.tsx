@@ -76,7 +76,7 @@ export function ProjectsTab({ communityId }: { communityId: string }) {
             <div className="mt-2 flex flex-wrap gap-2">
               {readiness.parcels < 2 && (
                 <Button asChild size="sm" variant="outline">
-                  <Link to="/community/$id" params={{ id: communityId }} search={{ tab: "parcels" }}>
+                  <Link to="/community/$id" params={{ id: communityId }} search={{ tab: "properties" }}>
                     Add properties <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 </Button>
@@ -98,7 +98,7 @@ export function ProjectsTab({ communityId }: { communityId: string }) {
             {readiness.unresolved} propert{readiness.unresolved === 1 ? "y" : "ies"} still need an address or confirmation before you publish an allocation.
           </span>
           <Button asChild size="sm" variant="outline">
-            <Link to="/community/$id" params={{ id: communityId }} search={{ tab: "parcels" }}>
+            <Link to="/community/$id" params={{ id: communityId }} search={{ tab: "properties" }}>
               Review properties <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </Button>
