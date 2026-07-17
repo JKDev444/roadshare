@@ -51,7 +51,7 @@ export function MapPickStep({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
-  const centerMarkerRef = useRef<L.Marker | null>(null);
+  const centerMarkerRef = useRef<L.CircleMarker | null>(null);
 
   const [status, setStatus] = useState<Status>("geocoding");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -181,7 +181,11 @@ export function MapPickStep({
     }
     // Fit bounds on first load only (when nothing is selected yet)
     if (selected.size === 0) {
-      const bounds = layer.getBounds();
+      const bounds = L.latLngBounds([]);
+      layer.eachLayer((child) => {
+        const b = (child as L.Polygon).getBounds?.();
+        if (b) bounds.extend(b);
+      });
       if (bounds.isValid()) map.fitBounds(bounds, { padding: [20, 20], maxZoom: 19 });
     }
   }, [parcels, selected]);
