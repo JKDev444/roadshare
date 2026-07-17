@@ -5,7 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { Route as RouteIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useOnboarding } from "@/lib/onboarding/useOnboarding";
@@ -93,6 +94,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
   const [finishedJob, setFinishedJob] = useState<OnboardingJobRow | null>(null);
   const [draft, setDraft] = useState<CcrDraft | null>(null);
   const [applying, setApplying] = useState(false);
+  const [applyProgress, setApplyProgress] = useState<{ done: number; total: number; phase: string } | null>(null);
   const [creatingJob, setCreatingJob] = useState(false);
   const [focusUnresolved, setFocusUnresolved] = useState(false);
 
@@ -145,8 +147,11 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
     async (d: CcrDraft) => {
       if (applying) return;
       setApplying(true);
+      setApplyProgress({ done: 0, total: d.lots.length + Math.min(d.roads.length, 20) + 1, phase: "Starting…" });
       try {
-        const community = await applyCcrDraft(d);
+        const community = await applyCcrDraft(d, {
+          onProgress: (done, total, phase) => setApplyProgress({ done, total, phase }),
+        });
         if (jobId) await dismissJobFn({ data: { jobId } });
         await qc.invalidateQueries({ queryKey: ["onboarding", "progress"] });
         await qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
@@ -164,6 +169,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
         toast.error(err instanceof Error ? err.message : "Something went wrong.");
       } finally {
         setApplying(false);
+        setApplyProgress(null);
       }
     },
     [applying, dismissJobFn, jobId, navigate, qc, update],
@@ -256,6 +262,30 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
   return (
     <Dialog open={open} onOpenChange={(v) => (v ? setOpenOverride(true) : close(false))}>
       <DialogContent className={cn("max-w-2xl overflow-hidden", step === "review" && "max-w-4xl")}>
+        <VisuallyHidden>
+          <DialogTitle>Set up your road group</DialogTitle>
+          <DialogDescription>
+            Guided setup to add your community, properties, and roads.
+          </DialogDescription>
+        </VisuallyHidden>
+        {applying && applyProgress && (
+          <div className="absolute inset-x-0 top-0 z-20 border-b border-primary/30 bg-primary/10 px-4 py-2">
+            <div className="flex items-center justify-between text-xs font-medium text-primary">
+              <span>{applyProgress.phase}</span>
+              <span>
+                {Math.min(applyProgress.done, applyProgress.total)} / {applyProgress.total}
+              </span>
+            </div>
+            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-primary/20">
+              <div
+                className="h-full bg-primary transition-all"
+                style={{
+                  width: `${Math.min(100, (applyProgress.done / Math.max(1, applyProgress.total)) * 100)}%`,
+                }}
+              />
+            </div>
+          </div>
+        )}
         <div className="mb-3 flex items-center gap-2.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
             <RouteIcon className="h-4 w-4" />
