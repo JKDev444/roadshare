@@ -162,10 +162,10 @@ export function MapPickStep({
         polygon.map((ring) => ring.map(([lng, lat]) => [lat, lng] as [number, number])),
       );
       const poly = L.polygon(latlngs, {
-        color: isSel ? "#0ea5e9" : "#94a3b8",
-        weight: isSel ? 3 : 1.5,
-        fillColor: isSel ? "#38bdf8" : "#cbd5e1",
-        fillOpacity: isSel ? 0.45 : 0.15,
+        color: isSel ? "#0369a1" : "#1e293b",
+        weight: isSel ? 3 : 2,
+        fillColor: isSel ? "#0ea5e9" : "#f59e0b",
+        fillOpacity: isSel ? 0.55 : 0.35,
       });
       poly.bindTooltip(p.headline, { direction: "top", offset: [0, -4] });
       poly.on("click", () => {
