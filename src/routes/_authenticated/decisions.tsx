@@ -585,6 +585,11 @@ function VoteTab({ decision, communityId }: { decision: Decision; communityId: s
 function ExplanationTab({ decision, communityId }: { decision: Decision; communityId: string }) {
   const qc = useQueryClient();
   const [rationale, setRationale] = useState(decision.rationale ?? "");
+  const { data: readiness } = useQuery({
+    queryKey: ["scenario-readiness", communityId],
+    queryFn: () => import("@/lib/onboarding/readiness").then((m) => m.checkScenarioReadiness(communityId)),
+  });
+  const blockedByUnresolved = (readiness?.unresolved ?? 0) > 0;
 
   const publish = useMutation({
     mutationFn: () => publishRationale(decision, rationale.trim()),
@@ -594,6 +599,11 @@ function ExplanationTab({ decision, communityId }: { decision: Decision; communi
 
   return (
     <div className="space-y-4">
+      {blockedByUnresolved && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
+          Resolve the {readiness?.unresolved} property record{readiness?.unresolved === 1 ? "" : "s"} still missing an address before publishing this decision — the report should not cite unconfirmed properties.
+        </div>
+      )}
       {decision.status === "decided" && decision.outcome && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
           <p className="text-xs font-semibold uppercase text-primary">Recorded outcome</p>
@@ -608,7 +618,7 @@ function ExplanationTab({ decision, communityId }: { decision: Decision; communi
         </div>
         <Textarea id="rat" rows={6} className="mt-1" value={rationale} onChange={(e) => setRationale(e.target.value)} placeholder="Explain what was decided, why, and which evidence supported it. This becomes the community's official, versioned record." />
       </div>
-      <Button onClick={() => publish.mutate()} disabled={publish.isPending || !rationale.trim()}>
+      <Button onClick={() => publish.mutate()} disabled={publish.isPending || !rationale.trim() || blockedByUnresolved} title={blockedByUnresolved ? "Resolve unconfirmed properties first" : undefined}>
         <ScrollText className="h-4 w-4" /> {decision.rationale_version > 0 ? "Publish new version" : "Publish explanation"}
       </Button>
     </div>
