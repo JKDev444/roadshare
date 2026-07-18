@@ -44,36 +44,42 @@ export const Route = createFileRoute("/methodology")({
               aria-label="Homes along a road, each with a distance from the entrance"
             >
               <defs>
-                <pattern id="dash" width="14" height="4" patternUnits="userSpaceOnUse">
-                  <rect width="10" height="2" y="1" fill="hsl(var(--gold))" />
+                <pattern id="dash" width="18" height="4" patternUnits="userSpaceOnUse">
+                  <rect width="10" height="3" y="0.5" className="fill-gold" />
                 </pattern>
               </defs>
               {/* road */}
-              <rect x="40" y="90" width="560" height="18" rx="9" fill="hsl(var(--foreground))" />
+              <rect x="40" y="90" width="560" height="18" rx="9" className="fill-foreground" />
               <rect x="40" y="97" width="560" height="4" fill="url(#dash)" />
               {/* entrance pin */}
-              <circle cx="52" cy="99" r="10" fill="hsl(var(--primary))" />
+              <circle cx="52" cy="99" r="11" className="fill-primary" />
+              <circle cx="52" cy="99" r="4" className="fill-background" />
               <text x="52" y="140" textAnchor="middle" className="fill-muted-foreground" fontSize="11">
                 Entrance
               </text>
               {/* houses */}
               {[
-                { x: 150, name: "Ana", share: "$2,390" },
-                { x: 290, name: "Ben", share: "$6,056" },
-                { x: 430, name: "Cora", share: "$9,880" },
-                { x: 560, name: "Devon", share: "$13,705" },
+                { x: 150, name: "Ana", share: "$2,390", accent: "fill-selected" },
+                { x: 290, name: "Ben", share: "$6,056", accent: "fill-primary" },
+                { x: 430, name: "Cora", share: "$9,880", accent: "fill-primary" },
+                { x: 560, name: "Devon", share: "$13,705", accent: "fill-gold" },
               ].map((h) => (
                 <g key={h.name}>
                   <polygon
-                    points={`${h.x - 14},70 ${h.x},52 ${h.x + 14},70 ${h.x + 14},86 ${h.x - 14},86`}
-                    fill="hsl(var(--card))"
-                    stroke="hsl(var(--foreground))"
-                    strokeWidth="1.5"
+                    points={`${h.x - 16},74 ${h.x},54 ${h.x + 16},74 ${h.x + 16},88 ${h.x - 16},88`}
+                    className={h.accent}
                   />
-                  <text x={h.x} y="45" textAnchor="middle" className="fill-foreground" fontSize="11" fontWeight="600">
+                  <text x={h.x} y="46" textAnchor="middle" className="fill-foreground" fontSize="12" fontWeight="700">
                     {h.share}
                   </text>
-                  <text x={h.x} y="82" textAnchor="middle" className="fill-muted-foreground" fontSize="10">
+                  <text
+                    x={h.x}
+                    y="82"
+                    textAnchor="middle"
+                    fontSize="10"
+                    fontWeight="600"
+                    fill="white"
+                  >
                     {h.name}
                   </text>
                 </g>
