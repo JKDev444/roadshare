@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Route as RouteIcon, Sparkles } from "lucide-react";
+import { Route as RouteIcon, Sparkles, MapPin, Home } from "lucide-react";
 import { toast } from "sonner";
 
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -18,6 +18,7 @@ import { BasicInfoStep, type BasicInfo } from "./steps/BasicInfoStep";
 import { DocsQuestionStep } from "./steps/DocsQuestionStep";
 import { UploadStep } from "./steps/UploadStep";
 import { NoDocsStep, type NoDocsResult } from "./steps/NoDocsStep";
+import { MapPickStep } from "./steps/MapPickStep";
 import { ProcessingStep } from "./steps/ProcessingStep";
 import { SuccessSummaryStep } from "./steps/SuccessSummaryStep";
 import { FailureStep } from "./steps/FailureStep";
@@ -29,6 +30,7 @@ type Step =
   | "docsQ"
   | "upload"
   | "nodocs"
+  | "mappick"
   | "processing"
   | "success"
   | "failure"
@@ -298,17 +300,36 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
             </div>
           </div>
         )}
-        <div className="mb-3 flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
-            <RouteIcon className="h-4 w-4" />
-          </span>
-          <div className="min-w-0">
-            <p className="font-display text-sm font-bold leading-none tracking-tight">
-              Set up your road group
-            </p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
-              {step === "welcome" ? "Welcome" : step === "review" ? "Review your workspace" : "Setup"}
-            </p>
+        <div className="relative mb-3 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/15 via-fun-2/10 to-fun-3/15 px-4 py-3">
+          <div className="pointer-events-none absolute -right-3 -top-3 opacity-30">
+            <Home className="h-16 w-16 text-primary" />
+          </div>
+          <div className="pointer-events-none absolute right-10 top-2 opacity-40">
+            <MapPin className="h-6 w-6 text-fun-2-foreground" />
+          </div>
+          <div className="pointer-events-none absolute -bottom-2 right-16 opacity-30">
+            <Sparkles className="h-5 w-5 text-fun-3-foreground" />
+          </div>
+          <div className="relative flex items-center gap-2.5">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-md">
+              <RouteIcon className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="font-display text-base font-bold leading-tight tracking-tight">
+                Set up your road group
+              </p>
+              <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">
+                {step === "welcome"
+                  ? "Welcome — this takes about 2 minutes"
+                  : step === "review"
+                    ? "Review your workspace"
+                    : step === "mappick"
+                      ? "Pick your neighbors"
+                      : step === "docsQ"
+                        ? "Choose your path"
+                        : "Setup"}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -342,7 +363,11 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
 
           {step === "docsQ" && (
             <DocsQuestionStep
-              onAnswer={(a) => setStep(a === "yes" ? "upload" : "nodocs")}
+              onAnswer={(a) =>
+                setStep(
+                  a === "yes" ? "upload" : a === "map" ? "mappick" : "nodocs",
+                )
+              }
               onBack={() => setStep("basic")}
             />
           )}
@@ -362,6 +387,15 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
               onSubmit={handleNoDocs}
               onUploadInstead={() => setStep("upload")}
               onBack={() => setStep("docsQ")}
+              submitting={applying}
+            />
+          )}
+
+          {step === "mappick" && basicInfo && (
+            <MapPickStep
+              basicInfo={basicInfo}
+              onCancel={() => setStep("docsQ")}
+              onSubmit={handleNoDocs}
               submitting={applying}
             />
           )}

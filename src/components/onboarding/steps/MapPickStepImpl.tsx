@@ -436,9 +436,9 @@ export function MapPickStep({
         <div>
           <h2 className="font-display text-lg font-semibold">Pick your neighborhood on the map</h2>
           <p className="mt-0.5 max-w-lg text-xs text-muted-foreground">
-            We picked your closest neighbors to start. Tap any parcel to add or remove it, or use
-            the lasso to draw around your whole community — we'll auto-detect the roads. Dallas
-            County data via DCAD.
+            We picked your closest neighbors to start. Tap any home to add or remove it, or use
+            the lasso to draw around your whole community — we'll auto-detect the roads. Property
+            data from Dallas County records.
           </p>
         </div>
         <div className="flex shrink-0 gap-1.5">
@@ -497,7 +497,7 @@ export function MapPickStep({
             <Check className="h-3 w-3" />
             {selected.size} selected
           </span>
-          <span className="text-muted-foreground">of {parcels.length} shown</span>
+          <span className="text-muted-foreground">of {parcels.length} nearby homes</span>
           {hasDrawn && <span className="text-muted-foreground">· from your drawn area</span>}
           {roads.length > 0 && <span className="text-muted-foreground">· {roads.filter((r) => r.included).length} roads included</span>}
         </div>
@@ -510,9 +510,9 @@ export function MapPickStep({
 
       {status === "empty" && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-          <p className="font-medium">No parcels found in that area.</p>
+          <p className="font-medium">No homes found in that area.</p>
           <p className="mt-0.5">
-            DCAD covers Dallas County only right now. Try a different address inside Dallas County, or
+            Property records cover Dallas County only right now. Try a different address inside Dallas County, or
             go back and paste addresses instead.
           </p>
         </div>
