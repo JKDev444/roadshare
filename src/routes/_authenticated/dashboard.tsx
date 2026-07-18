@@ -17,7 +17,7 @@ import { getDashboardStats } from "@/lib/onboarding/api";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — RoadShare" }, { name: "robots", content: "noindex" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({ welcome: s.welcome === "1" || s.welcome === 1 || s.welcome === true ? true : undefined }),
+  validateSearch: (s: Record<string, unknown>) => ({ welcome: s.welcome === "1" || s.welcome === "true" || s.welcome === 1 || s.welcome === true ? true : undefined }),
   component: Dashboard,
 });
 
