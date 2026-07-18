@@ -520,8 +520,8 @@ export function MapPickStep({
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
           <p className="font-medium">No homes found in that area.</p>
           <p className="mt-0.5">
-            Property records cover Dallas County only right now. Try a different address inside Dallas County, or
-            go back and paste addresses instead.
+            We couldn't find any home outlines near that address. Try zooming out with the lasso to
+            cover a wider area, use a different starting address, or go back and paste addresses instead.
           </p>
         </div>
       )}
