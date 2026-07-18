@@ -13,11 +13,11 @@ Existing DCAD parcel lookup (free, Dallas-only) stays as-is — that part works.
 
 ## 1. Mapbox integration
 
-- **Prereq (asks user):** connect the Mapbox connector so we get a public token (`VITE_LOVABLE_CONNECTOR_MAPBOX_PUBLIC_TOKEN`). Free tier is plenty; no server calls needed for tiles.
+- **Prereq:** Connect the Mapbox connector so the app gets a public token (`VITE_LOVABLE_CONNECTOR_MAPBOX_PUBLIC_TOKEN`). Free tier is enough; no server calls needed for tiles.
 - Replace Leaflet with **`mapbox-gl` + `@mapbox/mapbox-gl-draw`** in `MapPickStep.tsx` and the community "Map" tab.
 - Base style: `mapbox://styles/mapbox/streets-v12` with a small custom overlay: rounded parcel polygons, primary-color fills for selected (`#0ea5e9`), warm amber for unselected (`#f59e0b`), soft glow on hover.
-- Bigger map canvas: on the community page and map-picker, expand to a **near-full-viewport map** (calc height minus header) with the sidebar collapsible so users can go big when a neighborhood is huge.
-- Draw tool: Mapbox Draw's polygon/rectangle controls (much better UX than Leaflet.draw). Add a "Lasso" quick button in the toolbar so it's obvious how to select an area.
+- Bigger map canvas: on the community page and map-picker, expand to a **near-full-viewport map** (calc height minus header) with a collapsible sidebar so users can go big when a neighborhood is huge.
+- Draw tool: Mapbox Draw's polygon/rectangle controls (better UX than Leaflet.draw). Add a "Lasso" quick button in the toolbar so it's obvious how to select an area.
 
 ## 2. Auto-detect roads (Overpass API)
 
@@ -67,14 +67,12 @@ Scoped to onboarding + community, not the marketing site:
 
 ## Testing plan
 
-After each of the 4 phases lands, drive Playwright end-to-end against your live session:
+After each of the 4 phases lands, drive Playwright end-to-end against the live session:
 
 1. Onboarding: basics → map pick → auto-detected roads → community created; screenshot each step.
 2. Community page: verify 3 tabs render, map is full-height, parcel + road layers toggle, provenance slide-over opens.
-3. Report red flags + answer the "non-tech user" questions honestly before you test.
+3. Report red flags + answer the non-tech user questions honestly before testing.
 
 ## One thing I need from you
 
-**Connect Mapbox** (I'll trigger the connector prompt as the first build-mode action). Free public token is fine; the connector stores it as an env var and I never see the raw value.
-
-Once connected, I'll execute phases 1 → 4 in order and test between each.
+**Connect Mapbox** via the Lovable connector. Free public token is fine; the connector stores it as an env var and I never see the raw value.
