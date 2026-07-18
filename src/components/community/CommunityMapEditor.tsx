@@ -174,9 +174,11 @@ export function CommunityMapEditor({
       const id = String(feat.properties?.id ?? "");
       onSelectSegment(id === selectedSegmentId ? null : id);
     };
+    const onMouseEnter = () => (map.getCanvas().style.cursor = "pointer");
+    const onMouseLeave = () => (map.getCanvas().style.cursor = "");
     map.on("click", "roads", onClickRoad);
-    map.on("mouseenter", "roads", () => (map.getCanvas().style.cursor = "pointer"));
-    map.on("mouseleave", "roads", () => (map.getCanvas().style.cursor = ""));
+    map.on("mouseenter", "roads", onMouseEnter);
+    map.on("mouseleave", "roads", onMouseLeave);
 
     const onCreate = (e: mapboxgl.MapboxEvent) => {
       const feat = (e as { features?: GeoJSON.Feature[] }).features?.[0];
@@ -189,8 +191,8 @@ export function CommunityMapEditor({
 
     return () => {
       map.off("click", "roads", onClickRoad);
-      map.off("mouseenter", "roads");
-      map.off("mouseleave", "roads");
+      map.off("mouseenter", "roads", onMouseEnter);
+      map.off("mouseleave", "roads", onMouseLeave);
       map.off("draw.create", onCreate);
     };
   }, [parcels, segments, selectedSegmentId, onSelectSegment, onCreateSegment]);
