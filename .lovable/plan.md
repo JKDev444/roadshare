@@ -1,78 +1,64 @@
-# Plan: Make mapping + community page easy and fun
+## What's off today
 
-## Big picture
+Looked through `src/routes/index.tsx`, `product.index.tsx`, `about.tsx`, `pricing.tsx`, `methodology.tsx`, and the shared `SiteLayout` / `primitives.tsx`. The pattern that repeats across almost every page:
 
-Four coordinated changes, in this order so nothing lands broken:
+- Homepage has **two card grids back-to-back** (Story = 6 cards, Products = 6 cards).
+- Subpage tiles get repeated on the homepage as **small pill links** at the bottom — the "Solutions" audience row. Non-tech users have no way to tell those pills are the primary way into subpages.
+- The "secret sauce" — **fairly splitting road costs by how far each home actually drives on the road** — is only a single line in the hero. Nothing else on the site shows or celebrates it.
+- Subpages (`/product`, `/about`, etc.) lean on the same card grid formula, which makes the whole site feel like one giant card wall.
 
-1. **Swap Leaflet/OSM tiles for Mapbox Streets** (vibrant, matches Cedar Hollow).
-2. **Auto-detect roads from OpenStreetMap** when the user lassos a neighborhood, so the "Draw road" step goes away for most people.
-3. **Collapse community page** from 5 tabs (Overview / Property layer / Road geometry / Projects / Provenance) down to **3: Map · Properties · Projects**, with Provenance moved to a small "history" popover.
-4. **Playful visual refresh** (rounded cards, warm accents, bounce toasts, celebratory micro-interactions) across the onboarding + community pages, keeping current semantic tokens.
+## What I'll do
 
-Existing DCAD parcel lookup (free, Dallas-only) stays as-is — that part works.
+### 1. Homepage — one card section, not three
 
-## 1. Mapbox integration
+Keep exactly **one** card grid (the Products section — that one earns cards because each item is a real destination). Everything else becomes its own shape:
 
-- **Prereq:** Connect the Mapbox connector so the app gets a public token (`VITE_LOVABLE_CONNECTOR_MAPBOX_PUBLIC_TOKEN`). Free tier is enough; no server calls needed for tiles.
-- Replace Leaflet with **`mapbox-gl` + `@mapbox/mapbox-gl-draw`** in `MapPickStep.tsx` and the community "Map" tab.
-- Base style: `mapbox://styles/mapbox/streets-v12` with a small custom overlay: rounded parcel polygons, primary-color fills for selected (`#0ea5e9`), warm amber for unselected (`#f59e0b`), soft glow on hover.
-- Bigger map canvas: on the community page and map-picker, expand to a **near-full-viewport map** (calc height minus header) with a collapsible sidebar so users can go big when a neighborhood is huge.
-- Draw tool: Mapbox Draw's polygon/rectangle controls (better UX than Leaflet.draw). Add a "Lasso" quick button in the toolbar so it's obvious how to select an area.
+- **Story section → horizontal numbered storyline.** Six labeled steps (Map → Allocate → Documents → Community → Decide → Report) laid out along a connecting road line with numbered dots, not tiles. Reads left-to-right like a journey. On mobile it stacks as a vertical timeline. This gives the page a narrative spine instead of a second card wall.
+- **Solutions pill row → "Who uses RoadShare"** paragraph-style band with 3–4 named personas as inline text callouts + one clear "See who it's for →" button that opens a proper list page. Kills the confusing tiny pill soup at the bottom.
 
-## 2. Auto-detect roads (Overpass API)
+### 2. New "Secret sauce" spotlight section
 
-New server function `detectRoadsInPolygon` in `src/lib/onboarding/osm.functions.ts`:
+Add a dedicated section between Story and Products called something like **"The fair-share formula"**:
 
-- Input: the drawn GeoJSON polygon.
-- Query Overpass for `way["highway"]` inside the polygon (free, no key).
-- Return road segments as GeoJSON LineStrings with name + highway class.
-- Onboarding: after parcels are picked, show a **"Roads we found"** panel with checkboxes ("Include this road", "Private / Shared / Public" chip per road, default Shared). One-click "Include all", one-click "Skip roads for now".
-- Roads get persisted alongside parcels during `createCommunity`. They land on the community's Map tab as editable segments — the user can still tweak names/labels/classifications after.
-- If Overpass returns nothing (rural), fall back to the current "Draw road" tool with a friendly explainer.
+- Left side: short plain-English pitch — "Every home pays for the road they actually use. Drive past 3 homes to reach yours? You pay a share on that stretch. Neighbors closer to the entrance pay less."
+- Right side: an interactive miniature — a small map with 4 homes, a hovering slider that moves a "your house" pin, and the dollar amount for each neighbor updating live. Uses the existing `HeroMap`-style SVG animation, no new libraries.
+- Below: three little proof stat chips ("Distance-based • Frontage-based • Equal split — you pick") to show flexibility without becoming another card grid.
 
-## 3. Community page — 3 tabs
+This is the section that finally makes the secret sauce loud.
 
-Rework `src/routes/_authenticated/community.$id.tsx`:
+### 3. Site-wide polish for "fun + non-technical"
 
-- **Map** (default) — parcels + roads on one Mapbox canvas. Tools sidebar: layer toggles (parcels / roads / satellite), select-move / draw-road / draw-parcel. This absorbs today's Overview + Property layer + Road geometry.
-- **Properties** — the list table of parcels with owner, address, verification status. Bulk verify.
-- **Projects** — unchanged (existing ProjectsTab).
-- **Provenance** — becomes a small clock-icon button on the top-right that opens a slide-over showing the audit trail. Not a tab anymore.
-- Empty states get rewritten with a single obvious CTA each ("Add roads on the map →").
+- **Language pass.** Rewrite headings and card copy in the voice we've been using in-app ("homes", "your road", "your share") instead of governance jargon ("parcels", "obligations", "allocation methods").
+- **Playful accents.** Reuse the in-app `fun-1/2/3` gradient tokens for the secret-sauce section, the CTA, and page heroes so the marketing site matches the wizard's personality.
+- **Motion moment.** One animated pin/road stroke on the hero and one live-updating number in the secret-sauce section. Nothing more — motion should feel like a wink, not a rave.
 
-## 4. Playful visual refresh
+### 4. Subpage cleanup (same principles)
 
-Scoped to onboarding + community, not the marketing site:
-
-- **Type + color:** keep semantic tokens; introduce a fresh accent palette in `styles.css`: `--color-fun-1` (#22c55e), `--color-fun-2` (#facc15), `--color-fun-3` (#3b82f6). Larger, rounded card radii (`rounded-3xl`), soft dual-tone gradients on hero panels.
-- **Motion:** framer-motion for wizard step transitions (slide + fade), a confetti burst on community creation (component already exists — wire it), micro-bounce on primary CTAs.
-- **Toasts:** replace plain sonner toasts with playful copy + emoji ("🎉 JK Hollow is ready").
-- **Empty states:** friendly illustrations (simple SVGs, no external deps) instead of grey boxes.
-- **Progress:** the wizard gets a rounded progress dot row at the top, not just a header.
+- `/product` — remove the redundant "audience pills at the bottom" pattern where it repeats; anchor each product with a small illustrative graphic instead of a card.
+- `/about`, `/methodology`, `/pricing` — replace stacked info-card grids with the existing `ContentPage` prose layout (already in `primitives.tsx`) so the whole site doesn't feel identical.
+- `SiteFooter` / `SiteHeader` — verify the top nav (Product / Solutions / Pricing / About) is clearly labeled and matches what the pill row used to point at, so nothing is lost.
 
 ## Technical notes
 
-- Mapbox package: `bun add mapbox-gl @mapbox/mapbox-gl-draw` + types.
-- Overpass endpoint: `https://overpass-api.de/api/interpreter` — free, rate-limited; called from a server function to avoid CORS.
-- `createCommunity` API extends to accept `roads: Array<{name, class, geometry}>` — existing parcel path is unchanged.
-- Provenance data still stored & readable; only the surface moves.
-- No DB migrations required — road_segments table already exists.
+- New storyline component: `src/components/site/StoryPath.tsx` (SVG road line + numbered stops, `framer-motion` reveal already in the project).
+- New secret-sauce component: `src/components/site/SecretSauce.tsx` — reuses the SVG language from `HeroMap` in `src/routes/index.tsx`.
+- Content lives in `src/lib/site/content.ts` (already the source of truth for PRODUCTS/SOLUTIONS) — extend with a `PERSONAS` short list and a `FORMULA_HOMES` demo dataset.
+- No new dependencies; keeps `framer-motion` + Tailwind + shadcn only.
+- Preserve all existing route heads (titles, descriptions, og tags) — copy edits only, no metadata regressions.
 
-## What I will NOT touch this pass
+## Out of scope
 
-- Marketing site look (already good).
-- DCAD lookup (works).
-- Auth flow, onboarding jobs table, decisions gating (all recently fixed).
-- Regrid code (already removed).
+- No changes to authenticated app pages.
+- No new backend, database, or Cloud changes.
+- Not touching `/tools/cedar-hollow` — that stays as the live demo target.
 
-## Testing plan
+## Suggested build order
 
-After each of the 4 phases lands, drive Playwright end-to-end against the live session:
+1. Storyline component + drop into homepage (replaces first card grid).
+2. Secret-sauce section + drop into homepage.
+3. Kill the pill row, replace with the "Who uses RoadShare" band.
+4. Copy pass across homepage + subpages.
+5. Subpage card-grid cleanup on `/product`, `/about`, `/methodology`.
+6. Playwright pass: capture each marketing page at desktop + mobile, confirm no card-heaviness regressions and that the secret sauce is visible above the fold on `/`.
 
-1. Onboarding: basics → map pick → auto-detected roads → community created; screenshot each step.
-2. Community page: verify 3 tabs render, map is full-height, parcel + road layers toggle, provenance slide-over opens.
-3. Report red flags + answer the non-tech user questions honestly before testing.
-
-## One thing I need from you
-
-**Connect Mapbox** via the Lovable connector. Free public token is fine; the connector stores it as an env var and I never see the raw value.
+Want me to also run the visual-direction ritual (palette / type / layout picks + 3 rendered previews of the new homepage) before I start building, or go straight into implementation from this plan?
