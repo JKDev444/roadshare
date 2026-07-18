@@ -109,6 +109,7 @@ export function MapPickStep({
   const [detectingRoads, setDetectingRoads] = useState(false);
   const [drawingActive, setDrawingActive] = useState(false);
   const [anchorParcelId, setAnchorParcelId] = useState<string | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   // 1) Geocode starting address once.
   useEffect(() => {
@@ -179,6 +180,7 @@ export function MapPickStep({
     new mapboxgl.Marker({ color: "#f59e0b" }).setLngLat([center.lng, center.lat]).addTo(map);
 
     map.on("load", () => {
+      setMapLoaded(true);
       map.addSource("parcels", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -337,7 +339,7 @@ export function MapPickStep({
   // 5) Re-render parcel source whenever parcels/selection change.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !mapLoaded) return;
     const source = map.getSource("parcels") as mapboxgl.GeoJSONSource | undefined;
     if (!source) return;
     const features: GeoJSON.Feature[] = parcels.map((p) => {
@@ -368,7 +370,7 @@ export function MapPickStep({
       }
       if (added) map.fitBounds(bounds, { padding: 40, maxZoom: 19 });
     }
-  }, [parcels, selected, anchorParcelId]);
+  }, [parcels, selected, anchorParcelId, mapLoaded]);
 
   const selectedList = useMemo(
     () => parcels.filter((p) => selected.has(p.id)),
