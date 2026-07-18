@@ -24,10 +24,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { searchAddresses } from "@/lib/onboarding/nominatim";
 import {
-  dcadPointLookup,
-  dcadPolygonLookup,
-  type DcadParcel,
-} from "@/lib/onboarding/dcad.functions";
+  parcelsPointLookup,
+  parcelsPolygonLookup,
+  type ParcelSource,
+} from "@/lib/onboarding/parcels.functions";
+import type { DcadParcel } from "@/lib/onboarding/dcad.functions";
 import { detectRoadsInPolygon, type OsmRoad } from "@/lib/onboarding/osm.functions";
 import { getMapboxToken } from "@/lib/mapbox";
 import type { Json } from "@/integrations/supabase/types";
@@ -91,8 +92,8 @@ export function MapPickStep({
   onSubmit: (r: MapPickResult) => void | Promise<void>;
   submitting?: boolean;
 }) {
-  const pointFn = useServerFn(dcadPointLookup);
-  const polygonFn = useServerFn(dcadPolygonLookup);
+  const pointFn = useServerFn(parcelsPointLookup);
+  const polygonFn = useServerFn(parcelsPolygonLookup);
   const detectRoadsFn = useServerFn(detectRoadsInPolygon);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -110,6 +111,7 @@ export function MapPickStep({
   const [drawingActive, setDrawingActive] = useState(false);
   const [anchorParcelId, setAnchorParcelId] = useState<string | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [source, setSource] = useState<ParcelSource | null>(null);
 
   // 1) Geocode starting address once.
   useEffect(() => {
@@ -263,6 +265,7 @@ export function MapPickStep({
       try {
         const res = await pointFn({ data: { lat: c.lat, lng: c.lng, radius: 400, limit: 300 } });
         setParcels(res.parcels);
+        setSource(res.source);
         // Auto-select the nearest ~8 parcels so the user sees immediate progress.
         const withDist = res.parcels
           .map((p) => ({
@@ -310,6 +313,7 @@ export function MapPickStep({
           detectRoadsFn({ data: { polygon: { type: "Polygon", coordinates: [ring] } } }),
         ]);
         setParcels(parcelRes.parcels);
+        setSource(parcelRes.source);
         setSelected(new Set(parcelRes.parcels.map((p) => p.id)));
         setHasDrawn(true);
         setRoads(
