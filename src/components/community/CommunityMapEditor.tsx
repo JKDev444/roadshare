@@ -3,7 +3,10 @@ import { ClientOnly } from "@tanstack/react-router";
 
 import type { CommunityMapEditorProps } from "./CommunityMapEditorImpl";
 
-const LazyCommunityMapEditor = React.lazy(() => import("./CommunityMapEditorImpl"));
+const LazyCommunityMapEditor = React.lazy(async () => {
+  const { CommunityMapEditor } = await import("./CommunityMapEditorImpl");
+  return { default: CommunityMapEditor };
+});
 
 export function CommunityMapEditor(props: CommunityMapEditorProps) {
   return (
