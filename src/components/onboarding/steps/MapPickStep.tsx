@@ -7,19 +7,28 @@ import {
   MapPin,
   Pencil,
   RotateCcw,
+  SquareDashedMousePointer,
+  ShieldCheck,
+  Shield,
+  Car,
+  Road,
+  X,
 } from "lucide-react";
-import L from "leaflet";
-import "leaflet-draw";
-import "leaflet/dist/leaflet.css";
-import "leaflet-draw/dist/leaflet.draw.css";
+import mapboxgl from "mapbox-gl";
+import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import "mapbox-gl/dist/mapbox-gl.css";
+import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { searchAddresses } from "@/lib/onboarding/nominatim";
 import {
   dcadPointLookup,
   dcadPolygonLookup,
   type DcadParcel,
 } from "@/lib/onboarding/dcad.functions";
+import { detectRoadsInPolygon, type OsmRoad } from "@/lib/onboarding/osm.functions";
+import { getMapboxToken } from "@/lib/mapbox";
 import type { BasicInfo } from "./BasicInfoStep";
 
 export type MapPickResult = {
@@ -29,19 +38,38 @@ export type MapPickResult = {
     address?: string;
     owner_name?: string;
     area_sqft?: number;
+    lat?: number;
+    lng?: number;
+    geojson?: unknown;
   }>;
+  roads: Array<{ id: string; name: string; class: string; responsibility: "shared" | "private" | "public"; geometry: { type: "LineString"; coordinates: [number, number][] } }>;
 };
 
 type Status = "geocoding" | "fetching" | "ready" | "error" | "empty";
 
+type RoadEntry = {
+  id: string;
+  name: string;
+  class: string;
+  included: boolean;
+  responsibility: "shared" | "private" | "public";
+  geometry: { type: "LineString"; coordinates: [number, number][] };
+};
+
+const RESP_LABEL: Record<string, { label: string; icon: typeof Shield }> = {
+  shared: { label: "Shared", icon: ShieldCheck },
+  private: { label: "Private", icon: Shield },
+  public: { label: "Public", icon: Car },
+};
+
 /**
- * Interactive map step (Dallas County / DCAD).
+ * Interactive Mapbox map step (Dallas County / DCAD).
  *
  * Flow:
- *   1. Geocode the starting address, load nearby DCAD parcels.
- *   2. User can click any parcel to toggle it,
- *      OR use the draw tool (top-right) to lasso a whole area — every parcel
- *      inside gets auto-selected, then fine-tune by clicking.
+ *   1. Geocode the starting address and center the map.
+ *   2. Draw a lasso around the neighborhood; every parcel inside gets selected.
+ *   3. OpenStreetMap roads inside the lasso are auto-detected and suggested.
+ *   4. Fine-tune parcels by clicking them, then confirm.
  */
 export function MapPickStep({
   basicInfo,
@@ -56,12 +84,11 @@ export function MapPickStep({
 }) {
   const pointFn = useServerFn(dcadPointLookup);
   const polygonFn = useServerFn(dcadPolygonLookup);
+  const detectRoadsFn = useServerFn(detectRoadsInPolygon);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const layerRef = useRef<L.LayerGroup | null>(null);
-  const drawLayerRef = useRef<L.FeatureGroup | null>(null);
-  const centerMarkerRef = useRef<L.CircleMarker | null>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const drawRef = useRef<MapboxDraw | null>(null);
 
   const [status, setStatus] = useState<Status>("geocoding");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -69,8 +96,10 @@ export function MapPickStep({
   const [parcels, setParcels] = useState<DcadParcel[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [hasDrawn, setHasDrawn] = useState(false);
+  const [roads, setRoads] = useState<RoadEntry[]>([]);
+  const [detectingRoads, setDetectingRoads] = useState(false);
 
-  // 1) Geocode starting address once
+  // 1) Geocode starting address once.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -81,8 +110,6 @@ export function MapPickStep({
         return;
       }
       try {
-        // Include the city so the geocoder doesn't match a same-named street in
-        // another Texas city (e.g. "Jackson St" exists in both Dallas and Houston).
         const cityState = [basicInfo.city, basicInfo.state].filter(Boolean).join(", ");
         const q = cityState ? `${address}, ${cityState}` : address;
         const hits = await searchAddresses(q, { state: basicInfo.state || undefined });
@@ -104,72 +131,101 @@ export function MapPickStep({
     return () => {
       cancelled = true;
     };
-  }, [basicInfo.startingAddress, basicInfo.state]);
+  }, [basicInfo.startingAddress, basicInfo.city, basicInfo.state]);
 
-  // 2) Initialize Leaflet + Leaflet.draw once center is known
+  // 2) Initialize Mapbox once center is known.
   useEffect(() => {
     if (!center || !containerRef.current || mapRef.current) return;
-    const map = L.map(containerRef.current, {
-      center: [center.lat, center.lng],
+    let token: string;
+    try {
+      token = getMapboxToken();
+    } catch (e) {
+      setStatus("error");
+      setErrorMsg(e instanceof Error ? e.message : "Mapbox token is missing.");
+      return;
+    }
+    mapboxgl.accessToken = token;
+    const map = new mapboxgl.Map({
+      container: containerRef.current,
+      style: "mapbox://styles/mapbox/streets-v12",
+      center: [center.lng, center.lat],
       zoom: 17,
-      zoomControl: true,
-      scrollWheelZoom: true,
+      attributionControl: true,
     });
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap",
-      maxZoom: 19,
-    }).addTo(map);
-    layerRef.current = L.layerGroup().addTo(map);
 
-    // FeatureGroup that holds the user-drawn polygon; required by Leaflet.draw.
-    const drawn = new L.FeatureGroup().addTo(map);
-    drawLayerRef.current = drawn;
+    const draw = new MapboxDraw({
+      displayControlsDefault: false,
+      controls: { polygon: true, trash: true },
+      defaultMode: "simple_select",
+    });
+    map.addControl(draw, "top-right");
+    drawRef.current = draw;
 
-    const drawControl = new L.Control.Draw({
-      position: "topright",
-      edit: { featureGroup: drawn, remove: true, edit: false },
-      draw: {
-        polygon: {
-          allowIntersection: false,
-          showArea: false,
-          shapeOptions: { color: "#0ea5e9", weight: 3 },
+    new mapboxgl.Marker({ color: "#f59e0b" }).setLngLat([center.lng, center.lat]).addTo(map);
+
+    map.on("load", () => {
+      map.addSource("parcels", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: "parcels-fill",
+        type: "fill",
+        source: "parcels",
+        paint: {
+          "fill-color": ["case", ["boolean", ["get", "selected"], false], "#0ea5e9", "#f59e0b"],
+          "fill-opacity": ["case", ["boolean", ["get", "selected"], false], 0.5, 0.35],
         },
-        rectangle: { shapeOptions: { color: "#0ea5e9", weight: 3 } } as L.DrawOptions.RectangleOptions,
-        polyline: false,
-        circle: false,
-        marker: false,
-        circlemarker: false,
-      },
+      });
+      map.addLayer({
+        id: "parcels-outline",
+        type: "line",
+        source: "parcels",
+        paint: {
+          "line-color": ["case", ["boolean", ["get", "selected"], false], "#0369a1", "#1e293b"],
+          "line-width": ["case", ["boolean", ["get", "selected"], false], 2.5, 1.5],
+        },
+      });
     });
-    map.addControl(drawControl);
 
-    centerMarkerRef.current = L.circleMarker([center.lat, center.lng], {
-      radius: 6,
-      color: "#f59e0b",
-      fillColor: "#f59e0b",
-      fillOpacity: 1,
-      weight: 2,
-    }).addTo(map);
+    map.on("click", "parcels-fill", (e) => {
+      const feature = e.features?.[0];
+      if (!feature) return;
+      const id = String(feature.properties?.id ?? "");
+      if (!id) return;
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    });
+    map.on("mouseenter", "parcels-fill", () => {
+      map.getCanvas().style.cursor = "pointer";
+    });
+    map.on("mouseleave", "parcels-fill", () => {
+      map.getCanvas().style.cursor = "";
+    });
+
     mapRef.current = map;
     return () => {
       map.remove();
       mapRef.current = null;
-      layerRef.current = null;
-      drawLayerRef.current = null;
-      centerMarkerRef.current = null;
+      drawRef.current = null;
     };
   }, [center]);
 
-  // 3) Fetch parcels around the starting address
+  // 3) Fetch parcels around the starting address.
   const fetchNearPoint = useCallback(
     async (c: { lat: number; lng: number }) => {
       setStatus("fetching");
       setErrorMsg(null);
       try {
-        const res = await pointFn({ data: { lat: c.lat, lng: c.lng, radius: 300, limit: 300 } });
+        const res = await pointFn({ data: { lat: c.lat, lng: c.lng, radius: 400, limit: 300 } });
         setParcels(res.parcels);
         setSelected(new Set());
         setHasDrawn(false);
+        setRoads([]);
         setStatus(res.parcels.length === 0 ? "empty" : "ready");
       } catch (err) {
         setStatus("error");
@@ -184,89 +240,86 @@ export function MapPickStep({
     void fetchNearPoint(center);
   }, [center, fetchNearPoint]);
 
-  // 4) Wire up Leaflet.draw events → run polygon query, bulk-select matches
+  // 4) Draw events → polygon query + road detection.
   useEffect(() => {
     const map = mapRef.current;
-    const drawn = drawLayerRef.current;
-    if (!map || !drawn) return;
+    const draw = drawRef.current;
+    if (!map || !draw) return;
 
-    const onCreated = async (event: L.LeafletEvent) => {
-      const e = event as L.DrawEvents.Created;
-      drawn.clearLayers();
-      drawn.addLayer(e.layer);
-      const geo = (e.layer as L.Polygon).toGeoJSON();
-      const ring: number[][] =
-        geo.geometry.type === "Polygon"
-          ? (geo.geometry.coordinates[0] as number[][])
-          : [];
+    const onCreated = async (e: mapboxgl.MapboxEvent) => {
+      const feat = (e as { features?: GeoJSON.Feature[] }).features?.[0];
+      if (!feat || feat.geometry.type !== "Polygon") return;
+      draw.deleteAll();
+      const ring: number[][] = (feat.geometry.coordinates as number[][][])[0];
       if (ring.length < 4) return;
       setStatus("fetching");
+      setDetectingRoads(true);
       setErrorMsg(null);
       try {
-        const res = await polygonFn({
-          data: { polygon: { type: "Polygon", coordinates: [ring] }, limit: 500 },
-        });
-        setParcels(res.parcels);
-        setSelected(new Set(res.parcels.map((p) => p.id)));
+        const [parcelRes, roadRes] = await Promise.all([
+          polygonFn({ data: { polygon: { type: "Polygon", coordinates: [ring] }, limit: 500 } }),
+          detectRoadsFn({ data: { polygon: { type: "Polygon", coordinates: [ring] } } }),
+        ]);
+        setParcels(parcelRes.parcels);
+        setSelected(new Set(parcelRes.parcels.map((p) => p.id)));
         setHasDrawn(true);
-        setStatus(res.parcels.length === 0 ? "empty" : "ready");
+        setRoads(
+          roadRes.roads.map((r) => ({
+            id: r.id,
+            name: r.name,
+            class: r.class,
+            included: true,
+            responsibility: "shared" as const,
+            geometry: r.geometry,
+          })),
+        );
+        setStatus(parcelRes.parcels.length === 0 ? "empty" : "ready");
       } catch (err) {
         setStatus("error");
-        setErrorMsg(err instanceof Error ? err.message : "Failed to load parcels in the drawn area.");
+        setErrorMsg(err instanceof Error ? err.message : "Failed to load parcels or roads in the drawn area.");
+      } finally {
+        setDetectingRoads(false);
       }
     };
-    const onDeleted = () => {
-      if (center) void fetchNearPoint(center);
-    };
-
-    map.on(L.Draw.Event.CREATED, onCreated);
-    map.on(L.Draw.Event.DELETED, onDeleted);
+    map.on("draw.create", onCreated);
     return () => {
-      map.off(L.Draw.Event.CREATED, onCreated);
-      map.off(L.Draw.Event.DELETED, onDeleted);
+      map.off("draw.create", onCreated);
     };
-  }, [polygonFn, fetchNearPoint, center]);
+  }, [polygonFn, detectRoadsFn]);
 
-  // 5) Render parcel polygons whenever parcels/selection change
+  // 5) Re-render parcel source whenever parcels/selection change.
   useEffect(() => {
     const map = mapRef.current;
-    const layer = layerRef.current;
-    if (!map || !layer) return;
-    layer.clearLayers();
-    if (parcels.length === 0) return;
-    for (const p of parcels) {
+    if (!map) return;
+    const source = map.getSource("parcels") as mapboxgl.GeoJSONSource | undefined;
+    if (!source) return;
+    const features: GeoJSON.Feature[] = parcels.map((p) => {
       const isSel = selected.has(p.id);
-      const rings =
-        p.geometry.type === "Polygon"
-          ? [p.geometry.coordinates]
-          : p.geometry.coordinates;
-      const latlngs = rings.map((polygon) =>
-        polygon.map((ring) => ring.map(([lng, lat]) => [lat, lng] as [number, number])),
-      );
-      const poly = L.polygon(latlngs, {
-        color: isSel ? "#0369a1" : "#1e293b",
-        weight: isSel ? 3 : 2,
-        fillColor: isSel ? "#0ea5e9" : "#f59e0b",
-        fillOpacity: isSel ? 0.55 : 0.35,
-      });
-      poly.bindTooltip(p.headline, { direction: "top", offset: [0, -4] });
-      poly.on("click", () => {
-        setSelected((prev) => {
-          const next = new Set(prev);
-          if (next.has(p.id)) next.delete(p.id);
-          else next.add(p.id);
-          return next;
-        });
-      });
-      poly.addTo(layer);
-    }
-    if (selected.size === 0) {
-      const bounds = L.latLngBounds([]);
-      layer.eachLayer((child) => {
-        const b = (child as L.Polygon).getBounds?.();
-        if (b) bounds.extend(b);
-      });
-      if (bounds.isValid()) map.fitBounds(bounds, { padding: [20, 20], maxZoom: 19 });
+      return {
+        type: "Feature",
+        properties: { id: p.id, label: p.headline, selected: isSel },
+        geometry: p.geometry,
+      };
+    });
+    source.setData({ type: "FeatureCollection", features });
+    if (parcels.length > 0) {
+      const bounds = new mapboxgl.LngLatBounds();
+      let added = false;
+      for (const p of parcels) {
+        const rings =
+          p.geometry.type === "Polygon"
+            ? [p.geometry.coordinates]
+            : p.geometry.type === "MultiPolygon"
+              ? p.geometry.coordinates
+              : [];
+        for (const ring of rings) {
+          for (const [lng, lat] of ring[0]) {
+            bounds.extend([lng, lat]);
+            added = true;
+          }
+        }
+      }
+      if (added) map.fitBounds(bounds, { padding: 40, maxZoom: 19 });
     }
   }, [parcels, selected]);
 
@@ -279,8 +332,21 @@ export function MapPickStep({
     setSelected(new Set());
   }
   function resetView() {
-    drawLayerRef.current?.clearLayers();
+    drawRef.current?.deleteAll();
     if (center) void fetchNearPoint(center);
+  }
+  function activateLasso() {
+    drawRef.current?.changeMode("draw_polygon");
+  }
+
+  function toggleRoad(id: string) {
+    setRoads((prev) => prev.map((r) => (r.id === id ? { ...r, included: !r.included } : r)));
+  }
+  function setRoadResp(id: string, responsibility: "shared" | "private" | "public") {
+    setRoads((prev) => prev.map((r) => (r.id === id ? { ...r, responsibility } : r)));
+  }
+  function includeAllRoads(include: boolean) {
+    setRoads((prev) => prev.map((r) => ({ ...r, included: include })));
   }
 
   async function confirm() {
@@ -292,29 +358,42 @@ export function MapPickStep({
         address: p.address ?? p.headline,
         owner_name: p.owner ?? undefined,
         area_sqft: p.areaSqft ?? undefined,
+        lat: p.lat,
+        lng: p.lng,
+        geojson: p.geometry,
       })),
+      roads: roads.filter((r) => r.included).map((r) => ({ ...r })),
     });
   }
 
   return (
     <div className="space-y-3">
-      <div>
-        <h2 className="font-display text-lg font-semibold">Pick your neighbors on the map</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          Use the <Pencil className="inline h-3 w-3" /> pencil (top-right) to draw around your community —
-          every parcel inside gets selected. Then click any parcel to add or remove it.
-          Dallas County data via DCAD.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-display text-lg font-semibold">Pick your neighborhood on the map</h2>
+          <p className="mt-0.5 max-w-lg text-xs text-muted-foreground">
+            Use the lasso to draw around your community. We’ll auto-select every parcel inside and
+            detect the roads. Then click any parcel to fine-tune. Dallas County data via DCAD.
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-1.5">
+          <Button variant="outline" size="sm" onClick={activateLasso} className="bounce hover:scale-105">
+            <SquareDashedMousePointer className="mr-1 h-3.5 w-3.5" /> Lasso
+          </Button>
+          <Button variant="outline" size="sm" onClick={resetView}>
+            <RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset
+          </Button>
+        </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-xl border border-border bg-muted">
-        <div ref={containerRef} className="h-[420px] w-full" />
-        {(status === "geocoding" || status === "fetching") && (
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-muted shadow-sm">
+        <div ref={containerRef} className="h-[440px] w-full" />
+        {(status === "geocoding" || status === "fetching" || detectingRoads) && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
-            <div className="flex items-center gap-2 rounded-full bg-card px-3 py-1.5 shadow-md">
+            <div className="flex items-center gap-2 rounded-full bg-card px-3 py-1.5 shadow-md fun-shadow-sm">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
               <span className="text-xs font-medium">
-                {status === "geocoding" ? "Finding your address…" : "Loading parcels…"}
+                {status === "geocoding" ? "Finding your address…" : detectingRoads ? "Detecting roads…" : "Loading parcels…"}
               </span>
             </div>
           </div>
@@ -329,13 +408,11 @@ export function MapPickStep({
           </span>
           <span className="text-muted-foreground">of {parcels.length} shown</span>
           {hasDrawn && <span className="text-muted-foreground">· from your drawn area</span>}
+          {roads.length > 0 && <span className="text-muted-foreground">· {roads.filter((r) => r.included).length} roads included</span>}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <Button variant="outline" size="sm" onClick={clearAll} disabled={selected.size === 0}>
-            <RotateCcw className="h-3.5 w-3.5" /> Clear selection
-          </Button>
-          <Button variant="outline" size="sm" onClick={resetView}>
-            Reset map
+            <X className="h-3.5 w-3.5" /> Clear selection
           </Button>
         </div>
       </div>
@@ -355,8 +432,10 @@ export function MapPickStep({
         </div>
       )}
 
+      {roads.length > 0 && <RoadsPanel roads={roads} onToggle={toggleRoad} onRespChange={setRoadResp} onIncludeAll={includeAllRoads} />}
+
       {selectedList.length > 0 && (
-        <div className="max-h-32 overflow-y-auto rounded-lg border border-border bg-card p-2">
+        <div className="max-h-32 overflow-y-auto rounded-2xl border border-border bg-card p-2">
           <ul className="space-y-1">
             {selectedList.slice(0, 12).map((p) => (
               <li key={p.id} className="flex items-center gap-2 text-xs">
@@ -379,12 +458,86 @@ export function MapPickStep({
           size="sm"
           onClick={confirm}
           disabled={selectedList.length === 0 || submitting}
+          className="bounce hover:scale-105"
         >
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
           Add {selectedList.length} {selectedList.length === 1 ? "property" : "properties"}{" "}
           <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
+    </div>
+  );
+}
+
+function RoadsPanel({
+  roads,
+  onToggle,
+  onRespChange,
+  onIncludeAll,
+}: {
+  roads: RoadEntry[];
+  onToggle: (id: string) => void;
+  onRespChange: (id: string, resp: "shared" | "private" | "public") => void;
+  onIncludeAll: (include: boolean) => void;
+}) {
+  const allIncluded = roads.every((r) => r.included);
+  const someIncluded = roads.some((r) => r.included);
+  return (
+    <div className="rounded-2xl border border-border bg-card p-3 shadow-sm fun-shadow-sm">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-fun-2 text-fun-2-foreground">
+            <Road className="h-3.5 w-3.5" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold">Roads we found</p>
+            <p className="text-xs text-muted-foreground">Uncheck any road that isn’t part of your community.</p>
+          </div>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => onIncludeAll(!allIncluded)} className="text-xs">
+          {allIncluded ? "Uncheck all" : "Include all"}
+        </Button>
+      </div>
+      <ul className="mt-2 space-y-1.5">
+        {roads.map((r) => {
+          const meta = RESP_LABEL[r.responsibility] ?? RESP_LABEL.shared;
+          const Icon = meta.icon;
+          return (
+            <li
+              key={r.id}
+              className={cn(
+                "flex items-center gap-2 rounded-xl border p-2 transition-colors",
+                r.included ? "border-primary/40 bg-primary/5" : "border-border bg-muted/40 opacity-70",
+              )}
+            >
+              <input
+                id={`road-${r.id}`}
+                type="checkbox"
+                checked={r.included}
+                onChange={() => onToggle(r.id)}
+                className="h-4 w-4 accent-primary"
+              />
+              <label htmlFor={`road-${r.id}`} className="flex-1 text-sm font-medium">
+                {r.name}
+              </label>
+              <select
+                value={r.responsibility}
+                onChange={(e) => onRespChange(r.id, e.target.value as "shared" | "private" | "public")}
+                className="rounded-md border border-border bg-background px-2 py-1 text-xs"
+                disabled={!r.included}
+              >
+                <option value="shared">Shared</option>
+                <option value="private">Private</option>
+                <option value="public">Public</option>
+              </select>
+              <span className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide", r.responsibility === "shared" && "bg-fun-1/20 text-fun-1-foreground", r.responsibility === "private" && "bg-fun-2/20 text-fun-2-foreground", r.responsibility === "public" && "bg-fun-3/20 text-fun-3-foreground")}>
+                <Icon className="h-3 w-3" /> {meta.label}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {!someIncluded && <p className="mt-2 text-xs text-muted-foreground">No roads selected — you can draw them later on the community map.</p>}
     </div>
   );
 }
