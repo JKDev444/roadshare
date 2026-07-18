@@ -18,6 +18,7 @@ import { BasicInfoStep, type BasicInfo } from "./steps/BasicInfoStep";
 import { DocsQuestionStep } from "./steps/DocsQuestionStep";
 import { UploadStep } from "./steps/UploadStep";
 import { NoDocsStep, type NoDocsResult } from "./steps/NoDocsStep";
+import { MapPickStep } from "./steps/MapPickStep";
 import { ProcessingStep } from "./steps/ProcessingStep";
 import { SuccessSummaryStep } from "./steps/SuccessSummaryStep";
 import { FailureStep } from "./steps/FailureStep";
@@ -29,6 +30,7 @@ type Step =
   | "docsQ"
   | "upload"
   | "nodocs"
+  | "mappick"
   | "processing"
   | "success"
   | "failure"
@@ -342,7 +344,11 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
 
           {step === "docsQ" && (
             <DocsQuestionStep
-              onAnswer={(a) => setStep(a === "yes" ? "upload" : "nodocs")}
+              onAnswer={(a) =>
+                setStep(
+                  a === "yes" ? "upload" : a === "map" ? "mappick" : "nodocs",
+                )
+              }
               onBack={() => setStep("basic")}
             />
           )}
@@ -362,6 +368,15 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
               onSubmit={handleNoDocs}
               onUploadInstead={() => setStep("upload")}
               onBack={() => setStep("docsQ")}
+              submitting={applying}
+            />
+          )}
+
+          {step === "mappick" && basicInfo && (
+            <MapPickStep
+              basicInfo={basicInfo}
+              onCancel={() => setStep("docsQ")}
+              onSubmit={handleNoDocs}
               submitting={applying}
             />
           )}
