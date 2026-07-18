@@ -103,6 +103,43 @@ export function segmentToFeature(
   };
 }
 
+const DEFAULT_SQUARE_OFFSET = 0.00008; // roughly 25 ft in degrees
+
+/** Convert a parcel to a GeoJSON Feature for the map. */
+export function parcelToFeature(p: Parcel): {
+  type: "Feature";
+  geometry: GeoJSONPolygon;
+  properties: Record<string, unknown>;
+} | null {
+  if (isGeoJSONPolygon(p.geojson)) {
+    return {
+      type: "Feature",
+      geometry: p.geojson,
+      properties: { id: p.id, label: p.label, selected: false },
+    };
+  }
+  const lat = p.lat ?? p.pos_y ?? 0;
+  const lng = p.lng ?? p.pos_x ?? 0;
+  if (lat === 0 && lng === 0) return null;
+  const o = DEFAULT_SQUARE_OFFSET;
+  return {
+    type: "Feature",
+    geometry: {
+      type: "Polygon",
+      coordinates: [
+        [
+          [lng - o, lat - o],
+          [lng + o, lat - o],
+          [lng + o, lat + o],
+          [lng - o, lat + o],
+          [lng - o, lat - o],
+        ],
+      ],
+    },
+    properties: { id: p.id, label: p.label, selected: false },
+  };
+}
+
 /** Serialize road segments to a GeoJSON FeatureCollection. */
 export function segmentsToGeoJSON(
   community: Pick<Community, "name" | "region"> | null,
