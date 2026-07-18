@@ -5,6 +5,7 @@ import {
   createSegment,
   logEvent,
   type Community,
+  type GeoJSONLineString,
   type ParcelInput,
   type Point,
 } from "@/lib/community/api";
