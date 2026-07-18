@@ -202,6 +202,7 @@ function MapTab({
   segments: RoadSegment[];
   events: RecordEvent[];
 }) {
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
