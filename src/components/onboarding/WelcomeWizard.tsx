@@ -162,7 +162,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
           void navigate({
             to: "/community/$id",
             params: { id: community.id },
-            search: { tab: "roads" },
+            search: { tab: "map" },
           });
         }, 100);
       } catch (err) {
