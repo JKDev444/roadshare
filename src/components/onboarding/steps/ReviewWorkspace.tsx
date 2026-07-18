@@ -365,8 +365,7 @@ function RoadsSection({ draft, onChange }: { draft: CcrDraft; onChange: (d: CcrD
       <div>
         <h3 className="font-display text-lg font-semibold">Roads</h3>
         <p className="text-xs text-muted-foreground">
-          Named roads found in your documents. RoadShare doesn't yet import real parcel geometry
-          from CC&Rs — you'll draw or refine roads in the map editor after setup.
+          Named roads found in your documents. You'll draw or refine roads on the map after setup.
         </p>
       </div>
       <ul className="space-y-2">
