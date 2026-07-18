@@ -1,3 +1,5 @@
+import type { Json } from "@/integrations/supabase/types";
+
 export type CcrDraft = {
   community: {
     name: string;
