@@ -20,32 +20,32 @@ export const Route = createFileRoute("/about")({
     <SiteLayout>
       <PageHero
         eyebrow="Company"
-        title="The operating layer for community decisions."
-        subtitle="RoadShare helps communities understand shared obligations, organize governing evidence, compare scenarios, gather input, and document decisions that hold up over time."
+        title="Made for the neighbors who share a road."
+        subtitle="RoadShare helps small road communities figure out who pays what, keep the paperwork in one place, and make decisions that stick — without spreadsheets or shouting matches."
       />
       <ContentPage
         blocks={[
           {
             heading: "Why we exist",
             body: [
-              "Private roads and shared assets create obligations that are hard to understand and easy to dispute. Documents are scattered, math is opaque, and decisions lack a defensible record.",
-              "RoadShare connects the map, the properties, the documents, the law, the numbers, and the people so communities can decide together — and prove how they decided.",
+              "Shared roads are hard. The math is confusing, the paperwork is scattered, and every driveway has an opinion. So decisions get delayed, or made by whoever yells loudest.",
+              "RoadShare puts the map, the homes, the rules, the numbers, and the neighbors in one place — so your community can decide together, and show its work.",
             ],
           },
           {
-            heading: "What we are not",
-            body: ["RoadShare is deliberately focused. It is not:"],
+            heading: "What we're not",
+            body: ["We stay in our lane on purpose. RoadShare is not:"],
             bullets: [
-              "A generic HOA accounting or dues-collection platform",
-              "A violation-enforcement engine or neighborhood social network",
-              "A law firm, appraisal, engineering opinion, or lender approval",
-              "A generic chatbot layered over uploaded PDFs",
+              "An HOA accounting or dues-collection tool",
+              "A rule-enforcement app or neighborhood social feed",
+              "A law firm, appraisal, or engineering opinion",
+              "A generic chatbot bolted onto your PDFs",
             ],
           },
           {
             heading: "How we build",
             body: [
-              "We ship in phases with sample Cedar Hollow data first, then replace it with production data without rebuilding the platform. Every fact carries a source, confidence, and effective date, and history is never overwritten.",
+              "We start with a sample community (say hi to Cedar Hollow), then swap in your real data. Every number we show comes with a source, so your board can trust it and your neighbors can double-check it.",
             ],
           },
         ]}
