@@ -184,6 +184,12 @@
   --map-asphalt-edge: oklch(0.32 0.015 220);
   --map-lane: oklch(0.78 0.09 92);
   --map-parcel-edge: oklch(0.4 0.02 190);
+  --fun-1: oklch(0.72 0.2 142);
+  --fun-2: oklch(0.8 0.16 95);
+  --fun-3: oklch(0.62 0.17 250);
+  --fun-1-foreground: oklch(0.16 0.04 142);
+  --fun-2-foreground: oklch(0.16 0.04 95);
+  --fun-3-foreground: oklch(0.99 0.01 250);
 }
 
 @layer base {
