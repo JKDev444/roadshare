@@ -45,31 +45,31 @@ export const Route = createFileRoute("/methodology")({
             >
               <defs>
                 <pattern id="dash" width="18" height="4" patternUnits="userSpaceOnUse">
-                  <rect width="10" height="3" y="0.5" className="fill-gold" />
+                  <rect width="10" height="3" y="0.5" style={{ fill: "var(--gold)" }} />
                 </pattern>
               </defs>
               {/* road */}
-              <rect x="40" y="90" width="560" height="18" rx="9" className="fill-foreground" />
+              <rect x="40" y="90" width="560" height="18" rx="9" style={{ fill: "var(--foreground)" }} />
               <rect x="40" y="97" width="560" height="4" fill="url(#dash)" />
               {/* entrance pin */}
-              <circle cx="52" cy="99" r="11" className="fill-primary" />
-              <circle cx="52" cy="99" r="4" className="fill-background" />
-              <text x="52" y="140" textAnchor="middle" className="fill-muted-foreground" fontSize="11">
+              <circle cx="52" cy="99" r="11" style={{ fill: "var(--primary)" }} />
+              <circle cx="52" cy="99" r="4" style={{ fill: "var(--background)" }} />
+              <text x="52" y="140" textAnchor="middle" style={{ fill: "var(--muted-foreground)" }} fontSize="11">
                 Entrance
               </text>
               {/* houses */}
               {[
-                { x: 150, name: "Ana", share: "$2,390", accent: "fill-selected" },
-                { x: 290, name: "Ben", share: "$6,056", accent: "fill-primary" },
-                { x: 430, name: "Cora", share: "$9,880", accent: "fill-primary" },
-                { x: 560, name: "Devon", share: "$13,705", accent: "fill-gold" },
+                { x: 150, name: "Ana", share: "$2,390", color: "var(--selected)" },
+                { x: 290, name: "Ben", share: "$6,056", color: "var(--primary)" },
+                { x: 430, name: "Cora", share: "$9,880", color: "var(--primary)" },
+                { x: 560, name: "Devon", share: "$13,705", color: "var(--gold)" },
               ].map((h) => (
                 <g key={h.name}>
                   <polygon
                     points={`${h.x - 16},74 ${h.x},54 ${h.x + 16},74 ${h.x + 16},88 ${h.x - 16},88`}
-                    className={h.accent}
+                    style={{ fill: h.color }}
                   />
-                  <text x={h.x} y="46" textAnchor="middle" className="fill-foreground" fontSize="12" fontWeight="700">
+                  <text x={h.x} y="46" textAnchor="middle" style={{ fill: "var(--foreground)" }} fontSize="12" fontWeight="700">
                     {h.share}
                   </text>
                   <text
