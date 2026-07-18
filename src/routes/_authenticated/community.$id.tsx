@@ -265,10 +265,24 @@ function MapTab({
   const selected = segments.find((s) => s.id === selectedId) ?? null;
 
   const hasNoData = parcels.length === 0 && segments.length === 0;
+  const hasParcelsNoRoads = parcels.length > 0 && segments.length === 0;
 
   return (
     <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[1fr_340px]">
       <div className="min-h-0 flex-1">
+        {hasParcelsNoRoads && (
+          <div className="mb-3 flex items-start gap-3 rounded-2xl border border-fun-2/40 bg-fun-2/10 px-3 py-2 text-sm">
+            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-fun-2 text-fun-2-foreground">
+              <Pencil className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">We couldn't auto-detect any roads</p>
+              <p className="text-xs text-muted-foreground">
+                Use the pencil tool on the map to trace a road along your community — takes about 15 seconds per road.
+              </p>
+            </div>
+          </div>
+        )}
         {hasNoData ? (
           <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-border bg-card p-8 text-center">
             <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-fun-1/20 text-fun-1-foreground">
