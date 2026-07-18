@@ -54,15 +54,17 @@ export function NoDocsStep({
         </div>
 
         <div className="space-y-2">
-          {hasAddress && (
-            <MenuTile
-              title="Pick your neighbors on a map"
-              body="We'll show every home near your address. Tap the ones on your private road. Fastest for real neighborhoods."
-              icon={<MapIcon className="h-4 w-4 text-primary" />}
-              recommended
-              onClick={() => setMode("map")}
-            />
-          )}
+          <MenuTile
+            title="Pick your neighbors on a map"
+            body={
+              hasAddress
+                ? "We'll show every home near your address. Lasso the ones on your road. Fastest for real neighborhoods."
+                : "Draw around your community on the map. Fastest for real neighborhoods. (Tip: add a starting address on the previous step for best results.)"
+            }
+            icon={<MapIcon className="h-4 w-4 text-primary" />}
+            recommended
+            onClick={() => setMode("map")}
+          />
           <MenuTile
             title="Search and Add Addresses"
             body="Search for and add one address at a time."
