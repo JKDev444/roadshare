@@ -6,10 +6,12 @@ import {
   ArrowLeft,
   CheckCircle2,
   ClipboardList,
+  Clock,
   Download,
   HardHat,
   History,
   LayoutGrid,
+  Map as MapIcon,
   Plus,
   Route as RouteIcon,
   Ruler,
@@ -38,8 +40,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ConfidenceBadge, VerificationBadge } from "@/components/community/badges";
-import { GisEditor } from "@/components/community/GisEditor";
+import { CommunityMapEditor } from "@/components/community/CommunityMapEditor";
 import { ProjectsTab } from "@/components/planner/ProjectsTab";
 import {
   createParcel,
@@ -57,20 +64,20 @@ import {
   updateSegment,
   type Confidence,
   type Community,
+  type GeoJSONLineString,
   type Parcel,
   type ParcelInput,
-  type Point,
   type RoadSegment,
   type Verification,
 } from "@/lib/community/api";
 
-const TABS = ["overview", "properties", "roads", "projects", "provenance"] as const;
+const TABS = ["map", "properties", "projects"] as const;
 type Tab = (typeof TABS)[number];
 
 export const Route = createFileRoute("/_authenticated/community/$id")({
   head: () => ({ meta: [{ title: "Community Record — RoadShare" }, { name: "robots", content: "noindex" }] }),
   validateSearch: (s: Record<string, unknown>): { tab: Tab } => ({
-    tab: TABS.includes(s.tab as Tab) ? (s.tab as Tab) : "overview",
+    tab: TABS.includes(s.tab as Tab) ? (s.tab as Tab) : "map",
   }),
   component: CommunityDetail,
 });
@@ -89,57 +96,74 @@ function CommunityDetail() {
   const s = segments.data ?? [];
   const verified = p.filter((x) => x.verification === "verified").length;
   const disputed = p.filter((x) => x.verification === "disputed").length;
-  const totalRoad = s.reduce((sum, seg) => sum + pathLengthFt(toPoints(seg.geometry)), 0);
+  const totalRoad = s.reduce((sum, seg) => sum + pathLengthFt(seg.geometry), 0);
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div>
-          <Link to="/community" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" /> All communities
-          </Link>
-          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:items-end sm:justify-between">
-            <div className="min-w-0">
-              <h1 className="truncate font-display text-2xl font-bold tracking-tight sm:text-3xl">
-                {community.data?.name ?? "Loading…"}
-              </h1>
-              {community.data?.region && (
-                <p className="text-sm font-medium text-muted-foreground">{community.data.region}</p>
-              )}
+      <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-7xl flex-col space-y-4 px-4 py-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <Link to="/community" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="h-4 w-4" /> All communities
+            </Link>
+            <div className="mt-2 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+                <RouteIcon className="h-5 w-5" />
+              </span>
+              <div>
+                <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+                  {community.data?.name ?? "Loading…"}
+                </h1>
+                {community.data?.region && (
+                  <p className="text-sm font-medium text-muted-foreground">{community.data.region}</p>
+                )}
+              </div>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <ProvenancePopover events={events.data ?? []} loading={events.isLoading} />
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={s.length === 0}
+              onClick={() => {
+                downloadGeoJSON(community.data, s);
+                toast.success("GeoJSON exported");
+              }}
+            >
+              <Download className="h-4 w-4" /> Export
+            </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat icon={Users} label="Parcels" value={String(p.length)} />
           <Stat icon={CheckCircle2} label="Verified" value={`${verified}/${p.length || 0}`} tone="primary" />
           <Stat icon={Ruler} label="Road mapped" value={`${totalRoad.toLocaleString()} ft`} />
           <Stat icon={TriangleAlert} label="Disputed" value={String(disputed)} tone={disputed ? "warn" : "muted"} />
         </div>
 
-        <Tabs value={tab} onValueChange={(v) => navigate({ search: { tab: v as Tab } })}>
+        <Tabs value={tab} onValueChange={(v) => navigate({ search: { tab: v as Tab } })} className="flex min-h-0 flex-1 flex-col">
           <TabsList className="flex-wrap">
-            <TabsTrigger value="overview"><LayoutGrid className="mr-1.5 h-4 w-4" /> Overview</TabsTrigger>
-            <TabsTrigger value="properties"><Users className="mr-1.5 h-4 w-4" /> Property layer</TabsTrigger>
-            <TabsTrigger value="roads"><RouteIcon className="mr-1.5 h-4 w-4" /> Road geometry</TabsTrigger>
+            <TabsTrigger value="map"><MapIcon className="mr-1.5 h-4 w-4" /> Map</TabsTrigger>
+            <TabsTrigger value="properties"><Users className="mr-1.5 h-4 w-4" /> Properties</TabsTrigger>
             <TabsTrigger value="projects"><HardHat className="mr-1.5 h-4 w-4" /> Projects</TabsTrigger>
-            <TabsTrigger value="provenance"><History className="mr-1.5 h-4 w-4" /> Provenance</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="mt-6">
-            <OverviewTab community={community.data?.description} parcels={p} segments={s} events={events.data ?? []} />
+          <TabsContent value="map" className="mt-4 flex min-h-0 flex-1 flex-col">
+            <MapTab
+              communityId={id}
+              community={community.data ?? null}
+              parcels={p}
+              segments={s}
+              events={events.data ?? []}
+            />
           </TabsContent>
-          <TabsContent value="properties" className="mt-6">
+          <TabsContent value="properties" className="mt-4">
             <PropertiesTab communityId={id} parcels={p} loading={parcels.isLoading} />
           </TabsContent>
-          <TabsContent value="roads" className="mt-6">
-            <RoadsTab communityId={id} community={community.data ?? null} parcels={p} segments={s} />
-          </TabsContent>
-          <TabsContent value="projects" className="mt-6">
+          <TabsContent value="projects" className="mt-4">
             <ProjectsTab communityId={id} />
-          </TabsContent>
-          <TabsContent value="provenance" className="mt-6">
-            <ProvenanceTab events={events.data ?? []} loading={events.isLoading} />
           </TabsContent>
         </Tabs>
       </div>
@@ -155,7 +179,7 @@ function Stat({ icon: Icon, label, value, tone = "default" }: { icon: typeof Use
     muted: "bg-muted text-muted-foreground",
   }[tone];
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div className="rounded-2xl border border-border bg-card p-4 fun-shadow-sm">
       <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${toneCls}`}><Icon className="h-4 w-4" /></span>
       <p className="mt-3 font-display text-2xl font-bold">{value}</p>
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
@@ -163,75 +187,127 @@ function Stat({ icon: Icon, label, value, tone = "default" }: { icon: typeof Use
   );
 }
 
-// ---------------- Overview ----------------
-type EventRow = { id: string; action: string; entity_type: string; entity_label: string | null; note: string | null; created_at: string };
+// ---------------- Map tab ----------------
+function MapTab({
+  communityId,
+  community,
+  parcels,
+  segments,
+  events,
+}: {
+  communityId: string;
+  community: Community | null;
+  parcels: Parcel[];
+  segments: RoadSegment[];
+  events: RecordEvent[];
+}) {
+  const qc = useQueryClient();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-function OverviewTab({ community, parcels, segments, events }: { community?: string | null; parcels: Parcel[]; segments: RoadSegment[]; events: EventRow[] }) {
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["segments", communityId] });
+    qc.invalidateQueries({ queryKey: ["events", communityId] });
+  };
+  const invalidateParcels = () => qc.invalidateQueries({ queryKey: ["parcels", communityId] });
+
+  const create = useMutation({
+    mutationFn: (geometry: GeoJSONLineString) =>
+      createSegment(communityId, { geometry, name: `Segment ${segments.length + 1}` }),
+    onSuccess: (seg) => {
+      invalidate();
+      setSelectedId(seg.id);
+      toast.success("Road segment added — edit its details on the right");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const del = useMutation({
+    mutationFn: (seg: RoadSegment) => deleteSegment(seg.id, communityId, seg.name),
+    onSuccess: () => {
+      invalidate();
+      setSelectedId(null);
+      toast.success("Segment deleted");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const selected = segments.find((s) => s.id === selectedId) ?? null;
+
+  const hasNoData = parcels.length === 0 && segments.length === 0;
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-      <div className="space-y-6">
-        {community && (
-          <div className="rounded-2xl border border-border bg-card p-5">
-            <p className="text-sm leading-relaxed text-muted-foreground">{community}</p>
+    <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[1fr_340px]">
+      <div className="min-h-0 flex-1">
+        {hasNoData ? (
+          <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-border bg-card p-8 text-center">
+            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-fun-1/20 text-fun-1-foreground">
+              <MapIcon className="h-8 w-8" />
+            </span>
+            <h3 className="mt-4 font-display text-lg font-semibold">Nothing on the map yet</h3>
+            <p className="mt-1 max-w-xs text-sm text-muted-foreground">
+              Add properties on the Properties tab, or draw a road directly on the map.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <Button variant="outline" onClick={() => navigate({ to: "/community/$id", params: { id: communityId }, search: { tab: "properties" } })}>
+                Add properties
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <CommunityMapEditor
+            parcels={parcels}
+            segments={segments}
+            selectedSegmentId={selectedId}
+            onSelectSegment={setSelectedId}
+            onCreateSegment={(g) => create.mutate(g)}
+          />
+        )}
+      </div>
+      <div className="flex min-h-0 flex-col gap-4 overflow-y-auto">
+        <div className="rounded-2xl border border-border bg-card p-4 fun-shadow-sm">
+          <h3 className="font-display text-base font-semibold">Recent activity</h3>
+          <ActivityList events={events.slice(0, 6)} />
+        </div>
+        {selected ? (
+          <SegmentPanel key={selected.id} communityId={communityId} segment={selected} onSaved={invalidate} onDelete={() => del.mutate(selected)} />
+        ) : (
+          <div className="rounded-2xl border border-border bg-card p-4 fun-shadow-sm">
+            <h3 className="font-display text-base font-semibold">Roads</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Click a road on the map to edit, or draw a new one.</p>
+            <ul className="mt-3 space-y-2">
+              {segments.map((seg) => (
+                <li key={seg.id}>
+                  <button
+                    onClick={() => setSelectedId(seg.id)}
+                    className="flex w-full items-center justify-between rounded-xl border border-border px-3 py-2 text-left text-sm transition-colors hover:border-primary/40 hover:bg-accent/40"
+                  >
+                    <span className="font-medium">{seg.name}</span>
+                    <span className="text-xs text-muted-foreground">{pathLengthFt(seg.geometry)} ft</span>
+                  </button>
+                </li>
+              ))}
+              {segments.length === 0 && <li className="text-sm text-muted-foreground">No roads yet.</li>}
+            </ul>
           </div>
         )}
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <h3 className="font-display text-base font-semibold">Plat overview</h3>
-          <PlatPreview parcels={parcels} segments={segments} />
-        </div>
-      </div>
-      <div className="rounded-2xl border border-border bg-card p-5">
-        <h3 className="font-display text-base font-semibold">Recent activity</h3>
-        <ActivityList events={events.slice(0, 8)} />
       </div>
     </div>
   );
 }
 
-function PlatPreview({ parcels, segments }: { parcels: Parcel[]; segments: RoadSegment[] }) {
+function ActivityList({ events }: { events: RecordEvent[] }) {
+  if (events.length === 0) return <p className="mt-3 text-sm text-muted-foreground">No activity yet.</p>;
   return (
-    <div className="mt-4 overflow-hidden rounded-xl border border-border bg-background">
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-64 w-full">
-        <defs>
-          <pattern id="ov-dots" width="4" height="4" patternUnits="userSpaceOnUse">
-            <circle cx="0.5" cy="0.5" r="0.35" fill="var(--color-foreground)" opacity="0.1" />
-          </pattern>
-        </defs>
-        <rect width="100" height="100" fill="url(#ov-dots)" />
-        {segments.map((seg) => {
-          const pts = toPoints(seg.geometry);
-          if (pts.length < 2) return null;
-          return (
-            <path key={seg.id} d={pts.map((pt, i) => `${i === 0 ? "M" : "L"}${pt.x} ${pt.y}`).join(" ")}
-              fill="none" stroke="var(--color-primary)" style={{ strokeWidth: 4 }} strokeLinecap="round" opacity={0.85} />
-          );
-        })}
-        {parcels.map((p) => (
-          <g key={p.id}>
-            <rect x={p.pos_x - 4} y={p.pos_y - 3} width={8} height={6} rx={1.2}
-              fill="var(--color-map-parcel)" stroke="var(--color-map-parcel-edge)" strokeWidth={0.3} />
-            <text x={p.pos_x} y={p.pos_y + 1} textAnchor="middle" fontSize={2.6} fontWeight={700} fill="var(--color-map-ink)">{p.label}</text>
-          </g>
-        ))}
-      </svg>
-    </div>
-  );
-}
-
-function ActivityList({ events }: { events: EventRow[] }) {
-  if (events.length === 0) return <p className="mt-4 text-sm text-muted-foreground">No activity yet.</p>;
-  return (
-    <ol className="mt-4 space-y-4">
+    <ol className="mt-3 space-y-3">
       {events.map((e) => (
-        <li key={e.id} className="relative pl-5">
-          <span className="absolute left-0 top-1.5 h-2 w-2 rounded-full bg-primary" />
-          <p className="text-sm">
+        <li key={e.id} className="relative pl-4">
+          <span className="absolute left-0 top-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
+          <p className="text-xs">
             <span className="font-semibold capitalize">{e.entity_type}</span>{" "}
             {e.entity_label && <span className="text-muted-foreground">“{e.entity_label}”</span>}{" "}
             <span className="font-medium text-primary">{e.action}</span>
           </p>
-          {e.note && <p className="text-xs text-muted-foreground">{e.note}</p>}
-          <p className="text-xs text-muted-foreground">{new Date(e.created_at).toLocaleString()}</p>
+          {e.note && <p className="text-[11px] text-muted-foreground">{e.note}</p>}
+          <p className="text-[11px] text-muted-foreground">{new Date(e.created_at).toLocaleString()}</p>
         </li>
       ))}
     </ol>
@@ -257,7 +333,7 @@ function PropertiesTab({ communityId, parcels, loading }: { communityId: string;
         <p className="text-sm text-muted-foreground">{parcels.length} parcels tracked</p>
         <ParcelDialog communityId={communityId} onSaved={invalidate} />
       </div>
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+      <div className="overflow-x-auto rounded-2xl border border-border bg-card fun-shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -406,94 +482,18 @@ function Field({ label, children, full }: { label: string; children: React.React
   );
 }
 
-// ---------------- Roads ----------------
-function RoadsTab({ communityId, community, parcels, segments }: { communityId: string; community: Community | null; parcels: Parcel[]; segments: RoadSegment[] }) {
-  const qc = useQueryClient();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ["segments", communityId] });
-    qc.invalidateQueries({ queryKey: ["events", communityId] });
-  };
-  const invalidateParcels = () => qc.invalidateQueries({ queryKey: ["parcels", communityId] });
-
-  const create = useMutation({
-    mutationFn: (geometry: Point[]) => createSegment(communityId, { geometry, name: `Segment ${segments.length + 1}` }),
-    onSuccess: (seg) => { invalidate(); setSelectedId(seg.id); toast.success("Road segment added"); },
-    onError: (e: Error) => toast.error(e.message),
-  });
-  const updateGeom = useMutation({
-    mutationFn: ({ id, geometry }: { id: string; geometry: Point[] }) => updateSegment(id, communityId, { geometry }, { silent: true }),
-    onSuccess: () => invalidate(),
-    onError: (e: Error) => toast.error(e.message),
-  });
-  const moveParcel = useMutation({
-    mutationFn: ({ id, pos }: { id: string; pos: Point }) => updateParcel(id, communityId, { pos_x: pos.x, pos_y: pos.y }, { silent: true }),
-    onSuccess: () => invalidateParcels(),
-  });
-  const del = useMutation({
-    mutationFn: (seg: RoadSegment) => deleteSegment(seg.id, communityId, seg.name),
-    onSuccess: () => { invalidate(); setSelectedId(null); toast.success("Segment deleted"); },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const selected = segments.find((s) => s.id === selectedId) ?? null;
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">{segments.length} road segment{segments.length === 1 ? "" : "s"} mapped</p>
-        <Button
-          variant="outline"
-          disabled={segments.length === 0}
-          onClick={() => {
-            downloadGeoJSON(community, segments);
-            toast.success("GeoJSON exported");
-          }}
-        >
-          <Download className="h-4 w-4" /> Export GeoJSON
-        </Button>
-      </div>
-      <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-      <GisEditor
-        parcels={parcels}
-        segments={segments}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-        onCreate={(g) => create.mutate(g)}
-        onUpdateGeometry={(id, geometry) => updateGeom.mutate({ id, geometry })}
-        onDelete={(seg) => del.mutate(seg)}
-        onMoveParcel={(id, pos) => moveParcel.mutate({ id, pos })}
-      />
-      <div className="space-y-4">
-        {selected ? (
-          <SegmentPanel key={selected.id} communityId={communityId} segment={selected} onSaved={invalidate} />
-        ) : (
-          <div className="rounded-2xl border border-border bg-card p-5">
-            <h3 className="font-display text-base font-semibold">Segments</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Select a segment on the map to edit its details, or draw a new road.</p>
-            <ul className="mt-4 space-y-2">
-              {segments.map((seg) => (
-                <li key={seg.id}>
-                  <button
-                    onClick={() => setSelectedId(seg.id)}
-                    className="flex w-full items-center justify-between rounded-xl border border-border px-3 py-2 text-left text-sm transition-colors hover:border-primary/40 hover:bg-accent/40"
-                  >
-                    <span className="font-medium">{seg.name}</span>
-                    <span className="text-xs text-muted-foreground">{pathLengthFt(toPoints(seg.geometry))} ft</span>
-                  </button>
-                </li>
-              ))}
-              {segments.length === 0 && <li className="text-sm text-muted-foreground">No segments yet.</li>}
-            </ul>
-          </div>
-        )}
-      </div>
-      </div>
-    </div>
-  );
-}
-
-function SegmentPanel({ communityId, segment, onSaved }: { communityId: string; segment: RoadSegment; onSaved: () => void }) {
+// ---------------- Segment details ----------------
+function SegmentPanel({
+  communityId,
+  segment,
+  onSaved,
+  onDelete,
+}: {
+  communityId: string;
+  segment: RoadSegment;
+  onSaved: () => void;
+  onDelete: () => void;
+}) {
   const [name, setName] = useState(segment.name);
   const [surface, setSurface] = useState(segment.surface ?? "");
   const [responsibility, setResponsibility] = useState(segment.responsibility);
@@ -508,10 +508,10 @@ function SegmentPanel({ communityId, segment, onSaved }: { communityId: string; 
   });
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
+    <div className="rounded-2xl border border-border bg-card p-4 fun-shadow-sm">
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-base font-semibold">Segment details</h3>
-        <span className="text-xs text-muted-foreground">{pathLengthFt(toPoints(segment.geometry))} ft</span>
+        <h3 className="font-display text-base font-semibold">Road details</h3>
+        <span className="text-xs text-muted-foreground">{pathLengthFt(segment.geometry)} ft</span>
       </div>
       <div className="mt-4 space-y-4">
         <div className="space-y-1.5"><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
@@ -552,40 +552,54 @@ function SegmentPanel({ communityId, segment, onSaved }: { communityId: string; 
             </Select>
           </div>
         </div>
-        <Button className="w-full" onClick={() => save.mutate()} disabled={save.isPending}>
-          {save.isPending ? "Saving…" : "Save segment"}
-        </Button>
+        <div className="flex gap-2">
+          <Button className="flex-1" onClick={() => save.mutate()} disabled={save.isPending}>
+            {save.isPending ? "Saving…" : "Save segment"}
+          </Button>
+          <Button variant="destructive" size="icon" onClick={onDelete}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
 
-// ---------------- Provenance ----------------
-function ProvenanceTab({ events, loading }: { events: EventRow[]; loading: boolean }) {
+// ---------------- Provenance popover ----------------
+function ProvenancePopover({ events, loading }: { events: RecordEvent[]; loading: boolean }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
-      <h3 className="font-display text-base font-semibold">Change history</h3>
-      <p className="mt-1 text-sm text-muted-foreground">Every addition and edit is logged and never overwritten.</p>
-      {loading ? (
-        <p className="mt-6 text-sm text-muted-foreground">Loading…</p>
-      ) : events.length === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">No history yet.</p>
-      ) : (
-        <ol className="mt-6 space-y-5 border-l border-border pl-6">
-          {events.map((e) => (
-            <li key={e.id} className="relative">
-              <span className="absolute -left-[27px] top-1 h-3 w-3 rounded-full border-2 border-background bg-primary" />
-              <p className="text-sm">
-                <span className="font-semibold capitalize">{e.entity_type}</span>{" "}
-                {e.entity_label && <span className="text-muted-foreground">“{e.entity_label}”</span>}{" "}
-                <span className="font-medium text-primary">{e.action}</span>
-              </p>
-              {e.note && <p className="text-xs text-muted-foreground">{e.note}</p>}
-              <p className="text-xs text-muted-foreground">{new Date(e.created_at).toLocaleString()}</p>
-            </li>
-          ))}
-        </ol>
-      )}
-    </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm">
+          <Clock className="mr-1.5 h-4 w-4" /> History
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 max-h-[60vh] overflow-y-auto" align="end">
+        <div className="space-y-1">
+          <h3 className="font-display text-sm font-semibold">Change history</h3>
+          <p className="text-xs text-muted-foreground">Every addition and edit is logged.</p>
+        </div>
+        {loading ? (
+          <p className="mt-4 text-sm text-muted-foreground">Loading…</p>
+        ) : events.length === 0 ? (
+          <p className="mt-4 text-sm text-muted-foreground">No history yet.</p>
+        ) : (
+          <ol className="mt-4 space-y-4 border-l border-border pl-4">
+            {events.map((e) => (
+              <li key={e.id} className="relative">
+                <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full border-2 border-background bg-primary" />
+                <p className="text-sm">
+                  <span className="font-semibold capitalize">{e.entity_type}</span>{" "}
+                  {e.entity_label && <span className="text-muted-foreground">“{e.entity_label}”</span>{" "}
+                  <span className="font-medium text-primary">{e.action}</span>
+                </p>
+                {e.note && <p className="text-xs text-muted-foreground">{e.note}</p>}
+                <p className="text-xs text-muted-foreground">{new Date(e.created_at).toLocaleString()}</p>
+              </li>
+            ))}
+          </ol>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
