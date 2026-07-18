@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -12,9 +12,12 @@ import {
   History,
   LayoutGrid,
   Map as MapIcon,
+  PartyPopper,
   Plus,
+  Pencil,
   Route as RouteIcon,
   Ruler,
+  Sparkles,
   Trash2,
   TriangleAlert,
   Users,
@@ -47,6 +50,7 @@ import {
 } from "@/components/ui/popover";
 import { ConfidenceBadge, VerificationBadge } from "@/components/community/badges";
 import { CommunityMapEditor } from "@/components/community/CommunityMapEditor";
+import { Confetti } from "@/components/onboarding/Confetti";
 import { ProjectsTab } from "@/components/planner/ProjectsTab";
 import {
   createParcel,
@@ -77,16 +81,29 @@ type Tab = (typeof TABS)[number];
 
 export const Route = createFileRoute("/_authenticated/community/$id")({
   head: () => ({ meta: [{ title: "Community Record — RoadShare" }, { name: "robots", content: "noindex" }] }),
-  validateSearch: (s: Record<string, unknown>): { tab: Tab } => ({
+  validateSearch: (s: Record<string, unknown>): { tab: Tab; justCreated?: string } => ({
     tab: TABS.includes(s.tab as Tab) ? (s.tab as Tab) : "map",
+    justCreated: s.justCreated === "1" ? "1" : undefined,
   }),
   component: CommunityDetail,
 });
 
 function CommunityDetail() {
   const { id } = Route.useParams();
-  const { tab } = Route.useSearch();
+  const { tab, justCreated } = Route.useSearch();
   const navigate = Route.useNavigate();
+
+  const [celebrate, setCelebrate] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+  useEffect(() => {
+    if (justCreated === "1") {
+      setCelebrate(true);
+      setShowWelcome(true);
+      // Strip the flag from the URL so it doesn't re-fire on refresh.
+      void navigate({ search: { tab }, replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [justCreated]);
 
   const community = useQuery({ queryKey: ["community", id], queryFn: () => getCommunity(id) });
   const parcels = useQuery({ queryKey: ["parcels", id], queryFn: () => listParcels(id) });
@@ -101,7 +118,20 @@ function CommunityDetail() {
 
   return (
     <AppShell>
-      <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-7xl flex-col space-y-4 px-4 py-4">
+      <div className="relative mx-auto flex h-[calc(100vh-4rem)] max-w-7xl flex-col space-y-4 px-4 py-4">
+        <Confetti show={celebrate} />
+        {showWelcome && (
+          <WelcomeBanner
+            communityName={community.data?.name ?? "your community"}
+            parcelCount={p.length}
+            roadCount={s.length}
+            onCreateProject={() => {
+              setShowWelcome(false);
+              void navigate({ search: { tab: "projects" } });
+            }}
+            onDismiss={() => setShowWelcome(false)}
+          />
+        )}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <Link to="/community" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
@@ -188,6 +218,51 @@ function Stat({ icon: Icon, label, value, tone = "default" }: { icon: typeof Use
   );
 }
 
+function WelcomeBanner({
+  communityName,
+  parcelCount,
+  roadCount,
+  onCreateProject,
+  onDismiss,
+}: {
+  communityName: string;
+  parcelCount: number;
+  roadCount: number;
+  onCreateProject: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 via-fun-2/10 to-fun-3/15 px-4 py-3 fun-shadow-sm">
+      <div className="pointer-events-none absolute -right-4 -top-4 opacity-30">
+        <Sparkles className="h-16 w-16 text-primary" />
+      </div>
+      <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-md">
+            <PartyPopper className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="font-display text-base font-bold leading-tight">
+              {communityName} is ready to go
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              We added <strong>{parcelCount}</strong> {parcelCount === 1 ? "home" : "homes"}
+              {roadCount > 0 ? ` and ${roadCount} ${roadCount === 1 ? "road" : "roads"}` : ""}. Next
+              step: create your first project to plan a shared cost.
+            </p>
+          </div>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Button variant="ghost" size="sm" onClick={onDismiss}>Not now</Button>
+          <Button size="sm" onClick={onCreateProject} className="bounce hover:scale-105">
+            Create your first project
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---------------- Map tab ----------------
 function MapTab({
   communityId,
@@ -235,10 +310,24 @@ function MapTab({
   const selected = segments.find((s) => s.id === selectedId) ?? null;
 
   const hasNoData = parcels.length === 0 && segments.length === 0;
+  const hasParcelsNoRoads = parcels.length > 0 && segments.length === 0;
 
   return (
     <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[1fr_340px]">
       <div className="min-h-0 flex-1">
+        {hasParcelsNoRoads && (
+          <div className="mb-3 flex items-start gap-3 rounded-2xl border border-fun-2/40 bg-fun-2/10 px-3 py-2 text-sm">
+            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-fun-2 text-fun-2-foreground">
+              <Pencil className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">We couldn't auto-detect any roads</p>
+              <p className="text-xs text-muted-foreground">
+                Use the pencil tool on the map to trace a road along your community — takes about 15 seconds per road.
+              </p>
+            </div>
+          </div>
+        )}
         {hasNoData ? (
           <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-border bg-card p-8 text-center">
             <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-fun-1/20 text-fun-1-foreground">
