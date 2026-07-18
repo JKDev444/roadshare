@@ -218,6 +218,51 @@ function Stat({ icon: Icon, label, value, tone = "default" }: { icon: typeof Use
   );
 }
 
+function WelcomeBanner({
+  communityName,
+  parcelCount,
+  roadCount,
+  onCreateProject,
+  onDismiss,
+}: {
+  communityName: string;
+  parcelCount: number;
+  roadCount: number;
+  onCreateProject: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 via-fun-2/10 to-fun-3/15 px-4 py-3 fun-shadow-sm">
+      <div className="pointer-events-none absolute -right-4 -top-4 opacity-30">
+        <Sparkles className="h-16 w-16 text-primary" />
+      </div>
+      <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-md">
+            <PartyPopper className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="font-display text-base font-bold leading-tight">
+              {communityName} is ready to go
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              We added <strong>{parcelCount}</strong> {parcelCount === 1 ? "home" : "homes"}
+              {roadCount > 0 ? ` and ${roadCount} ${roadCount === 1 ? "road" : "roads"}` : ""}. Next
+              step: create your first project to plan a shared cost.
+            </p>
+          </div>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Button variant="ghost" size="sm" onClick={onDismiss}>Not now</Button>
+          <Button size="sm" onClick={onCreateProject} className="bounce hover:scale-105">
+            Create your first project
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---------------- Map tab ----------------
 function MapTab({
   communityId,
