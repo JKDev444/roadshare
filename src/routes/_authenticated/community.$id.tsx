@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -12,9 +12,12 @@ import {
   History,
   LayoutGrid,
   Map as MapIcon,
+  PartyPopper,
   Plus,
+  Pencil,
   Route as RouteIcon,
   Ruler,
+  Sparkles,
   Trash2,
   TriangleAlert,
   Users,
@@ -47,6 +50,7 @@ import {
 } from "@/components/ui/popover";
 import { ConfidenceBadge, VerificationBadge } from "@/components/community/badges";
 import { CommunityMapEditor } from "@/components/community/CommunityMapEditor";
+import { Confetti } from "@/components/onboarding/Confetti";
 import { ProjectsTab } from "@/components/planner/ProjectsTab";
 import {
   createParcel,
@@ -77,16 +81,29 @@ type Tab = (typeof TABS)[number];
 
 export const Route = createFileRoute("/_authenticated/community/$id")({
   head: () => ({ meta: [{ title: "Community Record — RoadShare" }, { name: "robots", content: "noindex" }] }),
-  validateSearch: (s: Record<string, unknown>): { tab: Tab } => ({
+  validateSearch: (s: Record<string, unknown>): { tab: Tab; justCreated?: string } => ({
     tab: TABS.includes(s.tab as Tab) ? (s.tab as Tab) : "map",
+    justCreated: s.justCreated === "1" ? "1" : undefined,
   }),
   component: CommunityDetail,
 });
 
 function CommunityDetail() {
   const { id } = Route.useParams();
-  const { tab } = Route.useSearch();
+  const { tab, justCreated } = Route.useSearch();
   const navigate = Route.useNavigate();
+
+  const [celebrate, setCelebrate] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+  useEffect(() => {
+    if (justCreated === "1") {
+      setCelebrate(true);
+      setShowWelcome(true);
+      // Strip the flag from the URL so it doesn't re-fire on refresh.
+      void navigate({ search: { tab }, replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [justCreated]);
 
   const community = useQuery({ queryKey: ["community", id], queryFn: () => getCommunity(id) });
   const parcels = useQuery({ queryKey: ["parcels", id], queryFn: () => listParcels(id) });
@@ -101,7 +118,20 @@ function CommunityDetail() {
 
   return (
     <AppShell>
-      <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-7xl flex-col space-y-4 px-4 py-4">
+      <div className="relative mx-auto flex h-[calc(100vh-4rem)] max-w-7xl flex-col space-y-4 px-4 py-4">
+        <Confetti show={celebrate} />
+        {showWelcome && (
+          <WelcomeBanner
+            communityName={community.data?.name ?? "your community"}
+            parcelCount={p.length}
+            roadCount={s.length}
+            onCreateProject={() => {
+              setShowWelcome(false);
+              void navigate({ search: { tab: "projects" } });
+            }}
+            onDismiss={() => setShowWelcome(false)}
+          />
+        )}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <Link to="/community" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
