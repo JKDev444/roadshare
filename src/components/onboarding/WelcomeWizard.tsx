@@ -203,6 +203,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
     const region =
       [basicInfo.city, basicInfo.state].filter(Boolean).join(", ") || null;
     let lots: CcrDraft["lots"] = [];
+    let roads: CcrDraft["roads"] = [];
     if (r.kind === "addresses") {
       lots = r.items.map((it) => ({
         label: it.label,
@@ -221,6 +222,17 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
         address: it.address ?? null,
         owner_name: it.owner_name ?? null,
         area_sqft: it.area_sqft ?? null,
+        lat: it.lat ?? null,
+        lng: it.lng ?? null,
+        geojson: it.geojson ?? null,
+        provenance: "entered" as const,
+      }));
+      roads = r.roads.map((rd) => ({
+        name: rd.name,
+        responsibility: rd.responsibility,
+        surface: null,
+        geometry: rd.geometry,
+        has_geometry: true,
         provenance: "entered" as const,
       }));
     }
@@ -240,7 +252,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
         description: null,
       },
       lots,
-      roads: [],
+      roads,
       maintenance_summary: null,
       assessment_formula: null,
       meta: {
@@ -248,7 +260,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
         region_found: !!region,
         addresses_found: lots.filter((l) => l.address).length,
         lot_refs_found: lots.length,
-        roads_found: 0,
+        roads_found: roads.length,
         maintenance_found: false,
         formula_found: false,
         missing_exhibits: [],
