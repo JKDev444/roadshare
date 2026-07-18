@@ -227,7 +227,7 @@ async function osmBuildingsNearPoint(
 ): Promise<DcadParcel[]> {
   const b = bboxAround(lat, lng, radiusMeters);
   const bbox = `${b.south},${b.west},${b.north},${b.east}`;
-  const query = `[out:json][timeout:25];(way["building"](${bbox});relation["building"](${bbox}););out tags;>;out skel qt;`;
+  const query = `[out:json][timeout:25];(way["building"](${bbox});relation["building"](${bbox}););out body;>;out skel qt;`;
   const elements = await runOverpass(query);
   const parcels = buildingsToParcels(elements);
   // Sort by distance and cap
@@ -245,7 +245,7 @@ async function osmBuildingsInPolygon(
   const ring = polygon.coordinates[0];
   if (!ring || ring.length < 4) return [];
   const poly = ring.map(([lng, lat]) => `${lat} ${lng}`).join(" ");
-  const query = `[out:json][timeout:25];(way["building"](poly:"${poly}");relation["building"](poly:"${poly}"););out tags;>;out skel qt;`;
+  const query = `[out:json][timeout:25];(way["building"](poly:"${poly}");relation["building"](poly:"${poly}"););out body;>;out skel qt;`;
   const elements = await runOverpass(query);
   const parcels = buildingsToParcels(elements);
   return parcels.slice(0, Math.max(1, Math.min(500, limit)));
