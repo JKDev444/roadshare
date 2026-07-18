@@ -590,7 +590,7 @@ function ProvenancePopover({ events, loading }: { events: RecordEvent[]; loading
                 <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full border-2 border-background bg-primary" />
                 <p className="text-sm">
                   <span className="font-semibold capitalize">{e.entity_type}</span>{" "}
-                  {e.entity_label && <span className="text-muted-foreground">“{e.entity_label}”</span>{" "}
+                  {e.entity_label && <span className="text-muted-foreground">“{e.entity_label}”</span>}{" "}
                   <span className="font-medium text-primary">{e.action}</span>
                 </p>
                 {e.note && <p className="text-xs text-muted-foreground">{e.note}</p>}
