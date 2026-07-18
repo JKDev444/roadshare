@@ -3,7 +3,10 @@ import { ClientOnly } from "@tanstack/react-router";
 
 import type { MapPickStepProps } from "./MapPickStepImpl";
 
-const LazyMapPickStep = React.lazy(() => import("./MapPickStepImpl"));
+const LazyMapPickStep = React.lazy(async () => {
+  const { MapPickStep } = await import("./MapPickStepImpl");
+  return { default: MapPickStep };
+});
 
 export type { MapPickResult } from "./MapPickStepImpl";
 
