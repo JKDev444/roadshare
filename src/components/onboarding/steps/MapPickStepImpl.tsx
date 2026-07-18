@@ -48,6 +48,13 @@ export type MapPickResult = {
 
 type Status = "geocoding" | "fetching" | "ready" | "error" | "empty";
 
+export type MapPickStepProps = {
+  basicInfo: BasicInfo;
+  onCancel: () => void;
+  onSubmit: (r: MapPickResult) => void | Promise<void>;
+  submitting?: boolean;
+};
+
 type RoadEntry = {
   id: string;
   name: string;
