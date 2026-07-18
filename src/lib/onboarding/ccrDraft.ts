@@ -1,3 +1,5 @@
+import type { Json } from "@/integrations/supabase/types";
+
 export type CcrDraft = {
   community: {
     name: string;
@@ -10,6 +12,9 @@ export type CcrDraft = {
     owner_name?: string | null;
     area_sqft?: number | null;
     frontage_ft?: number | null;
+    lat?: number | null;
+    lng?: number | null;
+    geojson?: Json | null;
     provenance?: "extracted" | "entered" | "confirmed" | "sample" | "unresolved";
     source_doc?: string | null;
     source_page?: number | null;
@@ -20,6 +25,7 @@ export type CcrDraft = {
     surface?: string | null;
     provenance?: "extracted" | "entered" | "confirmed" | "sample" | "unresolved";
     has_geometry?: boolean;
+    geometry?: { type: "LineString"; coordinates: [number, number][] } | null;
   }>;
   maintenance_summary: string | null;
   assessment_formula: string | null;

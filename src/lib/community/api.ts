@@ -9,9 +9,45 @@ export type Confidence = Database["public"]["Enums"]["confidence_level"];
 export type Verification = Database["public"]["Enums"]["verification_status"];
 
 export type Point = { x: number; y: number };
+export type GeoJSONLineString = { type: "LineString"; coordinates: [number, number][] };
+export type GeoJSONPolygon = { type: "Polygon"; coordinates: number[][][] };
 
 /** Canvas units are 0..100; treat the plat as ~1000 ft wide. */
 export const FT_PER_UNIT = 10;
+
+const RADIUS_FT = 20_925_000; // approximate Earth radius in feet
+
+function toRadians(deg: number) {
+  return (deg * Math.PI) / 180;
+}
+
+/** Haversine distance in feet between two lat/lng points. */
+export function haversineFt(a: [number, number], b: [number, number]): number {
+  const dLat = toRadians(b[1] - a[1]);
+  const dLng = toRadians(b[0] - a[0]);
+  const lat1 = toRadians(a[1]);
+  const lat2 = toRadians(b[1]);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * RADIUS_FT * Math.asin(Math.sqrt(h));
+}
+
+export function isGeoJSONLineString(geometry: unknown): geometry is GeoJSONLineString {
+  return (
+    !!geometry &&
+    typeof geometry === "object" &&
+    (geometry as GeoJSONLineString).type === "LineString" &&
+    Array.isArray((geometry as GeoJSONLineString).coordinates)
+  );
+}
+
+export function isGeoJSONPolygon(geometry: unknown): geometry is GeoJSONPolygon {
+  return (
+    !!geometry &&
+    typeof geometry === "object" &&
+    (geometry as GeoJSONPolygon).type === "Polygon" &&
+    Array.isArray((geometry as GeoJSONPolygon).coordinates)
+  );
+}
 
 export function toPoints(geometry: unknown): Point[] {
   if (!Array.isArray(geometry)) return [];
@@ -20,7 +56,20 @@ export function toPoints(geometry: unknown): Point[] {
     .map((p) => ({ x: Number(p.x), y: Number(p.y) }));
 }
 
-export function pathLengthFt(points: Point[]): number {
+export function lineStringToPoints(geometry: unknown): Point[] {
+  if (!isGeoJSONLineString(geometry)) return [];
+  return geometry.coordinates.map(([lng, lat]) => ({ x: lng, y: lat }));
+}
+
+export function pathLengthFt(geometry: Point[] | GeoJSONLineString | unknown): number {
+  if (isGeoJSONLineString(geometry)) {
+    let total = 0;
+    for (let i = 1; i < geometry.coordinates.length; i++) {
+      total += haversineFt(geometry.coordinates[i - 1], geometry.coordinates[i]);
+    }
+    return Math.round(total);
+  }
+  const points = Array.isArray(geometry) ? (geometry as Point[]) : toPoints(geometry);
   let total = 0;
   for (let i = 1; i < points.length; i++) {
     const dx = points[i].x - points[i - 1].x;
@@ -30,9 +79,72 @@ export function pathLengthFt(points: Point[]): number {
   return Math.round(total * FT_PER_UNIT);
 }
 
-/** Serialize road segments to a GeoJSON FeatureCollection. Canvas units (0..100)
- *  are mapped to a simple local planar coordinate space (x, inverted y). */
-export function segmentsToGeoJSON(community: Pick<Community, "name" | "region"> | null, segments: RoadSegment[]) {
+/** Convert a road segment to a GeoJSON Feature for the map. */
+export function segmentToFeature(
+  seg: RoadSegment,
+): {
+  type: "Feature";
+  geometry: GeoJSONLineString;
+  properties: Record<string, unknown>;
+} | null {
+  if (isGeoJSONLineString(seg.geometry)) {
+    return {
+      type: "Feature",
+      geometry: seg.geometry,
+      properties: { id: seg.id, name: seg.name, surface: seg.surface, responsibility: seg.responsibility },
+    };
+  }
+  const pts = toPoints(seg.geometry);
+  if (pts.length < 2) return null;
+  return {
+    type: "Feature",
+    geometry: { type: "LineString", coordinates: pts.map((p) => [p.x, 100 - p.y]) },
+    properties: { id: seg.id, name: seg.name, surface: seg.surface, responsibility: seg.responsibility },
+  };
+}
+
+const DEFAULT_SQUARE_OFFSET = 0.00008; // roughly 25 ft in degrees
+
+/** Convert a parcel to a GeoJSON Feature for the map. */
+export function parcelToFeature(p: Parcel): {
+  type: "Feature";
+  geometry: GeoJSONPolygon;
+  properties: Record<string, unknown>;
+} | null {
+  if (isGeoJSONPolygon(p.geojson)) {
+    return {
+      type: "Feature",
+      geometry: p.geojson,
+      properties: { id: p.id, label: p.label, selected: false },
+    };
+  }
+  const lat = p.lat ?? p.pos_y ?? 0;
+  const lng = p.lng ?? p.pos_x ?? 0;
+  if (lat === 0 && lng === 0) return null;
+  const o = DEFAULT_SQUARE_OFFSET;
+  return {
+    type: "Feature",
+    geometry: {
+      type: "Polygon",
+      coordinates: [
+        [
+          [lng - o, lat - o],
+          [lng + o, lat - o],
+          [lng + o, lat + o],
+          [lng - o, lat + o],
+          [lng - o, lat - o],
+        ],
+      ],
+    },
+    properties: { id: p.id, label: p.label, selected: false },
+  };
+}
+
+/** Serialize road segments to a GeoJSON FeatureCollection. */
+export function segmentsToGeoJSON(
+  community: Pick<Community, "name" | "region"> | null,
+  segments: RoadSegment[],
+) {
   return {
     type: "FeatureCollection" as const,
     name: community?.name ?? "RoadShare export",
@@ -40,30 +152,9 @@ export function segmentsToGeoJSON(community: Pick<Community, "name" | "region"> 
       community: community?.name ?? null,
       region: community?.region ?? null,
       generated_at: new Date().toISOString(),
-      coordinate_note: "Local plat units (0-100); y-axis inverted so north is up.",
+      coordinate_note: "WGS84 for real geometry; local plat units (0-100) for legacy segments.",
     },
-    features: segments
-      .map((seg) => {
-        const pts = toPoints(seg.geometry);
-        if (pts.length < 2) return null;
-        return {
-          type: "Feature" as const,
-          geometry: {
-            type: "LineString" as const,
-            coordinates: pts.map((p) => [p.x, 100 - p.y]),
-          },
-          properties: {
-            name: seg.name,
-            surface: seg.surface,
-            responsibility: seg.responsibility,
-            source: seg.source,
-            confidence: seg.confidence,
-            verification: seg.verification,
-            length_ft: pathLengthFt(pts),
-          },
-        };
-      })
-      .filter((f): f is NonNullable<typeof f> => f !== null),
+    features: segments.map((seg) => segmentToFeature(seg)).filter((f): f is NonNullable<typeof f> => f !== null),
   };
 }
 
@@ -72,7 +163,10 @@ export function downloadGeoJSON(community: Pick<Community, "name" | "region"> | 
   const json = JSON.stringify(segmentsToGeoJSON(community, segments), null, 2);
   const blob = new Blob([json], { type: "application/geo+json" });
   const url = URL.createObjectURL(blob);
-  const slug = (community?.name ?? "roadshare").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  const slug = (community?.name ?? "roadshare")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
   const a = document.createElement("a");
   a.href = url;
   a.download = `${slug || "roadshare"}-roads.geojson`;
@@ -91,9 +185,7 @@ async function unwrap<T>(p: PromiseLike<{ data: T; error: { message: string } | 
 // ---------------- Communities ----------------
 
 export async function listCommunities(): Promise<Community[]> {
-  return unwrap(
-    supabase.from("communities").select("*").order("created_at", { ascending: false }),
-  );
+  return unwrap(supabase.from("communities").select("*").order("created_at", { ascending: false }));
 }
 
 export async function getCommunity(id: string): Promise<Community> {
@@ -105,9 +197,7 @@ export async function createCommunity(input: {
   region?: string;
   description?: string;
 }): Promise<Community> {
-  const community = await unwrap(
-    supabase.from("communities").insert(input).select().single(),
-  );
+  const community = await unwrap(supabase.from("communities").insert(input).select().single());
   await logEvent(community.id, {
     entity_type: "community",
     entity_label: community.name,
@@ -125,9 +215,7 @@ export async function deleteCommunity(id: string): Promise<void> {
 // ---------------- Parcels ----------------
 
 export async function listParcels(communityId: string): Promise<Parcel[]> {
-  return unwrap(
-    supabase.from("parcels").select("*").eq("community_id", communityId).order("label"),
-  );
+  return unwrap(supabase.from("parcels").select("*").eq("community_id", communityId).order("label"));
 }
 
 export type ParcelInput = Partial<
@@ -140,6 +228,9 @@ export type ParcelInput = Partial<
     | "frontage_ft"
     | "pos_x"
     | "pos_y"
+    | "lat"
+    | "lng"
+    | "geojson"
     | "source"
     | "confidence"
     | "verification"
@@ -169,9 +260,7 @@ export async function updateParcel(
   input: ParcelInput,
   { silent }: { silent?: boolean } = {},
 ): Promise<Parcel> {
-  const parcel = await unwrap(
-    supabase.from("parcels").update(input).eq("id", id).select().single(),
-  );
+  const parcel = await unwrap(supabase.from("parcels").update(input).eq("id", id).select().single());
   if (!silent) {
     await logEvent(communityId, {
       entity_type: "parcel",
@@ -188,6 +277,25 @@ export async function deleteParcel(id: string, communityId: string, label: strin
   await logEvent(communityId, { entity_type: "parcel", entity_label: label, action: "removed" });
 }
 
+/** Compute a bounding box from real parcel lat/lng coordinates. */
+export function boundsFromParcels(parcels: Pick<Parcel, "lat" | "lng">[]): { sw: [number, number]; ne: [number, number] } | null {
+  const points = parcels
+    .map((p) => ({ lat: p.lat, lng: p.lng }))
+    .filter((p): p is { lat: number; lng: number } => p.lat != null && p.lng != null);
+  if (points.length === 0) return null;
+  let minLat = points[0].lat;
+  let maxLat = points[0].lat;
+  let minLng = points[0].lng;
+  let maxLng = points[0].lng;
+  for (const p of points) {
+    minLat = Math.min(minLat, p.lat);
+    maxLat = Math.max(maxLat, p.lat);
+    minLng = Math.min(minLng, p.lng);
+    maxLng = Math.max(maxLng, p.lng);
+  }
+  return { sw: [minLng, minLat], ne: [maxLng, maxLat] };
+}
+
 // ---------------- Road segments ----------------
 
 export async function listSegments(communityId: string): Promise<RoadSegment[]> {
@@ -198,7 +306,7 @@ export async function listSegments(communityId: string): Promise<RoadSegment[]> 
 
 export type SegmentInput = {
   name?: string;
-  geometry?: Point[];
+  geometry?: Point[] | GeoJSONLineString;
   surface?: string | null;
   responsibility?: string;
   source?: string | null;
@@ -207,14 +315,14 @@ export type SegmentInput = {
 };
 
 export async function createSegment(communityId: string, input: SegmentInput): Promise<RoadSegment> {
-  const geometry = input.geometry ?? [];
+  const geometry = input.geometry ?? ([] as Point[]);
   const segment = await unwrap(
     supabase
       .from("road_segments")
       .insert({
         community_id: communityId,
         name: input.name ?? "New segment",
-        geometry,
+        geometry: geometry as Json,
         length_ft: pathLengthFt(geometry),
         surface: input.surface,
         responsibility: input.responsibility ?? "shared",
@@ -249,9 +357,7 @@ export async function updateSegment(
     geometry: input.geometry as Json | undefined,
   };
   if (input.geometry) patch.length_ft = pathLengthFt(input.geometry);
-  const segment = await unwrap(
-    supabase.from("road_segments").update(patch).eq("id", id).select().single(),
-  );
+  const segment = await unwrap(supabase.from("road_segments").update(patch).eq("id", id).select().single());
   if (!silent) {
     await logEvent(communityId, {
       entity_type: "road",

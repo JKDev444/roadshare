@@ -72,6 +72,12 @@
   --color-map-asphalt-edge: var(--map-asphalt-edge);
   --color-map-lane: var(--map-lane);
   --color-map-parcel-edge: var(--map-parcel-edge);
+  --color-fun-1: var(--fun-1);
+  --color-fun-2: var(--fun-2);
+  --color-fun-3: var(--fun-3);
+  --color-fun-1-foreground: var(--fun-1-foreground);
+  --color-fun-2-foreground: var(--fun-2-foreground);
+  --color-fun-3-foreground: var(--fun-3-foreground);
   --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -124,6 +130,12 @@
   --map-asphalt-edge: oklch(0.28 0.012 220);
   --map-lane: oklch(0.88 0.09 92);
   --map-parcel-edge: oklch(0.82 0.02 150);
+  --fun-1: oklch(0.68 0.22 142);
+  --fun-2: oklch(0.85 0.18 95);
+  --fun-3: oklch(0.62 0.19 250);
+  --fun-1-foreground: oklch(0.25 0.05 142);
+  --fun-2-foreground: oklch(0.25 0.06 95);
+  --fun-3-foreground: oklch(0.99 0.01 250);
 }
 
 .dark {
@@ -172,6 +184,12 @@
   --map-asphalt-edge: oklch(0.32 0.015 220);
   --map-lane: oklch(0.78 0.09 92);
   --map-parcel-edge: oklch(0.4 0.02 190);
+  --fun-1: oklch(0.72 0.2 142);
+  --fun-2: oklch(0.8 0.16 95);
+  --fun-3: oklch(0.62 0.17 250);
+  --fun-1-foreground: oklch(0.16 0.04 142);
+  --fun-2-foreground: oklch(0.16 0.04 95);
+  --fun-3-foreground: oklch(0.99 0.01 250);
 }
 
 @layer base {
@@ -234,6 +252,35 @@
   background-size: 100% 42%;
   padding: 0 0.1em;
   border-radius: 0.15em;
+}
+
+/* Playful card fills. */
+@utility card-gradient {
+  background: linear-gradient(135deg, color-mix(in oklab, var(--color-primary) 12%, transparent), color-mix(in oklab, var(--color-fun-2) 22%, transparent));
+}
+
+@utility card-gradient-fun {
+  background: linear-gradient(135deg, color-mix(in oklab, var(--color-fun-1) 18%, transparent) 0%, color-mix(in oklab, var(--color-fun-3) 18%, transparent) 100%);
+}
+
+@utility fun-shadow {
+  box-shadow: 0 16px 40px -12px color-mix(in oklab, var(--color-primary) 30%, transparent), 0 4px 0 0 color-mix(in oklab, var(--color-fun-2) 40%, transparent);
+}
+
+@utility fun-shadow-sm {
+  box-shadow: 0 8px 20px -8px color-mix(in oklab, var(--color-primary) 30%, transparent), 0 2px 0 0 color-mix(in oklab, var(--color-fun-2) 40%, transparent);
+}
+
+@utility bounce {
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@utility map-glow {
+  filter: drop-shadow(0 4px 10px color-mix(in oklab, var(--color-primary) 45%, transparent));
+}
+
+@utility text-shadow {
+  text-shadow: 0 1px 2px color-mix(in oklab, var(--color-background) 60%, transparent);
 }
 
 @keyframes rs-reveal {

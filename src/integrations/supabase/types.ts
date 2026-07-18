@@ -412,8 +412,11 @@ export type Database = {
           created_at: string
           effective_date: string | null
           frontage_ft: number | null
+          geojson: Json | null
           id: string
           label: string
+          lat: number | null
+          lng: number | null
           owner_id: string
           owner_name: string | null
           pos_x: number
@@ -430,8 +433,11 @@ export type Database = {
           created_at?: string
           effective_date?: string | null
           frontage_ft?: number | null
+          geojson?: Json | null
           id?: string
           label: string
+          lat?: number | null
+          lng?: number | null
           owner_id?: string
           owner_name?: string | null
           pos_x?: number
@@ -448,8 +454,11 @@ export type Database = {
           created_at?: string
           effective_date?: string | null
           frontage_ft?: number | null
+          geojson?: Json | null
           id?: string
           label?: string
+          lat?: number | null
+          lng?: number | null
           owner_id?: string
           owner_name?: string | null
           pos_x?: number

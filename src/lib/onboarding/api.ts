@@ -5,6 +5,7 @@ import {
   createSegment,
   logEvent,
   type Community,
+  type GeoJSONLineString,
   type ParcelInput,
   type Point,
 } from "@/lib/community/api";
@@ -30,6 +31,25 @@ function gridPositions(count: number): Point[] {
   return out;
 }
 
+/** Normalize lat/lng lots to 0..100 canvas positions. */
+function mapBounds(lots: CcrDraft["lots"]) {
+  const points = lots
+    .map((l) => ({ lat: l.lat, lng: l.lng }))
+    .filter((p): p is { lat: number; lng: number } => p.lat != null && p.lng != null);
+  if (points.length < 2) return null;
+  let minLat = points[0].lat;
+  let maxLat = points[0].lat;
+  let minLng = points[0].lng;
+  let maxLng = points[0].lng;
+  for (const p of points) {
+    minLat = Math.min(minLat, p.lat);
+    maxLat = Math.max(maxLat, p.lat);
+    minLng = Math.min(minLng, p.lng);
+    maxLng = Math.max(maxLng, p.lng);
+  }
+  return { minLat, maxLat, minLng, maxLng };
+}
+
 /** Create a community + its parcels + its roads from a reviewed CCR draft. */
 export async function applyCcrDraft(
   draft: CcrDraft,
@@ -52,55 +72,67 @@ export async function applyCcrDraft(
 
   // Bulk-insert all parcels in one round trip.
   if (draft.lots.length > 0) {
-    const positions = gridPositions(draft.lots.length);
-    const rows = draft.lots.map((lot, i) => ({
-      community_id: community.id,
-      label: lot.label || `Lot ${i + 1}`,
-      owner_name: lot.owner_name ?? null,
-      address: lot.address ?? null,
-      area_sqft: lot.area_sqft ?? null,
-      frontage_ft: lot.frontage_ft ?? null,
-      pos_x: positions[i].x,
-      pos_y: positions[i].y,
-      confidence: "medium" as const,
-      verification: "unverified" as const,
-      source: "CCR import",
-    }));
+    const bounds = mapBounds(draft.lots);
+    const grid = gridPositions(draft.lots.length);
+    const rows = draft.lots.map((lot, i) => {
+      let pos_x = grid[i].x;
+      let pos_y = grid[i].y;
+      if (bounds && lot.lat != null && lot.lng != null) {
+        pos_x = 10 + ((lot.lng - bounds.minLng) / (bounds.maxLng - bounds.minLng)) * 80;
+        pos_y = 10 + ((bounds.maxLat - lot.lat) / (bounds.maxLat - bounds.minLat)) * 80;
+      }
+      return {
+        community_id: community.id,
+        label: lot.label || `Lot ${i + 1}`,
+        owner_name: lot.owner_name ?? null,
+        address: lot.address ?? null,
+        area_sqft: lot.area_sqft ?? null,
+        frontage_ft: lot.frontage_ft ?? null,
+        lat: lot.lat ?? null,
+        lng: lot.lng ?? null,
+        geojson: lot.geojson ?? null,
+        pos_x,
+        pos_y,
+        confidence: "medium" as const,
+        verification: "unverified" as const,
+        source: "map selection",
+      };
+    });
     const { error } = await supabase.from("parcels").insert(rows);
     if (error) console.error("applyCcrDraft bulk parcels", error);
     done += draft.lots.length;
     opts.onProgress?.(done, total, `Added ${draft.lots.length} properties`);
   }
 
-  // Give each named road a placeholder centerline so it appears on the map.
-  // The user refines geometry in the map editor.
+  // Persist roads with real geometry from the map, or a placeholder if none.
   const roads = draft.roads.slice(0, 20);
   for (let i = 0; i < roads.length; i++) {
-    const y = 20 + (i * 60) / Math.max(1, roads.length - 1);
+    const rd = roads[i];
+    const geometry: Point[] | GeoJSONLineString = rd.geometry ?? [
+      { x: 10, y: 20 + (i * 60) / Math.max(1, roads.length - 1) },
+      { x: 90, y: 20 + (i * 60) / Math.max(1, roads.length - 1) },
+    ];
     try {
       await createSegment(community.id, {
-        name: roads[i].name,
-        responsibility: roads[i].responsibility,
-        surface: roads[i].surface ?? undefined,
-        geometry: [
-          { x: 10, y },
-          { x: 90, y },
-        ],
+        name: rd.name,
+        responsibility: rd.responsibility,
+        surface: rd.surface ?? undefined,
+        geometry,
         confidence: "medium",
         verification: "unverified",
-        source: "CCR import",
+        source: rd.geometry ? "OpenStreetMap" : "CCR import",
       });
     } catch (err) {
-      console.error("applyCcrDraft segment", roads[i].name, err);
+      console.error("applyCcrDraft segment", rd.name, err);
     }
-    bump(`Added road "${roads[i].name}"`);
+    bump(`Added road "${rd.name}"`);
   }
 
   await logEvent(community.id, {
     entity_type: "community",
     entity_label: community.name,
     action: "imported",
-    note: `AI-imported from CCR: ${draft.lots.length} lots, ${roads.length} roads.`,
+    note: `Created from map selection: ${draft.lots.length} lots, ${roads.length} roads.`,
   });
 
   return community;
