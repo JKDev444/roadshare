@@ -24,10 +24,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { searchAddresses } from "@/lib/onboarding/nominatim";
 import {
-  dcadPointLookup,
-  dcadPolygonLookup,
-  type DcadParcel,
-} from "@/lib/onboarding/dcad.functions";
+  parcelsPointLookup,
+  parcelsPolygonLookup,
+  type ParcelSource,
+} from "@/lib/onboarding/parcels.functions";
+import type { DcadParcel } from "@/lib/onboarding/dcad.functions";
 import { detectRoadsInPolygon, type OsmRoad } from "@/lib/onboarding/osm.functions";
 import { getMapboxToken } from "@/lib/mapbox";
 import type { Json } from "@/integrations/supabase/types";
@@ -91,8 +92,8 @@ export function MapPickStep({
   onSubmit: (r: MapPickResult) => void | Promise<void>;
   submitting?: boolean;
 }) {
-  const pointFn = useServerFn(dcadPointLookup);
-  const polygonFn = useServerFn(dcadPolygonLookup);
+  const pointFn = useServerFn(parcelsPointLookup);
+  const polygonFn = useServerFn(parcelsPolygonLookup);
   const detectRoadsFn = useServerFn(detectRoadsInPolygon);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -110,6 +111,7 @@ export function MapPickStep({
   const [drawingActive, setDrawingActive] = useState(false);
   const [anchorParcelId, setAnchorParcelId] = useState<string | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [source, setSource] = useState<ParcelSource | null>(null);
 
   // 1) Geocode starting address once.
   useEffect(() => {
@@ -263,6 +265,7 @@ export function MapPickStep({
       try {
         const res = await pointFn({ data: { lat: c.lat, lng: c.lng, radius: 400, limit: 300 } });
         setParcels(res.parcels);
+        setSource(res.source);
         // Auto-select the nearest ~8 parcels so the user sees immediate progress.
         const withDist = res.parcels
           .map((p) => ({
@@ -310,6 +313,7 @@ export function MapPickStep({
           detectRoadsFn({ data: { polygon: { type: "Polygon", coordinates: [ring] } } }),
         ]);
         setParcels(parcelRes.parcels);
+        setSource(parcelRes.source);
         setSelected(new Set(parcelRes.parcels.map((p) => p.id)));
         setHasDrawn(true);
         setRoads(
@@ -437,8 +441,12 @@ export function MapPickStep({
           <h2 className="font-display text-lg font-semibold">Pick your neighborhood on the map</h2>
           <p className="mt-0.5 max-w-lg text-xs text-muted-foreground">
             We picked your closest neighbors to start. Tap any home to add or remove it, or use
-            the lasso to draw around your whole community — we'll auto-detect the roads. Property
-            data from Dallas County records.
+            the lasso to draw around your whole community — we'll auto-detect the roads.
+            {source === "dcad"
+              ? " Property data from Dallas County records."
+              : source === "osm"
+                ? " Home outlines from OpenStreetMap."
+                : ""}
           </p>
         </div>
         <div className="flex shrink-0 gap-1.5">
@@ -512,8 +520,8 @@ export function MapPickStep({
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
           <p className="font-medium">No homes found in that area.</p>
           <p className="mt-0.5">
-            Property records cover Dallas County only right now. Try a different address inside Dallas County, or
-            go back and paste addresses instead.
+            We couldn't find any home outlines near that address. Try zooming out with the lasso to
+            cover a wider area, use a different starting address, or go back and paste addresses instead.
           </p>
         </div>
       )}

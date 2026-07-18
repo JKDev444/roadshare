@@ -34,17 +34,14 @@ export const detectRoadsInPolygon = createServerFn({ method: "POST" })
     const poly = ring.map(([lng, lat]) => `${lat} ${lng}`).join(" ");
     const query = `[out:json][timeout:25];way["highway"](poly:"${poly}");out;>;out skel qt;`;
 
-    const res = await fetch("https://overpass-api.de/api/interpreter", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: `data=${encodeURIComponent(query)}`,
-    });
-
-    if (!res.ok) {
-      throw new Error(`Overpass returned ${res.status}. Try again in a few seconds.`);
-    }
-
-    const json = (await res.json()) as {
+    const endpoints = [
+      "https://overpass-api.de/api/interpreter",
+      "https://overpass.kumi.systems/api/interpreter",
+      "https://overpass.private.coffee/api/interpreter",
+    ];
+    let json:
+      | undefined
+      | {
       elements?: Array<
         | { type: "node"; id: number; lat: number; lon: number }
         | {
@@ -55,6 +52,33 @@ export const detectRoadsInPolygon = createServerFn({ method: "POST" })
           }
       >;
     };
+    let lastStatus = 0;
+    for (const url of endpoints) {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": "RoadShare/1.0 (road detection)",
+            Accept: "application/json",
+          },
+          body: `data=${encodeURIComponent(query)}`,
+        });
+        if (!res.ok) {
+          lastStatus = res.status;
+          continue;
+        }
+        json = await res.json();
+        break;
+      } catch {
+        /* try next */
+      }
+    }
+    if (!json) {
+      // Non-fatal: roads are optional; return an empty list.
+      console.warn(`Overpass road lookup failed (last status ${lastStatus}).`);
+      return { roads: [] as OsmRoad[] };
+    }
 
     const elements = json.elements ?? [];
     const nodes = new Map<number, [number, number]>();
