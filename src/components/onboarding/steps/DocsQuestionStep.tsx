@@ -30,7 +30,7 @@ export function DocsQuestionStep({
       icon: FileText,
       title: "Yes, I Have Documents",
       body:
-        "Upload what you have. RoadShare will determine what type of document it is — CC&R, plat, road agreement, easement, or amendment.",
+        "Upload what you have — HOA rules, a plat map, a road agreement, an easement, or an amendment. RoadShare figures out what each one is.",
     },
     {
       id: "no",
