@@ -48,17 +48,38 @@ type OsmRel = {
 };
 type OsmElement = OsmNode | OsmWay | OsmRel;
 
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+];
+
 async function runOverpass(query: string): Promise<OsmElement[]> {
-  const res = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `data=${encodeURIComponent(query)}`,
-  });
-  if (!res.ok) {
-    throw new Error(`Map service is busy (Overpass ${res.status}). Try again in a few seconds.`);
+  let lastErr: unknown = null;
+  for (const url of OVERPASS_ENDPOINTS) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "RoadShare/1.0 (nationwide parcel lookup)",
+          Accept: "application/json",
+        },
+        body: `data=${encodeURIComponent(query)}`,
+      });
+      if (!res.ok) {
+        lastErr = new Error(`Overpass ${res.status} @ ${new URL(url).host}`);
+        continue;
+      }
+      const json = (await res.json()) as { elements?: OsmElement[] };
+      return json.elements ?? [];
+    } catch (e) {
+      lastErr = e;
+    }
   }
-  const json = (await res.json()) as { elements?: OsmElement[] };
-  return json.elements ?? [];
+  throw new Error(
+    `Map service is busy right now (${lastErr instanceof Error ? lastErr.message : "unknown"}). Try again in a few seconds.`,
+  );
 }
 
 function ringFromNodes(
