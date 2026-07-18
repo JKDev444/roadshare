@@ -421,9 +421,23 @@ function PropertiesTab({ communityId, parcels, loading }: { communityId: string;
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{parcels.length} parcels tracked</p>
+        <p className="text-sm text-muted-foreground">
+          {parcels.length} {parcels.length === 1 ? "home" : "homes"} tracked
+        </p>
         <ParcelDialog communityId={communityId} onSaved={invalidate} />
       </div>
+      {!loading && parcels.length === 0 ? (
+        <div className="flex flex-col items-center rounded-3xl border border-dashed border-primary/30 bg-gradient-to-br from-fun-1/10 via-card to-fun-3/10 px-6 py-14 text-center fun-shadow-sm">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-fun-2 text-primary-foreground shadow-md">
+            <Users className="h-7 w-7" />
+          </span>
+          <h2 className="mt-5 font-display text-xl font-bold">No homes here yet</h2>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground">
+            Add the homes that share your road. You can pull them from the map or add one at a time.
+          </p>
+          <div className="mt-6"><ParcelDialog communityId={communityId} onSaved={invalidate} /></div>
+        </div>
+      ) : (
       <div className="overflow-x-auto rounded-2xl border border-border bg-card fun-shadow-sm">
         <table className="w-full text-sm">
           <thead>
@@ -439,8 +453,6 @@ function PropertiesTab({ communityId, parcels, loading }: { communityId: string;
           <tbody>
             {loading ? (
               <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
-            ) : parcels.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">No parcels yet — add one to begin.</td></tr>
             ) : parcels.map((p) => (
               <tr key={p.id} className="border-b border-border/60 last:border-0 hover:bg-accent/30">
                 <td className="px-4 py-3 font-semibold">{p.label}</td>
@@ -472,6 +484,7 @@ function PropertiesTab({ communityId, parcels, loading }: { communityId: string;
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }
