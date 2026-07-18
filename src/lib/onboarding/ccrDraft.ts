@@ -14,7 +14,7 @@ export type CcrDraft = {
     frontage_ft?: number | null;
     lat?: number | null;
     lng?: number | null;
-    geojson?: unknown | null;
+    geojson?: Json | null;
     provenance?: "extracted" | "entered" | "confirmed" | "sample" | "unresolved";
     source_doc?: string | null;
     source_page?: number | null;
