@@ -5,7 +5,6 @@ import {
   Check,
   Loader2,
   MapPin,
-  Pencil,
   RotateCcw,
   SquareDashedMousePointer,
   ShieldCheck,
@@ -13,6 +12,8 @@ import {
   Car,
   Route,
   X,
+  Info,
+  Sparkles,
 } from "lucide-react";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
@@ -106,25 +107,31 @@ export function MapPickStep({
   const [hasDrawn, setHasDrawn] = useState(false);
   const [roads, setRoads] = useState<RoadEntry[]>([]);
   const [detectingRoads, setDetectingRoads] = useState(false);
+  const [drawingActive, setDrawingActive] = useState(false);
+  const [anchorParcelId, setAnchorParcelId] = useState<string | null>(null);
 
   // 1) Geocode starting address once.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const address = basicInfo.startingAddress?.trim();
-      if (!address) {
+      const cityState = [basicInfo.city, basicInfo.state].filter(Boolean).join(", ");
+      if (!address && !cityState) {
         setStatus("error");
-        setErrorMsg("No starting address provided. Go back and enter one address on your road.");
+        setErrorMsg("No location yet. Go back and add a city, state, or one starting address.");
         return;
       }
       try {
-        const cityState = [basicInfo.city, basicInfo.state].filter(Boolean).join(", ");
-        const q = cityState ? `${address}, ${cityState}` : address;
+        const q = address
+          ? cityState
+            ? `${address}, ${cityState}`
+            : address
+          : cityState;
         const hits = await searchAddresses(q, { state: basicInfo.state || undefined });
         if (cancelled) return;
         if (hits.length === 0) {
           setStatus("error");
-          setErrorMsg(`We couldn't find "${address}" on the map. Check spelling or try adding city and state.`);
+          setErrorMsg(`We couldn't find "${address || cityState}" on the map. Check spelling or try adding city and state.`);
           return;
         }
         const h = hits[0];
@@ -155,9 +162,9 @@ export function MapPickStep({
     mapboxgl.accessToken = token;
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: "mapbox://styles/mapbox/streets-v12",
+      style: "mapbox://styles/mapbox/outdoors-v12",
       center: [center.lng, center.lat],
-      zoom: 17,
+      zoom: 17.5,
       attributionControl: true,
     });
 
@@ -181,8 +188,17 @@ export function MapPickStep({
         type: "fill",
         source: "parcels",
         paint: {
-          "fill-color": ["case", ["boolean", ["get", "selected"], false], "#0ea5e9", "#f59e0b"],
-          "fill-opacity": ["case", ["boolean", ["get", "selected"], false], 0.5, 0.35],
+          "fill-color": [
+            "case",
+            ["boolean", ["get", "anchor"], false], "#a855f7",
+            ["boolean", ["get", "selected"], false], "#22d3ee",
+            "#fbbf24",
+          ],
+          "fill-opacity": [
+            "case",
+            ["boolean", ["get", "selected"], false], 0.65,
+            0.5,
+          ],
         },
       });
       map.addLayer({
@@ -190,8 +206,18 @@ export function MapPickStep({
         type: "line",
         source: "parcels",
         paint: {
-          "line-color": ["case", ["boolean", ["get", "selected"], false], "#0369a1", "#1e293b"],
-          "line-width": ["case", ["boolean", ["get", "selected"], false], 2.5, 1.5],
+          "line-color": [
+            "case",
+            ["boolean", ["get", "anchor"], false], "#7e22ce",
+            ["boolean", ["get", "selected"], false], "#0e7490",
+            "#b45309",
+          ],
+          "line-width": [
+            "case",
+            ["boolean", ["get", "anchor"], false], 3.5,
+            ["boolean", ["get", "selected"], false], 3,
+            2,
+          ],
         },
       });
     });
@@ -216,6 +242,10 @@ export function MapPickStep({
     });
 
     mapRef.current = map;
+    const onModeChange = (e: { mode: string }) => {
+      setDrawingActive(e.mode === "draw_polygon");
+    };
+    map.on("draw.modechange", onModeChange as unknown as (...args: unknown[]) => void);
     return () => {
       map.remove();
       mapRef.current = null;
@@ -231,7 +261,16 @@ export function MapPickStep({
       try {
         const res = await pointFn({ data: { lat: c.lat, lng: c.lng, radius: 400, limit: 300 } });
         setParcels(res.parcels);
-        setSelected(new Set());
+        // Auto-select the nearest ~8 parcels so the user sees immediate progress.
+        const withDist = res.parcels
+          .map((p) => ({
+            id: p.id,
+            d: Math.hypot((p.lng ?? c.lng) - c.lng, (p.lat ?? c.lat) - c.lat),
+          }))
+          .sort((a, b) => a.d - b.d);
+        const anchor = withDist[0]?.id ?? null;
+        setAnchorParcelId(anchor);
+        setSelected(new Set(withDist.slice(0, Math.min(8, withDist.length)).map((p) => p.id)));
         setHasDrawn(false);
         setRoads([]);
         setStatus(res.parcels.length === 0 ? "empty" : "ready");
@@ -305,7 +344,7 @@ export function MapPickStep({
       const isSel = selected.has(p.id);
       return {
         type: "Feature",
-        properties: { id: p.id, label: p.headline, selected: isSel },
+        properties: { id: p.id, label: p.headline, selected: isSel, anchor: p.id === anchorParcelId },
         geometry: p.geometry,
       };
     });
@@ -329,7 +368,7 @@ export function MapPickStep({
       }
       if (added) map.fitBounds(bounds, { padding: 40, maxZoom: 19 });
     }
-  }, [parcels, selected]);
+  }, [parcels, selected, anchorParcelId]);
 
   const selectedList = useMemo(
     () => parcels.filter((p) => selected.has(p.id)),
@@ -345,6 +384,21 @@ export function MapPickStep({
   }
   function activateLasso() {
     drawRef.current?.changeMode("draw_polygon");
+    setDrawingActive(true);
+  }
+
+  function finishLasso() {
+    const map = mapRef.current;
+    if (!map) return;
+    // mapbox-gl-draw finishes the current polygon when Enter is pressed on the canvas.
+    const canvas = map.getCanvas();
+    canvas.focus();
+    const ev = new KeyboardEvent("keydown", { key: "Enter", code: "Enter", keyCode: 13, bubbles: true });
+    canvas.dispatchEvent(ev);
+  }
+
+  function selectAllVisible() {
+    setSelected(new Set(parcels.map((p) => p.id)));
   }
 
   function toggleRoad(id: string) {
@@ -380,13 +434,23 @@ export function MapPickStep({
         <div>
           <h2 className="font-display text-lg font-semibold">Pick your neighborhood on the map</h2>
           <p className="mt-0.5 max-w-lg text-xs text-muted-foreground">
-            Use the lasso to draw around your community. We’ll auto-select every parcel inside and
-            detect the roads. Then click any parcel to fine-tune. Dallas County data via DCAD.
+            We picked your closest neighbors to start. Tap any parcel to add or remove it, or use
+            the lasso to draw around your whole community — we'll auto-detect the roads. Dallas
+            County data via DCAD.
           </p>
         </div>
         <div className="flex shrink-0 gap-1.5">
-          <Button variant="outline" size="sm" onClick={activateLasso} className="bounce hover:scale-105">
-            <SquareDashedMousePointer className="mr-1 h-3.5 w-3.5" /> Lasso
+          {drawingActive ? (
+            <Button size="sm" onClick={finishLasso} className="bounce animate-pulse hover:scale-105">
+              <Check className="mr-1 h-3.5 w-3.5" /> Finish lasso
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" onClick={activateLasso} className="bounce hover:scale-105">
+              <SquareDashedMousePointer className="mr-1 h-3.5 w-3.5" /> Lasso
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={selectAllVisible} disabled={parcels.length === 0}>
+            <Sparkles className="mr-1 h-3.5 w-3.5" /> Select all
           </Button>
           <Button variant="outline" size="sm" onClick={resetView}>
             <RotateCcw className="mr-1 h-3.5 w-3.5" /> Reset
@@ -394,8 +458,25 @@ export function MapPickStep({
         </div>
       </div>
 
+      <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-primary">
+        <Info className="h-3.5 w-3.5 shrink-0" />
+        {drawingActive ? (
+          <span>
+            <strong>Drawing:</strong> click to add points around your community, then hit
+            <span className="mx-1 rounded bg-primary/15 px-1 py-0.5 font-mono">Finish lasso</span>
+            (or double-click the last point).
+          </span>
+        ) : (
+          <span>
+            <strong>Purple</strong> is your address. <strong>Teal</strong> = selected.
+            <strong className="ml-1">Amber</strong> = tap to add. Prefer drawing? Hit
+            <span className="mx-1 rounded bg-primary/15 px-1 py-0.5 font-medium">Lasso</span>.
+          </span>
+        )}
+      </div>
+
       <div className="relative overflow-hidden rounded-2xl border border-border bg-muted shadow-sm">
-        <div ref={containerRef} className="h-[440px] w-full" />
+        <div ref={containerRef} className="h-[560px] w-full" />
         {(status === "geocoding" || status === "fetching" || detectingRoads) && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
             <div className="flex items-center gap-2 rounded-full bg-card px-3 py-1.5 shadow-md fun-shadow-sm">
