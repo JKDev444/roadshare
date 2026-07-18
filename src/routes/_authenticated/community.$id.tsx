@@ -260,7 +260,7 @@ function MapTab({
             segments={segments}
             selectedSegmentId={selectedId}
             onSelectSegment={setSelectedId}
-            onCreateSegment={(g) => create.mutate(g)}
+            onCreateSegment={(g: GeoJSONLineString) => create.mutate(g)}
           />
         )}
       </div>
