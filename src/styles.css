@@ -72,6 +72,12 @@
   --color-map-asphalt-edge: var(--map-asphalt-edge);
   --color-map-lane: var(--map-lane);
   --color-map-parcel-edge: var(--map-parcel-edge);
+  --color-fun-1: var(--fun-1);
+  --color-fun-2: var(--fun-2);
+  --color-fun-3: var(--fun-3);
+  --color-fun-1-foreground: var(--fun-1-foreground);
+  --color-fun-2-foreground: var(--fun-2-foreground);
+  --color-fun-3-foreground: var(--fun-3-foreground);
   --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
