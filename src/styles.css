@@ -130,6 +130,12 @@
   --map-asphalt-edge: oklch(0.28 0.012 220);
   --map-lane: oklch(0.88 0.09 92);
   --map-parcel-edge: oklch(0.82 0.02 150);
+  --fun-1: oklch(0.68 0.22 142);
+  --fun-2: oklch(0.85 0.18 95);
+  --fun-3: oklch(0.62 0.19 250);
+  --fun-1-foreground: oklch(0.25 0.05 142);
+  --fun-2-foreground: oklch(0.25 0.06 95);
+  --fun-3-foreground: oklch(0.99 0.01 250);
 }
 
 .dark {
