@@ -45,31 +45,31 @@ export const Route = createFileRoute("/methodology")({
             >
               <defs>
                 <pattern id="dash" width="18" height="4" patternUnits="userSpaceOnUse">
-                  <rect width="10" height="3" y="0.5" style={{ fill: "var(--gold)" }} />
+                  <rect width="10" height="3" y="0.5" fill="#facc15" />
                 </pattern>
               </defs>
               {/* road */}
-              <rect x="40" y="90" width="560" height="18" rx="9" style={{ fill: "var(--foreground)" }} />
+              <rect x="40" y="90" width="560" height="18" rx="9" fill="#1f2937" />
               <rect x="40" y="97" width="560" height="4" fill="url(#dash)" />
               {/* entrance pin */}
-              <circle cx="52" cy="99" r="11" style={{ fill: "var(--primary)" }} />
-              <circle cx="52" cy="99" r="4" style={{ fill: "var(--background)" }} />
-              <text x="52" y="140" textAnchor="middle" style={{ fill: "var(--muted-foreground)" }} fontSize="11">
+              <circle cx="52" cy="99" r="11" fill="#4f46e5" />
+              <circle cx="52" cy="99" r="4" fill="#ffffff" />
+              <text x="52" y="140" textAnchor="middle" fill="#64748b" fontSize="11">
                 Entrance
               </text>
               {/* houses */}
               {[
-                { x: 150, name: "Ana", share: "$2,390", color: "var(--selected)" },
-                { x: 290, name: "Ben", share: "$6,056", color: "var(--primary)" },
-                { x: 430, name: "Cora", share: "$9,880", color: "var(--primary)" },
-                { x: 560, name: "Devon", share: "$13,705", color: "var(--gold)" },
+                { x: 150, name: "Ana", share: "$2,390", color: "#14b8a6", textColor: "#ffffff" },
+                { x: 290, name: "Ben", share: "$6,056", color: "#6366f1", textColor: "#ffffff" },
+                { x: 430, name: "Cora", share: "$9,880", color: "#8b5cf6", textColor: "#ffffff" },
+                { x: 560, name: "Devon", share: "$13,705", color: "#facc15", textColor: "#1f2937" },
               ].map((h) => (
                 <g key={h.name}>
                   <polygon
                     points={`${h.x - 16},74 ${h.x},54 ${h.x + 16},74 ${h.x + 16},88 ${h.x - 16},88`}
-                    style={{ fill: h.color }}
+                    fill={h.color}
                   />
-                  <text x={h.x} y="46" textAnchor="middle" style={{ fill: "var(--foreground)" }} fontSize="12" fontWeight="700">
+                  <text x={h.x} y="46" textAnchor="middle" fill="#0f172a" fontSize="12" fontWeight="700">
                     {h.share}
                   </text>
                   <text
@@ -77,8 +77,8 @@ export const Route = createFileRoute("/methodology")({
                     y="82"
                     textAnchor="middle"
                     fontSize="10"
-                    fontWeight="600"
-                    fill="white"
+                    fontWeight="700"
+                    fill={h.textColor}
                   >
                     {h.name}
                   </text>
