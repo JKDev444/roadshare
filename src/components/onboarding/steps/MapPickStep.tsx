@@ -487,7 +487,7 @@ function RoadsPanel({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-fun-2 text-fun-2-foreground">
-            <Road className="h-3.5 w-3.5" />
+            <Route className="h-3.5 w-3.5" />
           </span>
           <div>
             <p className="text-sm font-semibold">Roads we found</p>
