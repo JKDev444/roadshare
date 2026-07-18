@@ -29,6 +29,7 @@ import {
 } from "@/lib/onboarding/dcad.functions";
 import { detectRoadsInPolygon, type OsmRoad } from "@/lib/onboarding/osm.functions";
 import { getMapboxToken } from "@/lib/mapbox";
+import type { Json } from "@/integrations/supabase/types";
 import type { BasicInfo } from "./BasicInfoStep";
 
 export type MapPickResult = {
@@ -40,7 +41,7 @@ export type MapPickResult = {
     area_sqft?: number;
     lat?: number;
     lng?: number;
-    geojson?: unknown;
+    geojson?: Json;
   }>;
   roads: Array<{ id: string; name: string; class: string; responsibility: "shared" | "private" | "public"; geometry: { type: "LineString"; coordinates: [number, number][] } }>;
 };
