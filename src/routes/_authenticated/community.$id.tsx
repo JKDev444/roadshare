@@ -67,6 +67,7 @@ import {
   type GeoJSONLineString,
   type Parcel,
   type ParcelInput,
+  type RecordEvent,
   type RoadSegment,
   type Verification,
 } from "@/lib/community/api";
