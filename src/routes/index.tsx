@@ -13,6 +13,8 @@ import {
 
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { CTASection, Eyebrow, Reveal, Section } from "@/components/site/primitives";
+import { StoryPath } from "@/components/site/StoryPath";
+import { SecretSauce } from "@/components/site/SecretSauce";
 import { Button } from "@/components/ui/button";
 import { PRODUCTS, SOLUTIONS, SITE } from "@/lib/site/content";
 
@@ -35,12 +37,18 @@ export const Route = createFileRoute("/")({
 });
 
 const STORY = [
-  { icon: MapPin, title: "Map the project", body: "Select scope directly on the parcel and road-network map." },
-  { icon: Scale, title: "Allocate fairly", body: "Compare distance, frontage, and equal methods with live numbers." },
-  { icon: FileText, title: "Ground it in documents", body: "Clause timelines, effective dates, and missing-document flags." },
-  { icon: Users, title: "Gather the community", body: "Scenario-specific feedback with strict resident privacy." },
-  { icon: GitBranch, title: "Decide in the open", body: "Assemble evidence, track votes, publish a versioned record." },
-  { icon: MessageSquareQuote, title: "Deliver a report", body: "Board-ready, cited reports for owners and professionals." },
+  { icon: MapPin, title: "Map your road", body: "Point out your shared road and the homes on it." },
+  { icon: Scale, title: "Split it fairly", body: "See each home's share update as you tweak the plan." },
+  { icon: FileText, title: "Keep the paper trail", body: "Rules, agreements, and amendments — all in one place." },
+  { icon: Users, title: "Bring in the neighbors", body: "Gather input tied to the actual project, privately." },
+  { icon: GitBranch, title: "Decide together", body: "Votes, notes, and evidence — never lost, never overwritten." },
+  { icon: MessageSquareQuote, title: "Share the story", body: "A clear, cited report anyone can read and trust." },
+];
+
+const PERSONAS = [
+  { title: "Neighbors on a shared road", body: "See what you owe and why — no HOA required." },
+  { title: "HOA & self-managed boards", body: "Plan projects your community actually understands." },
+  { title: "Real estate & title pros", body: "A buyer-ready brief for every private-road property." },
 ];
 
 function Home() {
@@ -88,36 +96,27 @@ function Home() {
       {/* Story sequence */}
       <Section>
         <Reveal className="max-w-2xl">
-          <Eyebrow>From problem to decision</Eyebrow>
+          <Eyebrow>How it works</Eyebrow>
           <h2 className="mt-4 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-            One connected workflow, not a pile of spreadsheets.
+            From "who pays what?" to "here's the plan" in six clear stops.
           </h2>
           <p className="mt-3 text-muted-foreground">
-            RoadShare turns a raw problem into scope, costs, methodology, feedback, and a permanent,
-            defensible record.
+            No spreadsheets, no all-caps emails at 11pm. Just one guided path
+            everyone on your road can follow.
           </p>
         </Reveal>
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {STORY.map((s, i) => (
-            <Reveal key={s.title} delay={i * 0.05}>
-              <div className="group h-full rounded-2xl border border-border bg-card p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md">
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <s.icon className="h-5 w-5" />
-                </span>
-                <h3 className="mt-4 font-display text-lg font-semibold">{s.title}</h3>
-                <p className="mt-1.5 text-sm text-muted-foreground">{s.body}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
+        <StoryPath stops={STORY} />
       </Section>
+
+      {/* Secret sauce — the reason RoadShare exists */}
+      <SecretSauce />
 
       {/* Products */}
       <Section muted>
         <Reveal className="max-w-2xl">
           <Eyebrow>The platform</Eyebrow>
           <h2 className="mt-4 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-            Everything a community needs to understand shared obligations.
+            The whole toolkit — pick the parts your community needs.
           </h2>
         </Reveal>
         <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -149,27 +148,44 @@ function Home() {
         </div>
       </Section>
 
-      {/* Audiences */}
+      {/* Who uses RoadShare */}
       <Section>
-        <Reveal className="max-w-2xl">
-          <Eyebrow>Built for everyone at the table</Eyebrow>
-          <h2 className="mt-4 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-            From neighbors to boards, agents, title, lenders, and counsel.
-          </h2>
-        </Reveal>
-        <div className="mt-10 flex flex-wrap gap-2.5">
-          {SOLUTIONS.map((s, i) => (
-            <Reveal key={s.slug} delay={i * 0.03}>
-              <Link
-                to="/solutions/$audience"
-                params={{ audience: s.slug }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium transition-colors hover:border-primary/40 hover:text-primary"
-              >
-                {s.audience}
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </Reveal>
-          ))}
+        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <Reveal>
+            <Eyebrow>Who uses RoadShare</Eyebrow>
+            <h2 className="mt-4 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+              Built for the people at the table, not just the pros.
+            </h2>
+            <p className="mt-3 text-muted-foreground">
+              Whether it's your first neighborhood meeting or your hundredth board vote,
+              RoadShare speaks plain English — and backs it up with real evidence.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button asChild size="lg">
+                <Link to="/solutions/$audience" params={{ audience: "private-road-communities" }}>
+                  See who it's for <ArrowRight className="ml-1.5 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <ul className="space-y-3">
+              {PERSONAS.map((p, i) => (
+                <li
+                  key={p.title}
+                  className="flex items-start gap-4 rounded-2xl border border-border bg-card px-5 py-4"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 font-display text-sm font-bold text-primary-foreground">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <p className="font-display text-base font-semibold">{p.title}</p>
+                    <p className="text-sm text-muted-foreground">{p.body}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Reveal>
         </div>
       </Section>
 
