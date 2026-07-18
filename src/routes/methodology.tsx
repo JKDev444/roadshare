@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { CTASection, ContentPage, PageHero } from "@/components/site/primitives";
+import { CTASection, ContentPage, PageHero, Reveal, Section } from "@/components/site/primitives";
 
 export const Route = createFileRoute("/methodology")({
   head: () => ({
@@ -20,33 +20,102 @@ export const Route = createFileRoute("/methodology")({
     <SiteLayout>
       <PageHero
         eyebrow="Methodology"
-        title="Transparent math, along the road that's actually driven."
-        subtitle="RoadShare's Road Network Responsibility Engine calculates responsibility along the road network — not straight-line distance."
+        title="The math, in plain English."
+        subtitle="You pay for the road you actually drive on. Not straight-line distance. Not a flat split. The exact stretch of pavement between the entrance and your driveway."
       />
+      <Section muted>
+        <Reveal>
+          <div className="mx-auto max-w-4xl rounded-3xl border border-border bg-card p-8 sm:p-10">
+            <span className="inline-flex items-center gap-2 rounded-full bg-gold/20 px-3 py-1 text-xs font-semibold text-foreground">
+              <span className="h-1.5 w-1.5 rounded-full bg-gold" /> The secret sauce
+            </span>
+            <h2 className="mt-4 font-display text-2xl font-bold tracking-tight sm:text-3xl">
+              Distance along the road, not through the woods.
+            </h2>
+            <p className="mt-3 text-muted-foreground">
+              Most cost splits treat every home the same. Ours doesn't. We route from the entrance
+              to the far edge of your driveway through actual road junctions — the same path your
+              car takes home.
+            </p>
+            <svg
+              viewBox="0 0 640 180"
+              className="mt-6 w-full"
+              role="img"
+              aria-label="Homes along a road, each with a distance from the entrance"
+            >
+              <defs>
+                <pattern id="dash" width="18" height="4" patternUnits="userSpaceOnUse">
+                  <rect width="10" height="3" y="0.5" fill="#facc15" />
+                </pattern>
+              </defs>
+              {/* road */}
+              <rect x="40" y="90" width="560" height="18" rx="9" fill="#1f2937" />
+              <rect x="40" y="97" width="560" height="4" fill="url(#dash)" />
+              {/* entrance pin */}
+              <circle cx="52" cy="99" r="11" fill="#4f46e5" />
+              <circle cx="52" cy="99" r="4" fill="#ffffff" />
+              <text x="52" y="140" textAnchor="middle" fill="#64748b" fontSize="11">
+                Entrance
+              </text>
+              {/* houses */}
+              {[
+                { x: 150, name: "Ana", share: "$2,390", color: "#14b8a6", textColor: "#ffffff" },
+                { x: 290, name: "Ben", share: "$6,056", color: "#6366f1", textColor: "#ffffff" },
+                { x: 430, name: "Cora", share: "$9,880", color: "#8b5cf6", textColor: "#ffffff" },
+                { x: 560, name: "Devon", share: "$13,705", color: "#facc15", textColor: "#1f2937" },
+              ].map((h) => (
+                <g key={h.name}>
+                  <polygon
+                    points={`${h.x - 16},74 ${h.x},54 ${h.x + 16},74 ${h.x + 16},88 ${h.x - 16},88`}
+                    fill={h.color}
+                  />
+                  <text x={h.x} y="46" textAnchor="middle" fill="#0f172a" fontSize="12" fontWeight="700">
+                    {h.share}
+                  </text>
+                  <text
+                    x={h.x}
+                    y="82"
+                    textAnchor="middle"
+                    fontSize="10"
+                    fontWeight="700"
+                    fill={h.textColor}
+                  >
+                    {h.name}
+                  </text>
+                </g>
+              ))}
+            </svg>
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              Ana lives near the entrance. Devon lives at the far end. Devon pays for more road —
+              because Devon drives on more road.
+            </p>
+          </div>
+        </Reveal>
+      </Section>
       <ContentPage
         blocks={[
           {
-            heading: "Responsibility by along-road distance",
+            heading: "How we measure your share",
             body: [
-              "Each property's responsibility is the along-road network distance from an entrance to the far edge of its frontage, routed through junctions rather than as the crow flies.",
-              "With two entrances pinned, RoadShare computes each and averages them, so homes are credited for the access they actually use.",
+              "Your share = the distance from the road entrance to the far edge of your driveway, measured along the road itself — through real junctions and turns.",
+              "Got two entrances? We measure from each and average them, so homes get credit for the access they actually use.",
             ],
           },
           {
-            heading: "Multiple methodologies",
-            body: ["Communities can compare fair methods side by side:"],
+            heading: "Not sure distance is fair? Compare it.",
+            body: ["Every community is different. Compare fair methods side by side and pick the one that fits:"],
             bullets: [
-              "Distance — along-road far-edge responsibility (default)",
-              "Frontage — each lot's own frontage length",
-              "Equal per lot — a uniform share",
-              "Base-plus-use, custom schedules, and document-defined methods (roadmap)",
+              "Distance — along the road you actually drive (our default)",
+              "Frontage — the width of road in front of your lot",
+              "Equal — everyone pays the same, no matter where they live",
+              "Base-plus-use, custom, or document-defined (coming soon)",
             ],
           },
           {
-            heading: "Cost flow",
+            heading: "Where the total comes from",
             body: [
-              "Pavement area = centerline length × width. The blended rate is a percentage-weighted average of the surface unit costs. Total project cost = area × blended rate.",
-              "Each household's share = its responsibility ÷ the sum of responsibilities, and every figure divides by the funding period for a flat annual number. An equal-split comparison is always shown.",
+              "Total pavement = road length × road width. The rate is a weighted blend of the surfaces you chose. Total project cost = area × rate.",
+              "Your share = your distance ÷ everyone's distance, spread across the funding period as a flat yearly number. We always show the equal-split number next to it, so you can see the difference.",
             ],
           },
         ]}
