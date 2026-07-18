@@ -128,7 +128,7 @@ function CommunityDetail() {
               size="sm"
               disabled={s.length === 0}
               onClick={() => {
-                downloadGeoJSON(community.data, s);
+                downloadGeoJSON(community.data ?? null, s);
                 toast.success("GeoJSON exported");
               }}
             >
