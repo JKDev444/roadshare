@@ -436,9 +436,9 @@ export function MapPickStep({
         <div>
           <h2 className="font-display text-lg font-semibold">Pick your neighborhood on the map</h2>
           <p className="mt-0.5 max-w-lg text-xs text-muted-foreground">
-            We picked your closest neighbors to start. Tap any parcel to add or remove it, or use
-            the lasso to draw around your whole community — we'll auto-detect the roads. Dallas
-            County data via DCAD.
+            We picked your closest neighbors to start. Tap any home to add or remove it, or use
+            the lasso to draw around your whole community — we'll auto-detect the roads. Property
+            data from Dallas County records.
           </p>
         </div>
         <div className="flex shrink-0 gap-1.5">
