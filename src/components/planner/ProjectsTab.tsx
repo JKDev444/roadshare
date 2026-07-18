@@ -83,7 +83,7 @@ export function ProjectsTab({ communityId }: { communityId: string }) {
               )}
               {readiness.roads < 1 && (
                 <Button asChild size="sm" variant="outline">
-                  <Link to="/community/$id" params={{ id: communityId }} search={{ tab: "roads" }}>
+                  <Link to="/community/$id" params={{ id: communityId }} search={{ tab: "map" }}>
                     Add roads <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 </Button>
