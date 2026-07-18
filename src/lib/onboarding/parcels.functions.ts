@@ -161,10 +161,10 @@ function buildingsToParcels(elements: OsmElement[]): DcadParcel[] {
     outerRing: [number, number][],
   ) => {
     if (seen.has(id)) return;
-    // Skip huge non-residential buildings that would confuse "homes"
+    // Filter obvious noise but be generous — dense urban buildings can be
+    // large (apartments, condos) and we still want them as "homes".
     const area = ringAreaSqMeters(outerRing);
-    if (area > 5000) return; // > ~54k sqft; likely a warehouse/mall
-    if (area < 20) return; // sheds / noise
+    if (area < 15) return; // sheds / map noise
     const c = centroidOfRing(outerRing);
     const address = formatOsmAddress(tags);
     const areaSqft = Math.round(area * 10.7639);
