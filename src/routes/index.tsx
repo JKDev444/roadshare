@@ -16,7 +16,7 @@ import { CTASection, Eyebrow, Reveal, Section } from "@/components/site/primitiv
 import { StoryPath } from "@/components/site/StoryPath";
 import { SecretSauce } from "@/components/site/SecretSauce";
 import { Button } from "@/components/ui/button";
-import { PRODUCTS, SOLUTIONS, SITE } from "@/lib/site/content";
+import { PRODUCTS, SITE } from "@/lib/site/content";
 
 export const Route = createFileRoute("/")({
   head: () => ({
