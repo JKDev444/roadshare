@@ -68,17 +68,23 @@ export function BasicInfoStep({
         );
         if (!ctl.signal.aborted && (res.length === 0 || needsExactStreet)) {
           const fallback = await searchFallback({ data: { query: q } });
-          const fallbackHits = fallback.map((hit, index) => ({
-            place_id: -1000 - index,
-            display_name: hit.label,
-            lat: String(hit.lat),
-            lon: String(hit.lng),
-            address: {
-              city: hit.city ?? undefined,
-              state: hit.state ?? undefined,
-              postcode: hit.postcode ?? undefined,
-            },
-          }));
+          const fallbackHits = fallback.map((hit, index) => {
+            const street = hit.label.split(",")[0]?.trim() ?? "";
+            const streetParts = street.match(/^(\d+)\s+(.+)$/);
+            return {
+              place_id: -1000 - index,
+              display_name: hit.label,
+              lat: String(hit.lat),
+              lon: String(hit.lng),
+              address: {
+                house_number: streetParts?.[1],
+                road: streetParts?.[2],
+                city: hit.city ?? undefined,
+                state: hit.state ?? undefined,
+                postcode: hit.postcode ?? undefined,
+              },
+            };
+          });
           const seen = new Set<string>();
           res = [...fallbackHits, ...res].filter((hit) => {
             const key = formatHit(hit).toLowerCase();
