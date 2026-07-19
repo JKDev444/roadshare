@@ -41,10 +41,10 @@ export function CommunityMapEditor({
   const [satellite, setSatellite] = useState(false);
   const [drawing, setDrawing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const currentStyleRef = useRef(streets);
 
   const streets = "mapbox://styles/mapbox/streets-v12";
   const sat = "mapbox://styles/mapbox/satellite-streets-v12";
+  const currentStyleRef = useRef(streets);
 
   // 1) Initialize map once.
   useEffect(() => {
