@@ -275,7 +275,13 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => (v ? setOpenOverride(true) : close(false))}>
-      <DialogContent className={cn("max-w-2xl overflow-hidden", step === "review" && "max-w-4xl")}>
+      <DialogContent
+        className={cn(
+          "max-w-2xl overflow-hidden",
+          step === "review" && "max-w-4xl",
+          step === "mappick" && "max-w-6xl",
+        )}
+      >
         <VisuallyHidden>
           <DialogTitle>Set up your road group</DialogTitle>
           <DialogDescription>

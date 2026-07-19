@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
+// @ts-expect-error - no types shipped
+import FreehandMode from "mapbox-gl-draw-freehand-mode";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 
@@ -173,8 +175,9 @@ export function MapPickStep({
 
     const draw = new MapboxDraw({
       displayControlsDefault: false,
-      controls: { polygon: true, trash: true },
+      controls: { polygon: false, trash: true },
       defaultMode: "simple_select",
+      modes: { ...MapboxDraw.modes, draw_polygon: FreehandMode },
     });
     map.addControl(draw, "top-right");
     drawRef.current = draw;
@@ -389,14 +392,16 @@ export function MapPickStep({
     if (center) void fetchNearPoint(center);
   }
   function activateLasso() {
-    drawRef.current?.changeMode("draw_polygon");
+    const draw = drawRef.current;
+    if (!draw) return;
+    draw.deleteAll();
+    draw.changeMode("draw_polygon");
     setDrawingActive(true);
   }
 
   function finishLasso() {
     const map = mapRef.current;
     if (!map) return;
-    // mapbox-gl-draw finishes the current polygon when Enter is pressed on the canvas.
     const canvas = map.getCanvas();
     canvas.focus();
     const ev = new KeyboardEvent("keydown", { key: "Enter", code: "Enter", keyCode: 13, bubbles: true });
@@ -436,18 +441,23 @@ export function MapPickStep({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="font-display text-lg font-semibold">Pick your neighborhood on the map</h2>
-          <p className="mt-0.5 max-w-lg text-xs text-muted-foreground">
-            We picked your closest neighbors to start. Tap any home to add or remove it, or use
-            the lasso to draw around your whole community — we'll auto-detect the roads.
-            {source === "dcad"
-              ? " Property data from Dallas County records."
-              : source === "osm"
-                ? " Home outlines from OpenStreetMap."
-                : ""}
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <h2 className="font-display text-base font-semibold">Pick your neighborhood</h2>
+          <span className="hidden sm:inline text-xs text-muted-foreground">
+            Tap homes, or lasso around them.
+          </span>
+          <span
+            className="group relative inline-flex h-5 w-5 items-center justify-center rounded-full border border-border bg-muted text-[10px] text-muted-foreground cursor-help"
+            aria-label="How this works"
+          >
+            ?
+            <span className="pointer-events-none absolute left-0 top-6 z-30 hidden w-64 rounded-lg border border-border bg-popover p-2 text-[11px] leading-snug text-popover-foreground shadow-lg group-hover:block">
+              <strong>Purple</strong> = your address. <strong className="text-cyan-600">Teal</strong> = selected. <strong className="text-amber-600">Amber</strong> = tap to add. Use <em>Lasso</em> to free-draw around your whole community — we'll auto-detect the roads.
+              {source === "dcad" && <div className="mt-1 text-muted-foreground">Property data: Dallas County records.</div>}
+              {source === "osm" && <div className="mt-1 text-muted-foreground">Home outlines: OpenStreetMap.</div>}
+            </span>
+          </span>
         </div>
         <div className="flex shrink-0 gap-1.5">
           {drawingActive ? (
@@ -468,25 +478,17 @@ export function MapPickStep({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-primary">
-        <Info className="h-3.5 w-3.5 shrink-0" />
-        {drawingActive ? (
+      {drawingActive && (
+        <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs text-primary">
+          <Info className="h-3.5 w-3.5 shrink-0" />
           <span>
-            <strong>Drawing:</strong> click to add points around your community, then hit
-            <span className="mx-1 rounded bg-primary/15 px-1 py-0.5 font-mono">Finish lasso</span>
-            (or double-click the last point).
+            <strong>Free-draw:</strong> press and drag around your community. Release to finish.
           </span>
-        ) : (
-          <span>
-            <strong>Purple</strong> is your address. <strong>Teal</strong> = selected.
-            <strong className="ml-1">Amber</strong> = tap to add. Prefer drawing? Hit
-            <span className="mx-1 rounded bg-primary/15 px-1 py-0.5 font-medium">Lasso</span>.
-          </span>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="relative overflow-hidden rounded-2xl border border-border bg-muted shadow-sm">
-        <div ref={containerRef} className="h-[560px] w-full" />
+        <div ref={containerRef} className="h-[68vh] min-h-[520px] w-full" />
         {(status === "geocoding" || status === "fetching" || detectingRoads) && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
             <div className="flex items-center gap-2 rounded-full bg-card px-3 py-1.5 shadow-md fun-shadow-sm">
