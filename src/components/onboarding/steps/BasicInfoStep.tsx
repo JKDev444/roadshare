@@ -42,6 +42,7 @@ export function BasicInfoStep({
   const [searching, setSearching] = useState(false);
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState(!!initial?.startingAddress);
+  const [lookupStatus, setLookupStatus] = useState<"idle" | "ok" | "empty" | "error">("idle");
   const boxRef = useRef<HTMLDivElement | null>(null);
 
   // Debounced address suggestions.
@@ -50,6 +51,7 @@ export function BasicInfoStep({
     if (picked || q.length < 4) {
       setHits([]);
       setSearching(false);
+      setLookupStatus("idle");
       return;
     }
     setSearching(true);
@@ -59,8 +61,12 @@ export function BasicInfoStep({
         const res = await searchAddresses(q, { signal: ctl.signal });
         setHits(res);
         setOpen(res.length > 0);
+        setLookupStatus(res.length > 0 ? "ok" : "empty");
       } catch {
-        /* aborted or offline */
+        if (!ctl.signal.aborted) {
+          console.warn("[onboarding] address lookup failed");
+          setLookupStatus("error");
+        }
       } finally {
         setSearching(false);
       }
@@ -147,9 +153,19 @@ export function BasicInfoStep({
               </ul>
             )}
           </div>
-          <p className="text-[11px] text-muted-foreground">
-            Any address on your road works — pick one from the list so we can drop it on a map.
-          </p>
+          {lookupStatus === "error" ? (
+            <p className="text-[11px] text-destructive">
+              Can't reach the address lookup right now — type your full address and continue.
+            </p>
+          ) : lookupStatus === "empty" && !picked ? (
+            <p className="text-[11px] text-muted-foreground">
+              No matches yet — keep typing, or continue with what you've entered.
+            </p>
+          ) : (
+            <p className="text-[11px] text-muted-foreground">
+              Any address on your road works — pick one from the list, or type it in full.
+            </p>
+          )}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="bi-name" className="text-xs">
@@ -171,7 +187,7 @@ export function BasicInfoStep({
         onClick={() =>
           onContinue({ communityName, city, state, startingAddress: address }, "map")
         }
-        disabled={!picked || !address.trim()}
+        disabled={address.trim().length < 5}
       >
         Pick my neighbors on a map <ArrowRight className="h-4 w-4" />
       </Button>
