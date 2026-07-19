@@ -51,6 +51,7 @@ import {
 import { ConfidenceBadge, VerificationBadge } from "@/components/community/badges";
 import { CommunityMapEditor } from "@/components/community/CommunityMapEditor";
 import { CommunityHomeTab } from "@/components/community/CommunityHomeTab";
+import { MyRoadTab } from "@/components/community/MyRoadTab";
 import { Confetti } from "@/components/onboarding/Confetti";
 import {
   createParcel,
@@ -192,12 +193,18 @@ function CommunityDetail() {
             />
           </TabsContent>
           <TabsContent value="roads" className="mt-4 flex min-h-0 flex-1 flex-col">
-            <MapTab
-              communityId={id}
-              community={community.data ?? null}
+            <MyRoadTab
               parcels={p}
               segments={s}
-              events={events.data ?? []}
+              detailedMap={
+                <MapTab
+                  communityId={id}
+                  community={community.data ?? null}
+                  parcels={p}
+                  segments={s}
+                  events={events.data ?? []}
+                />
+              }
             />
           </TabsContent>
           <TabsContent value="homes" className="mt-4">
