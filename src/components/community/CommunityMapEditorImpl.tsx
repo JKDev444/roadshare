@@ -44,6 +44,7 @@ export function CommunityMapEditor({
 
   const streets = "mapbox://styles/mapbox/streets-v12";
   const sat = "mapbox://styles/mapbox/satellite-streets-v12";
+  const currentStyleRef = useRef(streets);
 
   // 1) Initialize map once.
   useEffect(() => {
@@ -62,16 +63,24 @@ export function CommunityMapEditor({
       center: [-96.8, 32.78],
       zoom: 12,
     });
-    const draw = new MapboxDraw({
-      displayControlsDefault: false,
-      controls: { line_string: true, trash: true },
-      defaultMode: "simple_select",
-    });
-    map.addControl(draw, "top-right");
-    drawRef.current = draw;
     mapRef.current = map;
 
+    const addDrawControl = () => {
+      if (drawRef.current || !mapRef.current) return;
+      const draw = new MapboxDraw({
+        displayControlsDefault: false,
+        controls: { line_string: true, trash: true },
+        defaultMode: "simple_select",
+      });
+      map.addControl(draw, "top-right");
+      drawRef.current = draw;
+    };
+
+    if (map.loaded() && map.isStyleLoaded()) addDrawControl();
+    else map.once("load", addDrawControl);
+
     return () => {
+      map.off("load", addDrawControl);
       map.remove();
       mapRef.current = null;
       drawRef.current = null;
@@ -83,6 +92,7 @@ export function CommunityMapEditor({
     const map = mapRef.current;
     if (!map) return;
     const setup = () => {
+      if (!mapRef.current || !map.isStyleLoaded()) return;
       if (!map.getSource("parcels")) {
         map.addSource("parcels", {
           type: "geojson",
@@ -165,7 +175,7 @@ export function CommunityMapEditor({
       }
     };
 
-    if (map.isStyleLoaded()) setup();
+    if (map.loaded() && map.isStyleLoaded()) setup();
     else map.once("style.load", setup);
 
     const onClickRoad = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
@@ -194,6 +204,7 @@ export function CommunityMapEditor({
       map.off("mouseenter", "roads", onMouseEnter);
       map.off("mouseleave", "roads", onMouseLeave);
       map.off("draw.create", onCreate);
+      map.off("style.load", setup);
     };
   }, [parcels, segments, selectedSegmentId, onSelectSegment, onCreateSegment]);
 
@@ -202,7 +213,8 @@ export function CommunityMapEditor({
     const map = mapRef.current;
     if (!map) return;
     const target = satellite ? sat : streets;
-    if (map.getStyle().sprite?.includes("satellite") ? !satellite : satellite) {
+    if (currentStyleRef.current !== target) {
+      currentStyleRef.current = target;
       map.setStyle(target);
     }
   }, [satellite, sat, streets]);
@@ -210,20 +222,43 @@ export function CommunityMapEditor({
   // 4) Fit bounds to parcels when they change.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || parcels.length === 0) return;
+    if (!map || (parcels.length === 0 && segments.length === 0)) return;
+
     const bounds = new mapboxgl.LngLatBounds();
     let added = false;
+    const extend = ([lng, lat]: [number, number]) => {
+      if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+      if (Math.abs(lng) > 180 || Math.abs(lat) > 85) return;
+      bounds.extend([lng, lat]);
+      added = true;
+    };
+
     for (const p of parcels) {
-      const f = parcelToFeature(p);
-      if (!f) continue;
-      const ring = f.geometry.coordinates[0] as [number, number][];
-      for (const [lng, lat] of ring) {
-        bounds.extend([lng, lat]);
-        added = true;
+      const feature = parcelToFeature(p);
+      if (!feature) continue;
+      for (const polygon of feature.geometry.type === "Polygon" ? [feature.geometry.coordinates] : []) {
+        for (const ring of polygon) {
+          for (const coordinate of ring) extend(coordinate as [number, number]);
+        }
       }
     }
-    if (added) map.fitBounds(bounds, { padding: 60, maxZoom: 19, duration: 800 });
-  }, [parcels]);
+    for (const segment of segments) {
+      const feature = segmentToFeature(segment);
+      if (!feature) continue;
+      for (const coordinate of feature.geometry.coordinates) extend(coordinate);
+    }
+
+    if (!added) return;
+    const fit = () => {
+      map.resize();
+      map.fitBounds(bounds, { padding: 70, maxZoom: 17, duration: 0 });
+    };
+    if (map.loaded() && map.isStyleLoaded()) fit();
+    else map.once("idle", fit);
+    return () => {
+      map.off("idle", fit);
+    };
+  }, [parcels, segments]);
 
   // 5) Toggle layer visibility.
   useEffect(() => {
@@ -249,7 +284,7 @@ export function CommunityMapEditor({
 
   return (
     <div className="relative flex h-full min-h-[520px] overflow-hidden rounded-2xl border border-border bg-muted">
-      <div ref={containerRef} className="absolute inset-0" />
+      <div ref={containerRef} className="h-full w-full" />
       {errorMsg && (
         <div className="absolute inset-x-0 top-0 z-20 border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-xs text-destructive">
           {errorMsg}

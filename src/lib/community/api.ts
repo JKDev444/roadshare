@@ -40,6 +40,16 @@ export function isGeoJSONLineString(geometry: unknown): geometry is GeoJSONLineS
   );
 }
 
+function coordinateLooksLikeLegacyPlat(coordinate: unknown[]): boolean {
+  const lng = Number(coordinate[0]);
+  const lat = Number(coordinate[1]);
+  return Number.isFinite(lng) && Number.isFinite(lat) && lng >= 0 && lng <= 100 && lat >= 0 && lat <= 100;
+}
+
+function lineStringUsesLegacyPlatCoordinates(geometry: GeoJSONLineString): boolean {
+  return geometry.coordinates.length > 0 && geometry.coordinates.every(coordinateLooksLikeLegacyPlat);
+}
+
 export function isGeoJSONPolygon(geometry: unknown): geometry is GeoJSONPolygon {
   return (
     !!geometry &&
@@ -47,6 +57,18 @@ export function isGeoJSONPolygon(geometry: unknown): geometry is GeoJSONPolygon 
     (geometry as GeoJSONPolygon).type === "Polygon" &&
     Array.isArray((geometry as GeoJSONPolygon).coordinates)
   );
+}
+
+function polygonUsesLegacyPlatCoordinates(geometry: GeoJSONPolygon): boolean {
+  const ring = geometry.coordinates[0] ?? [];
+  return ring.length > 0 && ring.every(coordinateLooksLikeLegacyPlat);
+}
+
+function remapLegacyPolygon(geometry: GeoJSONPolygon): GeoJSONPolygon {
+  return {
+    type: "Polygon",
+    coordinates: geometry.coordinates.map((ring) => ring.map(([x, y]) => legacyPointToLngLat({ x: Number(x), y: Number(y) }))),
+  };
 }
 
 export function toPoints(geometry: unknown): Point[] {
@@ -90,7 +112,9 @@ export function segmentToFeature(
   if (isGeoJSONLineString(seg.geometry)) {
     return {
       type: "Feature",
-      geometry: seg.geometry,
+      geometry: lineStringUsesLegacyPlatCoordinates(seg.geometry)
+        ? { type: "LineString", coordinates: seg.geometry.coordinates.map(([x, y]) => legacyPointToLngLat({ x: Number(x), y: Number(y) })) }
+        : seg.geometry,
       properties: { id: seg.id, name: seg.name, surface: seg.surface, responsibility: seg.responsibility },
     };
   }
@@ -98,12 +122,19 @@ export function segmentToFeature(
   if (pts.length < 2) return null;
   return {
     type: "Feature",
-    geometry: { type: "LineString", coordinates: pts.map((p) => [p.x, 100 - p.y]) },
+    geometry: { type: "LineString", coordinates: pts.map(legacyPointToLngLat) },
     properties: { id: seg.id, name: seg.name, surface: seg.surface, responsibility: seg.responsibility },
   };
 }
 
 const DEFAULT_SQUARE_OFFSET = 0.00008; // roughly 25 ft in degrees
+const LEGACY_CENTER_LNG = -120.95;
+const LEGACY_CENTER_LAT = 39.08;
+const LEGACY_UNIT_DEGREES = 0.00018;
+
+function legacyPointToLngLat(point: Point): [number, number] {
+  return [LEGACY_CENTER_LNG + (point.x - 50) * LEGACY_UNIT_DEGREES, LEGACY_CENTER_LAT + (50 - point.y) * LEGACY_UNIT_DEGREES];
+}
 
 /** Convert a parcel to a GeoJSON Feature for the map. */
 export function parcelToFeature(p: Parcel): {
@@ -114,13 +145,33 @@ export function parcelToFeature(p: Parcel): {
   if (isGeoJSONPolygon(p.geojson)) {
     return {
       type: "Feature",
-      geometry: p.geojson,
+      geometry: polygonUsesLegacyPlatCoordinates(p.geojson) ? remapLegacyPolygon(p.geojson) : p.geojson,
       properties: { id: p.id, label: p.label, selected: false },
     };
   }
   const lat = p.lat ?? p.pos_y ?? 0;
   const lng = p.lng ?? p.pos_x ?? 0;
   if (lat === 0 && lng === 0) return null;
+  if (p.lat == null && p.lng == null && p.pos_x != null && p.pos_y != null) {
+    const [legacyLng, legacyLat] = legacyPointToLngLat({ x: p.pos_x, y: p.pos_y });
+    const o = DEFAULT_SQUARE_OFFSET;
+    return {
+      type: "Feature",
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [legacyLng - o, legacyLat - o],
+            [legacyLng + o, legacyLat - o],
+            [legacyLng + o, legacyLat + o],
+            [legacyLng - o, legacyLat + o],
+            [legacyLng - o, legacyLat - o],
+          ],
+        ],
+      },
+      properties: { id: p.id, label: p.label, selected: false },
+    };
+  }
   const o = DEFAULT_SQUARE_OFFSET;
   return {
     type: "Feature",
