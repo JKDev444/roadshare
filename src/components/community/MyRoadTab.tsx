@@ -1,19 +1,9 @@
 import { useMemo, useState, type ReactNode } from "react";
-import {
-  CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  Home as HomeIcon,
-  MapPin,
-  Route as RouteIcon,
-  Ruler,
-} from "lucide-react";
+import { CheckCircle2, Home as HomeIcon, MapPin, Route as RouteIcon, Ruler } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { VerificationBadge } from "@/components/community/badges";
 import { cn } from "@/lib/utils";
 import { haversineFt, pathLengthFt, type Parcel, type RoadSegment } from "@/lib/community/api";
 import { computeCostShare, formatUSD, type CostMethod } from "@/lib/community/costShare";
@@ -34,59 +24,10 @@ type Props = {
  * The Mapbox map is still the source of truth; Overview just presents it.
  */
 export function MyRoadTab({ parcels, segments, detailedMap }: Props) {
-  const [view, setView] = useState<"overview" | "homes" | "costs">("overview");
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <Tabs
-        value={view}
-        onValueChange={(v) => setView(v as typeof view)}
-        className="flex min-h-0 flex-1 flex-col"
-      >
-        <TabsList className="w-full sm:w-auto">
-          <TabsTrigger value="overview" className="flex-1 sm:flex-none">
-            <RouteIcon className="mr-1.5 h-4 w-4" /> Overview
-          </TabsTrigger>
-          <TabsTrigger value="homes" className="flex-1 sm:flex-none">
-            <HomeIcon className="mr-1.5 h-4 w-4" /> Homes & Access
-          </TabsTrigger>
-          <TabsTrigger value="costs" className="flex-1 sm:flex-none">
-            <Ruler className="mr-1.5 h-4 w-4" /> Cost sharing
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="mt-4">
-          <OverviewPane parcels={parcels} segments={segments} detailedMap={detailedMap} />
-        </TabsContent>
-        <TabsContent value="homes" className="mt-4">
-          <HomesAccessPane parcels={parcels} segments={segments} />
-        </TabsContent>
-        <TabsContent value="costs" className="mt-4">
-          <CostSharingPane parcels={parcels} segments={segments} />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-// ----- Overview -----
-function OverviewPane({
-  parcels,
-  segments,
-  detailedMap,
-}: {
-  parcels: Parcel[];
-  segments: RoadSegment[];
-  detailedMap: ReactNode;
-}) {
-  const [showMap, setShowMap] = useState(false);
   const roadFeet = segments.reduce((sum, s) => sum + pathLengthFt(s.geometry), 0);
-  const confirmedHomes = parcels.filter((p) => p.verification === "verified").length;
-  const needReview = parcels.length - confirmedHomes;
-  const roadsToConfirm = segments.filter((s) => s.verification !== "verified").length;
 
   return (
-    <div className="space-y-4">
+    <div className="flex min-h-0 flex-1 flex-col space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <SummaryTile
           icon={RouteIcon}
@@ -98,8 +39,8 @@ function OverviewPane({
           }
           body={
             segments.length === 0
-              ? "Trace the road you share so distances and costs can be measured."
-              : `About ${roadFeet.toLocaleString()} feet total. ${roadsToConfirm > 0 ? `${roadsToConfirm} still need${roadsToConfirm === 1 ? "s" : ""} confirmation.` : "Everything is confirmed."}`
+              ? "Draw the road you share so distances and costs can be measured."
+              : `About ${roadFeet.toLocaleString()} feet total.`
           }
         />
         <SummaryTile
@@ -113,39 +54,17 @@ function OverviewPane({
           body={
             parcels.length === 0
               ? "Add the homes that share this road."
-              : needReview === 0
-                ? "All home details are confirmed."
-                : `${needReview} home${needReview === 1 ? "" : "s"} still need${needReview === 1 ? "s" : ""} review.`
+              : "Everyone below shares the road."
           }
         />
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-4 fun-shadow-sm">
-        <button
-          type="button"
-          onClick={() => setShowMap((v) => !v)}
-          aria-expanded={showMap}
-          className="flex w-full items-center justify-between text-left"
-        >
-          <span className="flex items-center gap-3">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <MapPin className="h-4 w-4" />
-            </span>
-            <span>
-              <p className="text-sm font-semibold">Detailed map</p>
-              <p className="text-xs text-muted-foreground">
-                Open the geographic view to draw, edit, or confirm the shared road.
-              </p>
-            </span>
-          </span>
-          {showMap ? (
-            <ChevronUp className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          )}
-        </button>
-        {showMap && <div className="mt-3 h-[70vh] min-h-[480px]">{detailedMap}</div>}
+      <div className="h-[65vh] min-h-[440px] overflow-hidden rounded-2xl border border-border bg-card fun-shadow-sm">
+        {detailedMap}
       </div>
+
+      <HomesAccessPane parcels={parcels} segments={segments} />
+      <CostSharingPane parcels={parcels} segments={segments} />
     </div>
   );
 }
@@ -154,17 +73,12 @@ function OverviewPane({
 function HomesAccessPane({ parcels, segments }: { parcels: Parcel[]; segments: RoadSegment[] }) {
   const entrance = useMemo(() => firstEntrance(segments), [segments]);
   if (parcels.length === 0) {
-    return (
-      <div className="rounded-2xl border border-dashed border-border bg-card/60 p-8 text-center">
-        <p className="font-semibold">No homes added yet</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Add homes on the Homes tab so they can appear here.
-        </p>
-      </div>
-    );
+    return null;
   }
   return (
-    <ul className="grid gap-2 sm:grid-cols-2">
+    <div>
+      <h3 className="mb-2 font-display text-base font-semibold">Homes on this road</h3>
+      <ul className="grid gap-2 sm:grid-cols-2">
       {parcels.map((p) => {
         const dist = distanceFt(p, entrance);
         return (
@@ -177,7 +91,6 @@ function HomesAccessPane({ parcels, segments }: { parcels: Parcel[]; segments: R
                   <p className="mt-0.5 text-xs text-muted-foreground">{p.owner_name}</p>
                 )}
               </div>
-              <VerificationBadge value={p.verification} />
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1">
@@ -193,14 +106,15 @@ function HomesAccessPane({ parcels, segments }: { parcels: Parcel[]; segments: R
               {p.frontage_ft ? (
                 <span className="inline-flex items-center gap-1">
                   <RouteIcon className="h-3.5 w-3.5" />
-                  {Number(p.frontage_ft).toLocaleString()} ft frontage
+                  {Number(p.frontage_ft).toLocaleString()} ft touching the road
                 </span>
               ) : null}
             </div>
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </div>
   );
 }
 
@@ -215,14 +129,7 @@ function CostSharingPane({ parcels, segments }: { parcels: Parcel[]; segments: R
   );
 
   if (parcels.length === 0) {
-    return (
-      <div className="rounded-2xl border border-dashed border-border bg-card/60 p-8 text-center">
-        <p className="font-semibold">Add some homes first</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Fair Share needs at least one home so it can divide the cost.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   const methods: { id: CostMethod; label: string; blurb: string }[] = [
@@ -241,6 +148,7 @@ function CostSharingPane({ parcels, segments }: { parcels: Parcel[]; segments: R
 
   return (
     <div className="space-y-4">
+      <h3 className="font-display text-base font-semibold">Split the cost</h3>
       <div className="rounded-2xl border border-border bg-card p-4 fun-shadow-sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
