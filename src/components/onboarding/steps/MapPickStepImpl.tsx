@@ -352,7 +352,7 @@ export function MapPickStep({
     };
   }, [polygonFn, detectRoadsFn]);
 
-  // 5) Re-render parcel source whenever parcels/selection change.
+  // 5a) Repaint parcel source whenever parcels/selection change. No camera moves.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
@@ -367,26 +367,33 @@ export function MapPickStep({
       };
     });
     source.setData({ type: "FeatureCollection", features });
-    if (parcels.length > 0) {
-      const bounds = new mapboxgl.LngLatBounds();
-      let added = false;
-      for (const p of parcels) {
-        const rings =
-          p.geometry.type === "Polygon"
-            ? [p.geometry.coordinates]
-            : p.geometry.type === "MultiPolygon"
-              ? p.geometry.coordinates
-              : [];
-        for (const ring of rings) {
-          for (const [lng, lat] of ring[0]) {
-            bounds.extend([lng, lat]);
-            added = true;
-          }
+  }, [parcels, selected, anchorParcelId, mapLoaded]);
+
+  // 5b) Frame the map to the parcels ONLY when the parcel list itself changes
+  // (initial load / new address / lasso re-query). Never on selection toggles —
+  // otherwise every tap zooms the user out to the full neighborhood.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    if (parcels.length === 0) return;
+    const bounds = new mapboxgl.LngLatBounds();
+    let added = false;
+    for (const p of parcels) {
+      const rings =
+        p.geometry.type === "Polygon"
+          ? [p.geometry.coordinates]
+          : p.geometry.type === "MultiPolygon"
+            ? p.geometry.coordinates
+            : [];
+      for (const ring of rings) {
+        for (const [lng, lat] of ring[0]) {
+          bounds.extend([lng, lat]);
+          added = true;
         }
       }
-      if (added) map.fitBounds(bounds, { padding: 40, maxZoom: 19 });
     }
-  }, [parcels, selected, anchorParcelId, mapLoaded]);
+    if (added) map.fitBounds(bounds, { padding: 40, maxZoom: 18, duration: 400 });
+  }, [parcels, mapLoaded]);
 
   const selectedList = useMemo(
     () => parcels.filter((p) => selected.has(p.id)),
