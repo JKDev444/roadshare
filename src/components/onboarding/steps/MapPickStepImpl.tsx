@@ -114,6 +114,14 @@ export function MapPickStep({
   const [anchorParcelId, setAnchorParcelId] = useState<string | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [source, setSource] = useState<ParcelSource | null>(null);
+  const [showCoach, setShowCoach] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return window.localStorage.getItem("roadshare.mapCoachSeen") !== "1";
+  });
+  function dismissCoach() {
+    setShowCoach(false);
+    try { window.localStorage.setItem("roadshare.mapCoachSeen", "1"); } catch { /* noop */ }
+  }
 
   // 1) Geocode starting address once.
   useEffect(() => {
@@ -489,6 +497,19 @@ export function MapPickStep({
 
       <div className="relative overflow-hidden rounded-2xl border border-border bg-muted shadow-sm">
         <div ref={containerRef} className="h-[68vh] min-h-[520px] w-full" />
+        {showCoach && status === "ready" && !drawingActive && (
+          <button
+            type="button"
+            onClick={dismissCoach}
+            className="absolute left-1/2 top-3 z-10 flex max-w-[92%] -translate-x-1/2 items-start gap-2 rounded-2xl border border-primary/40 bg-background/95 px-3 py-2 text-left text-xs shadow-lg backdrop-blur transition-transform hover:scale-[1.02]"
+          >
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <span className="pr-4">
+              <strong>Tap a home</strong> to add or remove it. Hit <strong>Lasso</strong> to grab your whole community at once — we'll auto-detect the roads.
+            </span>
+            <X className="absolute right-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+        )}
         {(status === "geocoding" || status === "fetching" || detectingRoads) && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
             <div className="flex items-center gap-2 rounded-full bg-card px-3 py-1.5 shadow-md fun-shadow-sm">
