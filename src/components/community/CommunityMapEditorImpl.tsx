@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import { Layers, Map as MapIcon, Route, Satellite, Pencil, Check, X } from "lucide-react";
+import { Home, Route, Satellite, Pencil, X, Undo2, Check, Info } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getMapboxToken } from "@/lib/mapbox";
 import {
+  haversineFt,
   parcelToFeature,
   segmentToFeature,
   type GeoJSONLineString,
@@ -39,7 +40,9 @@ export function CommunityMapEditor({
   const [showParcels, setShowParcels] = useState(true);
   const [showRoads, setShowRoads] = useState(true);
   const [satellite, setSatellite] = useState(false);
-  const [drawing, setDrawing] = useState(false);
+  const [drawStep, setDrawStep] = useState<"idle" | "prepare" | "draw" | "confirm">("idle");
+  const [draftCoords, setDraftCoords] = useState<[number, number][]>([]);
+  const [pendingGeometry, setPendingGeometry] = useState<GeoJSONLineString | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const streets = "mapbox://styles/mapbox/streets-v12";
