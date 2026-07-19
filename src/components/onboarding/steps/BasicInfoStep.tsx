@@ -1,11 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, MapPin, Loader2, Sparkles, Home, Route as RouteIcon, FileText, PenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { searchAddresses, formatHit, type NominatimHit } from "@/lib/onboarding/nominatim";
-import { geocodeAddress } from "@/lib/onboarding/geocode.functions";
 
 export type BasicInfo = {
   communityName: string;
@@ -36,7 +34,6 @@ export function BasicInfoStep({
   onSample?: () => void;
   onLater?: () => void;
 }) {
-  const geocodeFn = useServerFn(geocodeAddress);
   const [communityName, setCommunityName] = useState(initial?.communityName ?? "");
   const [address, setAddress] = useState(initial?.startingAddress ?? "");
   const [city, setCity] = useState(initial?.city ?? "");
@@ -62,29 +59,9 @@ export function BasicInfoStep({
     const t = setTimeout(async () => {
       try {
         const res = await searchAddresses(q, { signal: ctl.signal });
-        if (res.length > 0) {
-          setHits(res);
-          setOpen(true);
-          setLookupStatus("ok");
-          return;
-        }
-        const exact = await geocodeFn({ data: { query: q } });
-        if (ctl.signal.aborted) return;
-        if (exact) {
-          const fallbackHit: NominatimHit = {
-            place_id: -1,
-            display_name: exact.label,
-            lat: String(exact.lat),
-            lon: String(exact.lng),
-          };
-          setHits([fallbackHit]);
-          setOpen(true);
-          setLookupStatus("ok");
-        } else {
-          setHits([]);
-          setOpen(false);
-          setLookupStatus("empty");
-        }
+        setHits(res);
+        setOpen(res.length > 0);
+        setLookupStatus(res.length > 0 ? "ok" : "empty");
       } catch {
         if (!ctl.signal.aborted) {
           console.warn("[onboarding] address lookup failed");
@@ -98,7 +75,7 @@ export function BasicInfoStep({
       clearTimeout(t);
       ctl.abort();
     };
-  }, [address, picked, geocodeFn]);
+  }, [address, picked]);
 
   // Close dropdown on outside click.
   useEffect(() => {

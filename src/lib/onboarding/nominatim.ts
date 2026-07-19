@@ -24,6 +24,16 @@ export type NominatimHit = {
   };
 };
 
+type CensusResponse = {
+  result?: {
+    addressMatches?: Array<{
+      matchedAddress?: string;
+      coordinates?: { x?: number; y?: number };
+      addressComponents?: { city?: string; state?: string; zip?: string };
+    }>;
+  };
+};
+
 const cache = new Map<string, NominatimHit[]>();
 const MAX_CACHE = 24;
 let lastCall = 0;
@@ -63,6 +73,17 @@ export async function searchAddresses(
   });
   if (!res.ok) return [];
   const raw = (await res.json()) as NominatimHit[];
+  if (raw.length === 0) {
+    const fallback = await searchCensusAddress(q, opts.signal);
+    if (fallback.length > 0) {
+      if (cache.size >= MAX_CACHE) {
+        const first = cache.keys().next().value;
+        if (first) cache.delete(first);
+      }
+      cache.set(cacheKey, fallback);
+      return fallback;
+    }
+  }
   // Nominatim occasionally returns duplicate place_ids across pages; dedupe
   // so React list keys stay unique in the autocomplete dropdown.
   const seen = new Set<number>();
@@ -77,6 +98,39 @@ export async function searchAddresses(
   }
   cache.set(cacheKey, data);
   return data;
+}
+
+async function searchCensusAddress(query: string, signal?: AbortSignal): Promise<NominatimHit[]> {
+  const url = new URL("https://geocoding.geo.census.gov/geocoder/locations/onelineaddress");
+  url.searchParams.set("address", query);
+  url.searchParams.set("benchmark", "Public_AR_Current");
+  url.searchParams.set("format", "json");
+  try {
+    const res = await fetch(url.toString(), { headers: { Accept: "application/json" }, signal });
+    if (!res.ok) return [];
+    const json = (await res.json()) as CensusResponse;
+    return (json.result?.addressMatches ?? [])
+      .slice(0, 6)
+      .map((match, index) => {
+        const lat = match.coordinates?.y;
+        const lon = match.coordinates?.x;
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+        return {
+          place_id: -1 - index,
+          display_name: match.matchedAddress ?? query,
+          lat: String(lat),
+          lon: String(lon),
+          address: {
+            city: match.addressComponents?.city,
+            state: match.addressComponents?.state,
+            postcode: match.addressComponents?.zip,
+          },
+        } satisfies NominatimHit;
+      })
+      .filter((hit): hit is NominatimHit => hit !== null);
+  } catch {
+    return [];
+  }
 }
 
 export function formatHit(hit: NominatimHit): string {
