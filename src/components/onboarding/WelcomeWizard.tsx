@@ -23,6 +23,7 @@ import { ProcessingStep } from "./steps/ProcessingStep";
 import { SuccessSummaryStep } from "./steps/SuccessSummaryStep";
 import { FailureStep } from "./steps/FailureStep";
 import { ReviewWorkspace } from "./steps/ReviewWorkspace";
+import { CommunityReadyStep } from "./steps/CommunityReadyStep";
 
 type Step =
   | "welcome"
@@ -35,6 +36,7 @@ type Step =
   | "success"
   | "failure"
   | "review"
+  | "created"
   | "sample";
 
 const SAMPLE_DRAFT: CcrDraft = {
@@ -99,6 +101,14 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
   const [applyProgress, setApplyProgress] = useState<{ done: number; total: number; phase: string } | null>(null);
   const [creatingJob, setCreatingJob] = useState(false);
   const [focusUnresolved, setFocusUnresolved] = useState(false);
+  const [created, setCreated] = useState<{
+    id: string;
+    name: string;
+    region: string | null;
+    homeCount: number;
+    roadCount: number;
+    documentCount: number;
+  } | null>(null);
 
   // Resume any in-flight job when the wizard opens.
   useEffect(() => {
@@ -142,6 +152,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
       setFinishedJob(null);
       setDraft(null);
       setFocusUnresolved(false);
+      setCreated(null);
     }, 200);
   }
 
@@ -159,14 +170,15 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
         await qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
         update({ wizard_completed: true, wizard_skipped: false });
         toast.success(`${community.name} is ready`);
-        setOpenOverride(false);
-        setTimeout(() => {
-          void navigate({
-            to: "/community/$id",
-            params: { id: community.id },
-            search: { tab: "map", justCreated: "1" },
-          });
-        }, 100);
+        setCreated({
+          id: community.id,
+          name: community.name,
+          region: d.community.region ?? null,
+          homeCount: d.lots.length,
+          roadCount: d.roads.length,
+          documentCount: finishedJob?.filenames?.length ?? jobFilenames.length,
+        });
+        setStep("created");
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Something went wrong.");
       } finally {
@@ -174,7 +186,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
         setApplyProgress(null);
       }
     },
-    [applying, dismissJobFn, jobId, navigate, qc, update],
+    [applying, dismissJobFn, finishedJob, jobFilenames, jobId, qc, update],
   );
 
   async function submitUpload(files: { file: File; dataUrl: string }[]) {
@@ -449,6 +461,53 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
               onSaveForLater={() => close(false)}
               applying={applying}
               focusUnresolved={focusUnresolved}
+            />
+          )}
+
+          {step === "created" && created && (
+            <CommunityReadyStep
+              communityName={created.name}
+              region={created.region}
+              homeCount={created.homeCount}
+              roadCount={created.roadCount}
+              roadFeet={0}
+              documentCount={created.documentCount}
+              onGoHome={() => {
+                setOpenOverride(false);
+                setTimeout(() => {
+                  void navigate({
+                    to: "/community/$id",
+                    params: { id: created.id },
+                    search: { tab: "home", justCreated: "1" },
+                  });
+                }, 100);
+              }}
+              onReviewRoad={() => {
+                setOpenOverride(false);
+                setTimeout(() => {
+                  void navigate({
+                    to: "/community/$id",
+                    params: { id: created.id },
+                    search: { tab: "roads" },
+                  });
+                }, 100);
+              }}
+              onUploadDocuments={() => {
+                setOpenOverride(false);
+                setTimeout(() => {
+                  void navigate({ to: "/documents" });
+                }, 100);
+              }}
+              onAddNeighbors={() => {
+                setOpenOverride(false);
+                setTimeout(() => {
+                  void navigate({
+                    to: "/community/$id",
+                    params: { id: created.id },
+                    search: { tab: "homes" },
+                  });
+                }, 100);
+              }}
             />
           )}
         </div>
