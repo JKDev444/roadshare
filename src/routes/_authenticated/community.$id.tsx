@@ -329,8 +329,8 @@ function MapTab({
               Add properties on the Properties tab, or draw a road directly on the map.
             </p>
             <div className="mt-4 flex gap-2">
-              <Button variant="outline" onClick={() => navigate({ to: "/community/$id", params: { id: communityId }, search: { tab: "properties" } })}>
-                Add properties
+              <Button variant="outline" onClick={() => navigate({ to: "/community/$id", params: { id: communityId }, search: { tab: "homes" } })}>
+                Add homes
               </Button>
             </div>
           </div>
