@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { GeocodeResult } from "./geocode.server";
+import type { GeocodeResult, SuggestHit } from "./geocode.server";
 
 export const geocodeAddress = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -25,17 +25,17 @@ export const searchAddressSuggestions = createServerFn({ method: "POST" })
     return searchAddressCandidates(data.query);
   });
 
-/** Mapbox Search Box: per-keystroke suggestions. Cheap — session_token bundles the flow. */
+/** Address autocomplete. Mapbox Search Box first, US Census fallback. */
 export const suggestAddresses = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { query: string; sessionToken: string }) => ({
     query: String(data.query ?? "").trim(),
     sessionToken: String(data.sessionToken ?? "").trim(),
   }))
-  .handler(async ({ data }) => {
+  .handler(async ({ data }): Promise<SuggestHit[]> => {
     if (data.query.length < 3 || !data.sessionToken) return [];
-    const { mapboxSuggestAddresses } = await import("./geocode.server");
-    return mapboxSuggestAddresses(data.query, data.sessionToken);
+    const { suggestAddressesUnified } = await import("./geocode.server");
+    return suggestAddressesUnified(data.query, data.sessionToken);
   });
 
 /** Mapbox Search Box: retrieve final coordinates for a picked suggestion. */
