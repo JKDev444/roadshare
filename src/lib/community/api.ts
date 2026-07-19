@@ -263,6 +263,21 @@ export async function deleteCommunity(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Wipe every community owned by the current signed-in user. Used by the
+ * "roadshare" easter egg to give testers a fresh onboarding start.
+ * RLS scopes the delete to the caller's own rows; parcels / road_segments /
+ * events cascade via foreign keys.
+ */
+export async function deleteAllCommunities(): Promise<number> {
+  const list = await listCommunities();
+  for (const c of list) {
+    const { error } = await supabase.from("communities").delete().eq("id", c.id);
+    if (error) throw new Error(error.message);
+  }
+  return list.length;
+}
+
 // ---------------- Parcels ----------------
 
 export async function listParcels(communityId: string): Promise<Parcel[]> {

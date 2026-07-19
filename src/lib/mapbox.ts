@@ -7,3 +7,11 @@ export function getMapboxToken(): string {
   }
   return token;
 }
+
+/**
+ * Map style used inside the app for the community/road workspace. A calm,
+ * minimal grey basemap that lets our home dots and road line stand out.
+ * The onboarding lasso keeps a richer style so users can recognize their
+ * own neighborhood.
+ */
+export const MAP_STYLE = "mapbox://styles/mapbox/light-v11";

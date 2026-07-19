@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { updateOnboardingState } from "@/lib/onboarding/api";
+import { deleteAllCommunities } from "@/lib/community/api";
 
 /**
  * Easter egg: type "roadshare" anywhere (outside a text field) to reset
@@ -33,16 +34,22 @@ export function useOnboardingResetEasterEgg() {
     async function doReset() {
       if (runningRef.current) return;
       runningRef.current = true;
-      const t = toast.loading("Resetting onboarding…");
+      const t = toast.loading("Wiping this account and restarting onboarding…");
       try {
+        const removed = await deleteAllCommunities();
         await updateOnboardingState({
           wizard_completed: false,
           wizard_skipped: false,
           checklist_dismissed: false,
           dismissed_hints: [],
         });
-        await qc.invalidateQueries({ queryKey: ["onboarding"] });
-        toast.success("Onboarding reset — welcome back!", { id: t });
+        await qc.invalidateQueries();
+        toast.success(
+          removed > 0
+            ? `Removed ${removed} ${removed === 1 ? "community" : "communities"}. Starting fresh!`
+            : "Fresh start — welcome back!",
+          { id: t },
+        );
         void navigate({ to: "/dashboard", search: { welcome: true } });
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Reset failed", { id: t });
