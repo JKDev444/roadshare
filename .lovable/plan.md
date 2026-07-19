@@ -1,109 +1,118 @@
-## Three things in this plan
+# Redesign Home and My Road
 
-1. Fix the "click a home → map zooms out" bug (confirmed root cause).
-2. Answer the Kalama / Mapbox question and lock in the current approach.
-3. Generate two reference documents you asked for — a **User Workflow Guide** and a **Developer / Architecture Guide**.
+I agree with the uploaded document. This plan implements it end-to-end while preserving the existing architecture (TanStack Router, 5-item nav, Mapbox as source of truth, Fair Share methods, RLS, onboarding state machine).
 
-The prior Vercel deploy work (vite.config.ts + vercel.json + env vars) stays as-is — this plan adds on top, it doesn't replace it.
+Delivered in 4 phases so you can approve/test each one before the next.
 
 ---
 
-## 1. Map zoom-out bug — confirmed
+## Phase 1 — Success Summary and routing after onboarding
 
-**File:** `src/components/onboarding/steps/MapPickStepImpl.tsx` around lines 360–389.
+- Rewrite the existing `SuccessSummary` step to match the spec:
+  - Headline: "Your RoadShare Community Is Ready"
+  - Line: `{name} has been created in {city, state}.`
+  - Plain-language stats: homes, possible shared road, approximate feet, documents.
+  - Primary: **Go to Community Home** → `/community/$id` (Home, not the map).
+  - Secondary: Review My Road, Upload Documents, Add Neighbors.
+- Change post-completion navigation so the wizard lands on Home.
+- Keep confetti; move the welcome banner into the new Home layout in Phase 2.
 
-Right now a single `useEffect` keyed on `[parcels, selected, anchorParcelId, mapLoaded]` does two things at once: (a) repaints the parcel colors, and (b) calls `map.fitBounds(bounds, { padding: 40, maxZoom: 19 })`. Because `selected` is in the dependency array, **every tap on a home re-runs `fitBounds` and yanks the camera back out to fit every parcel**. That's exactly what you're seeing.
+## Phase 2 — Rebuild Home as a guided dashboard
 
-**Fix:** split it into two effects.
+- **Header** — name, city/state, one-line status, one primary CTA (**Continue Setup**). History/Export move into a secondary menu. When all 5 steps are complete, hide **Continue Setup** and surface an "All set — invite your neighbors" link back into My Road.
+- **Setup checklist** — 5 plain-language steps with per-item status + action button + completed state. Progress reads `X of 5 complete`.
+- **Community summary cards** — Homes, Shared Road, Documents, Decisions. Each card has a plain sentence + one action button. No bare numbers.
+- **Recent Activity** — collapsible section at the bottom (demoted, not deleted).
+- Remove the four unexplained stat cards from the current Home.
 
-- Effect A (paint) — deps `[parcels, selected, anchorParcelId, mapLoaded]`. Only `source.setData(...)`. No camera calls.
-- Effect B (frame) — deps `[parcels, mapLoaded]` only. Computes bounds and calls `map.fitBounds` **only when the parcel list itself changes** (initial load / new address / lasso re-query), never on selection toggles. Add `duration: 400` for a smooth ease and drop `maxZoom` to `18` so we don't over-zoom on tiny lots.
+## Phase 3 — Rebuild My Road
 
-Verification: reproduce the current bug in Playwright (zoom in → click a home → confirm zoom level drops), apply the fix, then confirm zoom level is preserved across 3 consecutive clicks.
+- Sub-sections replacing the current tab strip:
+  - **Overview** — simplified visual of shared road, connected homes, segments, current split method, anything needing confirmation. Presentation layer over the same Mapbox data — geographic map remains source of truth.
+  - **Homes & Access** — list with address, membership status, road access point, distance used, review status. Selecting a home opens a brief panel (address, community status, owner, road access, distance) — not a full form.
+  - **Cost sharing** — existing three Fair Share methods, presented more visually. Math untouched.
+- Remove the Map / Properties / **Projects** switch from `AppShell`/community workspace. Road-work proposals live under **Decisions**.
+- Keep the Mapbox map available as a "detailed view" toggle inside Overview.
 
----
+## Phase 4 — Drawing, terminology, empty/error states, responsive
 
-## 2. Kalama / Mapbox — do we need another tool?
+**Drawing (3 steps):**
+- Prepare: explain what drawing does + Start / Cancel.
+- Draw: visible point per click, live length readout, sticky Undo Last Point / Finish Road / Cancel controls. Finish via button or double-click.
+- Confirm: name (default "Shared Road 1"), approximate length, homes-using count, Save Road / Edit Drawing / Cancel. No advanced maintenance/legal fields here.
 
-**Short answer: no.** Mapbox handles Kalama fine. Your latest Munn Lake screenshot rendered 207 nearby homes — Mapbox found the address and Mapbox tiles drew the map. The earlier "blank map" wasn't Mapbox failing to recognize the neighborhood; it was our own parcels lookup timing out before buildings could render.
+**Terminology sweep:**
+- "Verified" → "Home details confirmed" / "Neighbor confirmed their home" / "Needs review" depending on what was confirmed.
+- "Parcel" → "Home" in homeowner-facing surfaces (kept where accuracy matters).
+- "Projects" → "Decisions" for road-work proposals.
+- Only rename where underlying data supports the new label.
 
-Two distinct data sources are at play, and it's worth being clear:
+**Empty / loading / error states:**
+- Preserve the lasso fallback.
+- No-homes empty state: "We Could Not Automatically Find the Homes" — Add Address / Use Lasso / Try Again.
+- Map load error: "We Could Not Load the Map Data" — same three actions.
 
-| Layer | Provider | Rural coverage |
-| --- | --- | --- |
-| Address typeahead / geocoding | Mapbox Search Box (with US Census fallback) | Excellent everywhere in the US |
-| Map tiles | Mapbox streets style | Excellent everywhere |
-| **Building / parcel polygons** | Dallas County GIS (Dallas only) → **OpenStreetMap Overpass** everywhere else | Depends on OSM coverage in that area |
-
-The only place rural areas can get thin is that third row — OSM building footprints. In practice OSM is very good in the US (Munn Lake had 207 homes mapped), and for the rare gap we already have the lasso: users draw their neighborhood and we snap it to whatever OSM knows. Adding Google Places / Google Maps would not improve rural building data — Google doesn't expose parcel polygons via API either, and it'd add cost, key management, and terms-of-service friction on top of a problem the lasso already solves.
-
-**Plan action:** no new provider. Two small hardenings only:
-
-- Cap the Overpass call at 8s and treat 0 results as "empty," not "error," so the empty-state UI can render.
-- In `MapPickStepImpl.tsx`, when the parcels lookup returns empty, show a clear callout: *"We couldn't find nearby homes automatically. Tap **Lasso** and draw around your neighborhood — we'll pull the buildings from your outline."* Right now empty and loading look identical.
-
----
-
-## 3. Documents to generate
-
-Both saved to `/mnt/documents` as `.docx` (editable in Word/Google Docs) plus a matching `.md` in the repo under `docs/` so it stays version-controlled with the code.
-
-### A. `RoadShare — User Workflow Guide.docx`
-
-Audience: a non-technical HOA board member or neighbor. Written in plain language, screenshots-optional, ~8–12 pages.
-
-Sections:
-1. **What RoadShare is** — one-paragraph plain-English pitch.
-2. **The 4 core roles** — Homeowner, HOA board, road committee lead, invited neighbor. What each one can do.
-3. **First-time onboarding, step by step** — Welcome → address lookup → "Pick my neighbors on a map" → lasso vs. tap → review homes → naming your community → confetti / dashboard drop-off. Called out: what "Skip for now" does, what the sandbox banner means, the `roadshare` easter-egg reset.
-4. **The dashboard after onboarding** — WelcomeBanner, next-step CTAs, where to find My Road / Neighbors / Documents / Decisions.
-5. **Adding neighbors after the fact** — lasso re-run, manual address entry, CSV import path.
-6. **Documents workflow** — upload a PDF (CC&Rs / HOA rules / invoices), what the classifier does, where extracted clauses show up.
-7. **Decisions workflow** — how a decision is proposed, voted on, closed. Quorum + Fair-Share math in plain words.
-8. **The "Fair Share" calculator** — distance vs. frontage vs. equal split, worked example from Cedar Hollow, when each is fairest.
-9. **Cedar Hollow sample** — what it's for, why the numbers aren't real, how to leave the sandbox.
-10. **FAQ / troubleshooting** — "the map is blank," "my address isn't found," "I picked the wrong neighborhood," "reset my account."
-
-### B. `RoadShare — Developer & Architecture Guide.docx`
-
-Audience: a new engineer or a reviewing consultant. ~10–14 pages.
-
-Sections:
-1. **Stack at a glance** — TanStack Start v1 (React 19), Vite 7, TanStack Router file-based routing, TanStack Query, Tailwind v4, shadcn/ui, Framer Motion, Lucide, Mapbox GL JS + mapbox-gl-draw (freehand mode), Leaflet.draw (legacy planner), Zod v4, Supabase (Lovable Cloud) for DB + auth + RLS + storage.
-2. **Runtime targets** — Lovable's managed hosting (Cloudflare Workers via nitro) and Vercel (nitro `vercel` preset). Env-var matrix for each, cross-referencing `VERCEL_ENV.md`.
-3. **Routing map** — `src/routes/` file conventions, `__root.tsx`, `_authenticated/` gate, `api/public/*` for webhooks, why we don't use `src/pages/`.
-4. **Server functions vs. server routes** — when we use `createServerFn` (address lookup, parcels, AI classify, extract, ask), when we'd use `createFileRoute` server blocks (webhooks/cron under `api/public/*`). Auth-middleware pattern for the ones that touch user data; explicit call-out that `geocode.*` and `parcels.*` are **public** and must NOT use `requireSupabaseAuth` (that was the Vercel 401 bug).
-5. **AI layer** — `ai-gateway.server.ts` and `ai-chat.server.ts`. Lovable AI Gateway is primary; `OPENAI_API_KEY` is the drop-in fallback for external hosts. Which server fn uses which model (`gpt-4o-mini` for classify/ask, `gpt-4o` for PDF extract).
-6. **Geocoding pipeline** — Mapbox Search Box (suggest + retrieve, session tokens) → US Census Geocoder fallback → title-casing helper. Why we abandoned Nominatim (rural gaps, rate limits).
-7. **Parcel pipeline** — DCAD (Dallas County) shortcut → OSM Overpass buildings elsewhere → lasso fallback. Batch insert path in `lib/community/api.ts`.
-8. **Onboarding state machine** — `useOnboarding.ts`, Welcome/BasicInfo/MapPick/Docs/Upload/Review/Success step order, the `?welcome=1` re-trigger, the "roadshare" easter-egg reset hook.
-9. **Data model** — high-level ERD: `profiles`, `user_roles`, `communities`, `parcels`, `documents`, `clauses`, `decisions`, `votes`. RLS pattern (`has_role`, `SECURITY DEFINER`), why roles live in a separate table.
-10. **Front-end architecture** — `AppShell`, primary nav simplification (Home / My Road / Neighbors / Documents / Decisions), design tokens in `styles.css`, no hardcoded colors rule.
-11. **Marketing site** — `StoryPath`, `SecretSauce`, persona subpages, why we killed the pill-shaped links and card grids.
-12. **Deployment** — Lovable Publish (zero-config) vs. Vercel (see `vercel.json` and the isVercel branch in `vite.config.ts`). Which env vars per host.
-13. **Known limitations & follow-ups** — rural OSM gaps, Vercel Hobby 10s timeout raised via `functions.maxDuration`, no realtime yet, invites/pulse still hidden.
-14. **How to run locally** — `bun install`, dev server, seed data, `?welcome=1` for QA, the easter-egg reset.
-
-### How the docs get built
-
-Using the DOCX skill: I'll write both documents in JS via `docx` (Arial 12pt, US Letter, proper Heading1/Heading2 styles, real bulleted lists with `LevelFormat.BULLET`, tables using DXA widths for Google Docs compatibility). Each generated `.docx` gets validated, then converted to page images and inspected before I hand them to you. Markdown twins land in `docs/user-workflow.md` and `docs/developer-guide.md` so the repo has a versioned source of truth.
-
-Deliverables in `/mnt/documents`:
-- `RoadShare — User Workflow Guide.docx`
-- `RoadShare — Developer & Architecture Guide.docx`
+**Responsive behavior (Part 8):**
+- Desktop, smaller laptops, tablets, mobile — every new surface (Home checklist, summary cards, My Road tabs, drawing controls) tested at each viewport.
+- Drawing controls stay fixed and visible while editing, on every viewport.
+- Home checklist collapses to a single column on mobile; summary cards stack.
+- My Road sub-sections switch to a segmented control on mobile, not a hidden dropdown.
 
 ---
 
-## Order of operations
+## Constraints (from the doc + existing conventions)
 
-1. Fix the MapPickStepImpl zoom-out bug and the empty-state banner.
-2. Verify the fix in Playwright (zoom-preserved-on-click check).
-3. Write both `.md` sources under `docs/`.
-4. Generate both `.docx` files, validate, render to page images, spot-check every page.
-5. Report back with artifact links and the Playwright evidence for the map fix.
+- No `src/pages/`. Everything under `src/routes/`.
+- No new top-level nav item — 5-item nav stays.
+- No hardcoded colors — tokens in `src/styles.css` + shadcn variants only.
+- Mapbox + US Census address fallback preserved.
+- OSM building + lasso fallback preserved.
+- Fair Share methods and math untouched.
+- Onboarding state machine step order untouched — only the Success step's content and the routing that follows it.
 
-## Explicitly not doing
+---
 
-- Not adding Google Maps / Google Places. Mapbox + OSM + lasso already covers the rural case.
-- Not touching the Vercel plan already in `.lovable/plan.md` — it stays.
-- Not editing schema, RLS, or auth.
+## Testing after each phase
+
+After every phase I will run Playwright against the live preview, take screenshots at each step, and answer these four questions in writing before calling the phase done:
+
+1. If I were a non-tech user, was the flow easy enough?
+2. Did anything on the screens confuse me or seem out of place?
+3. Was any part of it confusing?
+4. Did I get the result I wanted?
+
+Per phase, the flows I'll run:
+
+- **Phase 1** — fresh signup → onboarding → Success Summary → clicks "Go to Community Home" → lands on Home.
+- **Phase 2** — Home renders correctly with no map; setup checklist advances step-by-step; each summary card's action button opens the right screen; Recent Activity is present but collapsed.
+- **Phase 3** — My Road opens on Overview; Projects tab is gone; selecting a home shows the brief panel; switching Fair Share methods shows different splits with the same underlying math.
+- **Phase 4** — draw a road end-to-end (button-finish and double-click-finish); force an empty-parcels area (rural lasso) and confirm the empty-state UI; force a map load error and confirm recovery actions; every step re-run at desktop, small laptop, tablet, and mobile widths.
+
+Regression pass at the end: run the full journey (signup → onboarding → Success → Home → My Road → draw a road → save → back to Home → checklist marks the step complete) and re-answer the four questions.
+
+---
+
+## Acceptance criteria (from the doc)
+
+The redesign is done when all of these are true:
+
+- Home is the default post-onboarding destination.
+- Home contains the setup checklist and community summary; no dense map.
+- My Road contains the road map and cost-sharing tools.
+- The 5-item app navigation is preserved.
+- "Projects" is removed from the community workspace.
+- Road-related proposals continue through Decisions.
+- Numbers on Home have plain-language explanations.
+- Recent Activity is demoted during initial setup.
+- The shared road is visually distinguishable on the map.
+- Terminology matches the underlying data.
+- The Fair Share calculator's three methods still work.
+- The full user journey (12 checkpoints in the doc) passes end-to-end on desktop and mobile.
+
+---
+
+## Deliverables at the end
+
+- The new Home, My Road, and Success Summary shipped.
+- A short written summary covering: the new onboarding end, new Home, new My Road, how the simplified visualization uses existing data, terminology changes, the new drawing flow, and confirmation that Fair Share is preserved.
+- Playwright screenshots + written non-tech-user Q&A per phase.

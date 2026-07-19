@@ -8,7 +8,6 @@ import {
   ClipboardList,
   Clock,
   Download,
-  HardHat,
   History,
   LayoutGrid,
   Map as MapIcon,
@@ -21,6 +20,7 @@ import {
   Trash2,
   TriangleAlert,
   Users,
+  Home as HomeIcon,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -50,8 +50,8 @@ import {
 } from "@/components/ui/popover";
 import { ConfidenceBadge, VerificationBadge } from "@/components/community/badges";
 import { CommunityMapEditor } from "@/components/community/CommunityMapEditor";
+import { CommunityHomeTab } from "@/components/community/CommunityHomeTab";
 import { Confetti } from "@/components/onboarding/Confetti";
-import { ProjectsTab } from "@/components/planner/ProjectsTab";
 import {
   createParcel,
   createSegment,
@@ -76,13 +76,22 @@ import {
   type Verification,
 } from "@/lib/community/api";
 
-const TABS = ["map", "properties", "projects"] as const;
+const TABS = ["home", "roads", "homes"] as const;
 type Tab = (typeof TABS)[number];
+
+// Backward compatibility for older links / bookmarks.
+function normalizeTab(v: unknown): Tab {
+  if (v === "map") return "roads";
+  if (v === "properties") return "homes";
+  if (v === "projects") return "home";
+  if (typeof v === "string" && (TABS as readonly string[]).includes(v)) return v as Tab;
+  return "home";
+}
 
 export const Route = createFileRoute("/_authenticated/community/$id")({
   head: () => ({ meta: [{ title: "Community Record — RoadShare" }, { name: "robots", content: "noindex" }] }),
   validateSearch: (s: Record<string, unknown>): { tab: Tab; justCreated?: string } => ({
-    tab: TABS.includes(s.tab as Tab) ? (s.tab as Tab) : "map",
+    tab: normalizeTab(s.tab),
     justCreated: s.justCreated === "1" ? "1" : undefined,
   }),
   component: CommunityDetail,
@@ -112,22 +121,19 @@ function CommunityDetail() {
 
   const p = parcels.data ?? [];
   const s = segments.data ?? [];
-  const verified = p.filter((x) => x.verification === "verified").length;
-  const disputed = p.filter((x) => x.verification === "disputed").length;
-  const totalRoad = s.reduce((sum, seg) => sum + pathLengthFt(seg.geometry), 0);
 
   return (
     <AppShell>
       <div className="relative mx-auto flex h-[calc(100vh-4rem)] max-w-7xl flex-col space-y-4 px-4 py-4">
         <Confetti show={celebrate} />
-        {showWelcome && (
+        {showWelcome && tab !== "home" && (
           <WelcomeBanner
             communityName={community.data?.name ?? "your community"}
             parcelCount={p.length}
             roadCount={s.length}
-            onCreateProject={() => {
+            onGoHome={() => {
               setShowWelcome(false);
-              void navigate({ search: { tab: "projects" } });
+              void navigate({ search: { tab: "home" } });
             }}
             onDismiss={() => setShowWelcome(false)}
           />
@@ -167,21 +173,25 @@ function CommunityDetail() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat icon={Users} label="Parcels" value={String(p.length)} />
-          <Stat icon={CheckCircle2} label="Verified" value={`${verified}/${p.length || 0}`} tone="primary" />
-          <Stat icon={Ruler} label="Road mapped" value={`${totalRoad.toLocaleString()} ft`} />
-          <Stat icon={TriangleAlert} label="Disputed" value={String(disputed)} tone={disputed ? "warn" : "muted"} />
-        </div>
-
         <Tabs value={tab} onValueChange={(v) => navigate({ search: { tab: v as Tab } })} className="flex min-h-0 flex-1 flex-col">
           <TabsList className="flex-wrap">
-            <TabsTrigger value="map"><MapIcon className="mr-1.5 h-4 w-4" /> Map</TabsTrigger>
-            <TabsTrigger value="properties"><Users className="mr-1.5 h-4 w-4" /> Properties</TabsTrigger>
-            <TabsTrigger value="projects"><HardHat className="mr-1.5 h-4 w-4" /> Projects</TabsTrigger>
+            <TabsTrigger value="home"><HomeIcon className="mr-1.5 h-4 w-4" /> Home</TabsTrigger>
+            <TabsTrigger value="roads"><RouteIcon className="mr-1.5 h-4 w-4" /> My Road</TabsTrigger>
+            <TabsTrigger value="homes"><Users className="mr-1.5 h-4 w-4" /> Homes</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="map" className="mt-4 flex min-h-0 flex-1 flex-col">
+          <TabsContent value="home" className="mt-4">
+            <CommunityHomeTab
+              communityId={id}
+              community={community.data ?? null}
+              parcels={p}
+              segments={s}
+              events={events.data ?? []}
+              onGoToRoads={() => navigate({ search: { tab: "roads" } })}
+              onGoToHomes={() => navigate({ search: { tab: "homes" } })}
+            />
+          </TabsContent>
+          <TabsContent value="roads" className="mt-4 flex min-h-0 flex-1 flex-col">
             <MapTab
               communityId={id}
               community={community.data ?? null}
@@ -190,11 +200,8 @@ function CommunityDetail() {
               events={events.data ?? []}
             />
           </TabsContent>
-          <TabsContent value="properties" className="mt-4">
+          <TabsContent value="homes" className="mt-4">
             <PropertiesTab communityId={id} parcels={p} loading={parcels.isLoading} />
-          </TabsContent>
-          <TabsContent value="projects" className="mt-4">
-            <ProjectsTab communityId={id} />
           </TabsContent>
         </Tabs>
       </div>
@@ -202,33 +209,17 @@ function CommunityDetail() {
   );
 }
 
-function Stat({ icon: Icon, label, value, tone = "default" }: { icon: typeof Users; label: string; value: string; tone?: "default" | "primary" | "warn" | "muted" }) {
-  const toneCls = {
-    default: "bg-secondary text-secondary-foreground",
-    primary: "bg-primary/10 text-primary",
-    warn: "bg-destructive/10 text-destructive",
-    muted: "bg-muted text-muted-foreground",
-  }[tone];
-  return (
-    <div className="rounded-2xl border border-border bg-card p-4 fun-shadow-sm">
-      <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${toneCls}`}><Icon className="h-4 w-4" /></span>
-      <p className="mt-3 font-display text-2xl font-bold">{value}</p>
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-    </div>
-  );
-}
-
 function WelcomeBanner({
   communityName,
   parcelCount,
   roadCount,
-  onCreateProject,
+  onGoHome,
   onDismiss,
 }: {
   communityName: string;
   parcelCount: number;
   roadCount: number;
-  onCreateProject: () => void;
+  onGoHome: () => void;
   onDismiss: () => void;
 }) {
   return (
@@ -247,15 +238,15 @@ function WelcomeBanner({
             </p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               We added <strong>{parcelCount}</strong> {parcelCount === 1 ? "home" : "homes"}
-              {roadCount > 0 ? ` and ${roadCount} ${roadCount === 1 ? "road" : "roads"}` : ""}. Next
-              step: create your first project to plan a shared cost.
+              {roadCount > 0 ? ` and ${roadCount} ${roadCount === 1 ? "road" : "roads"}` : ""}. Head
+              back to Home to see the next steps.
             </p>
           </div>
         </div>
         <div className="flex shrink-0 gap-2">
           <Button variant="ghost" size="sm" onClick={onDismiss}>Not now</Button>
-          <Button size="sm" onClick={onCreateProject} className="bounce hover:scale-105">
-            Create your first project
+          <Button size="sm" onClick={onGoHome} className="bounce hover:scale-105">
+            Go to Community Home
           </Button>
         </div>
       </div>
@@ -338,8 +329,8 @@ function MapTab({
               Add properties on the Properties tab, or draw a road directly on the map.
             </p>
             <div className="mt-4 flex gap-2">
-              <Button variant="outline" onClick={() => navigate({ to: "/community/$id", params: { id: communityId }, search: { tab: "properties" } })}>
-                Add properties
+              <Button variant="outline" onClick={() => navigate({ to: "/community/$id", params: { id: communityId }, search: { tab: "homes" } })}>
+                Add homes
               </Button>
             </div>
           </div>
@@ -414,7 +405,7 @@ function PropertiesTab({ communityId, parcels, loading }: { communityId: string;
   };
   const del = useMutation({
     mutationFn: (p: Parcel) => deleteParcel(p.id, communityId, p.label),
-    onSuccess: () => { invalidate(); toast.success("Parcel removed"); },
+    onSuccess: () => { invalidate(); toast.success("Home removed"); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -446,7 +437,7 @@ function PropertiesTab({ communityId, parcels, loading }: { communityId: string;
               <th className="px-4 py-3 font-semibold">Owner</th>
               <th className="px-4 py-3 font-semibold">Area / frontage</th>
               <th className="px-4 py-3 font-semibold">Source</th>
-              <th className="px-4 py-3 font-semibold">Data quality</th>
+              <th className="px-4 py-3 font-semibold">Status</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -516,7 +507,7 @@ function ParcelDialog({ communityId, parcel, onSaved }: { communityId: string; p
       if (parcel) await updateParcel(parcel.id, communityId, payload);
       else await createParcel(communityId, payload);
     },
-    onSuccess: () => { onSaved(); toast.success(parcel ? "Parcel updated" : "Parcel added"); setOpen(false); },
+    onSuccess: () => { onSaved(); toast.success(parcel ? "Home updated" : "Home added"); setOpen(false); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -530,15 +521,15 @@ function ParcelDialog({ communityId, parcel, onSaved }: { communityId: string; p
             <ClipboardList className="h-4 w-4" />
           </Button>
         ) : (
-          <Button><Plus className="h-4 w-4" /> Add parcel</Button>
+          <Button><Plus className="h-4 w-4" /> Add home</Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{parcel ? `Edit parcel ${parcel.label}` : "Add parcel"}</DialogTitle>
+          <DialogTitle>{parcel ? `Edit home ${parcel.label}` : "Add home"}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-2 sm:grid-cols-2">
-          <Field label="Lot / label"><Input value={form.label ?? ""} onChange={(e) => set({ label: e.target.value })} /></Field>
+          <Field label="Home / lot label"><Input value={form.label ?? ""} onChange={(e) => set({ label: e.target.value })} /></Field>
           <Field label="Owner name"><Input value={form.owner_name ?? ""} onChange={(e) => set({ owner_name: e.target.value })} /></Field>
           <Field label="Address" full><Input value={form.address ?? ""} onChange={(e) => set({ address: e.target.value })} /></Field>
           <Field label="Area (ft²)"><Input type="number" value={form.area_sqft ?? ""} onChange={(e) => set({ area_sqft: e.target.value ? Number(e.target.value) : null })} /></Field>
@@ -558,8 +549,8 @@ function ParcelDialog({ communityId, parcel, onSaved }: { communityId: string; p
             <Select value={form.verification} onValueChange={(v) => set({ verification: v as Verification })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="verified">Verified</SelectItem>
-                <SelectItem value="unverified">Unverified</SelectItem>
+                <SelectItem value="verified">Confirmed</SelectItem>
+                <SelectItem value="unverified">Needs review</SelectItem>
                 <SelectItem value="disputed">Disputed</SelectItem>
               </SelectContent>
             </Select>
@@ -649,8 +640,8 @@ function SegmentPanel({
             <Select value={verification} onValueChange={(v) => setVerification(v as Verification)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="verified">Verified</SelectItem>
-                <SelectItem value="unverified">Unverified</SelectItem>
+                <SelectItem value="verified">Confirmed</SelectItem>
+                <SelectItem value="unverified">Needs review</SelectItem>
                 <SelectItem value="disputed">Disputed</SelectItem>
               </SelectContent>
             </Select>
