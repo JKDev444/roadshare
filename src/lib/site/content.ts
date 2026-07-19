@@ -67,7 +67,7 @@ export const PRODUCTS: Product[] = [
       { title: "Provenance on every fact", body: "Source, confidence, verification status, and change history." },
       { title: "HOA & non-HOA", body: "Supports private-road groups and formal associations alike." },
     ],
-    status: "planned",
+    status: "live",
   },
   {
     slug: "document-intelligence",
@@ -81,7 +81,7 @@ export const PRODUCTS: Product[] = [
       { title: "Missing-document detection", body: "Flags referenced exhibits and amendments that aren't uploaded." },
       { title: "Verified vs. extracted", body: "AI output stays separate from human-verified facts." },
     ],
-    status: "planned",
+    status: "live",
   },
   {
     slug: "ask-my-community",
@@ -95,7 +95,7 @@ export const PRODUCTS: Product[] = [
       { title: "Risk routing", body: "Sensitive topics route to professional review, not false certainty." },
       { title: "Community isolation", body: "Each community's data stays walled off from others." },
     ],
-    status: "planned",
+    status: "live",
   },
   {
     slug: "community-pulse",
@@ -109,7 +109,7 @@ export const PRODUCTS: Product[] = [
       { title: "Consensus & concerns", body: "Support, participation, top concerns, and change over time." },
       { title: "Privacy by design", body: "No troublemaker labels, no protected-characteristic inference." },
     ],
-    status: "planned",
+    status: "live",
   },
   {
     slug: "decision-rooms",
@@ -123,7 +123,7 @@ export const PRODUCTS: Product[] = [
       { title: "Full audit trail", body: "Who changed what, when, and why — never overwritten." },
       { title: "Versioned explanations", body: "A permanent record for future boards and buyers." },
     ],
-    status: "planned",
+    status: "live",
   },
   {
     slug: "reports",
@@ -137,7 +137,7 @@ export const PRODUCTS: Product[] = [
       { title: "Locked & versioned", body: "Reports can be replaced without losing history." },
       { title: "Shareable packages", body: "Private or public explanation links." },
     ],
-    status: "planned",
+    status: "live",
   },
   {
     slug: "community-lookup",
