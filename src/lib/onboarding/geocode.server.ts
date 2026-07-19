@@ -284,7 +284,7 @@ export async function suggestAddressesUnified(
   // Census fallback — coords come back directly, so callers can skip retrieve.
   const census = await searchWithCensus(query);
   return census.map((c) => ({
-    label: c.label,
+    label: toTitleCase(c.label),
     city: c.city,
     state: c.state,
     postcode: c.postcode,
@@ -293,3 +293,27 @@ export async function suggestAddressesUnified(
     source: "census" as const,
   }));
 }
+
+// Census returns everything in ALL CAPS. Title-case for a friendlier UI.
+function toTitleCase(input: string): string {
+  return input
+    .toLowerCase()
+    .split(/(\s+|,)/)
+    .map((tok) => {
+      if (/^\s+$/.test(tok) || tok === ",") return tok;
+      // Keep 2-letter state codes uppercase (e.g. "wa" -> "WA").
+      if (/^[a-z]{2}$/.test(tok) && US_STATES.has(tok.toUpperCase())) return tok.toUpperCase();
+      // Numeric tokens (house #, ZIP) stay as-is.
+      if (/^\d+(-\d+)?$/.test(tok)) return tok;
+      // Directional suffixes like NW/SE stay uppercase.
+      if (/^(n|s|e|w|nw|ne|sw|se)$/i.test(tok)) return tok.toUpperCase();
+      return tok.charAt(0).toUpperCase() + tok.slice(1);
+    })
+    .join("");
+}
+
+const US_STATES = new Set([
+  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME",
+  "MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA",
+  "RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY","DC",
+]);
