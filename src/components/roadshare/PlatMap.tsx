@@ -42,7 +42,7 @@ export function PlatMap({
             Cedar Hollow
           </span>
           <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            Plat · 14 lots
+            Neighborhood map · 14 homes
           </span>
         </div>
         <div className="hidden items-center gap-3 text-[11px] text-muted-foreground sm:flex">
@@ -50,7 +50,7 @@ export function PlatMap({
             <span className="h-2.5 w-2.5 rounded-[3px] bg-gold" /> You
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-[3px] bg-selected" /> In group
+            <span className="h-2.5 w-2.5 rounded-[3px] bg-selected" /> Sharing the road
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-[3px] border border-border bg-card" />

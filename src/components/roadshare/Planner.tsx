@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, MapPin, Search, X } from "lucide-react";
+import { Check, Home, MapPin, Route as RouteIcon, Search, Sparkles, X } from "lucide-react";
 
 import { PlatMap } from "@/components/roadshare/PlatMap";
 import { ResultsPanel } from "@/components/roadshare/ResultsPanel";
@@ -16,19 +16,21 @@ function Section({
   title,
   hint,
   done,
+  icon: Icon,
   children,
 }: {
   step: number;
   title: string;
   hint?: string;
   done?: boolean;
+  icon?: React.ComponentType<{ className?: string }>;
   children: React.ReactNode;
 }) {
   return (
     <section
       className={cn(
-        "rounded-2xl border bg-card p-4 shadow-sm transition-colors",
-        done ? "border-selected/40" : "border-border",
+        "rounded-2xl border bg-card p-4 shadow-sm transition-all",
+        done ? "border-selected/40 bg-gradient-to-br from-selected/5 to-transparent" : "border-border hover:border-primary/30",
       )}
     >
       <div className="mb-3 flex items-center gap-2.5">
@@ -38,10 +40,13 @@ function Section({
             done ? "bg-selected text-selected-foreground" : "bg-primary text-primary-foreground",
           )}
         >
-          {done ? <Check className="h-4 w-4" /> : step}
+          {done ? <Check className="h-4 w-4" /> : Icon ? <Icon className="h-3.5 w-3.5" /> : step}
         </span>
         <div className="min-w-0">
-          <h2 className="font-display text-sm font-semibold tracking-tight">{title}</h2>
+          <h2 className="font-display text-sm font-semibold tracking-tight">
+            <span className="mr-1.5 font-mono text-[10px] text-muted-foreground">Step {step}</span>
+            {title}
+          </h2>
           {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
         </div>
       </div>
@@ -51,9 +56,9 @@ function Section({
 }
 
 const METHODS: { id: Methodology; label: string }[] = [
-  { id: "distance", label: "Distance" },
-  { id: "frontage", label: "Frontage" },
-  { id: "equal", label: "Equal / lot" },
+  { id: "distance", label: "By distance" },
+  { id: "frontage", label: "By frontage" },
+  { id: "equal", label: "Split evenly" },
 ];
 
 export function Planner() {
@@ -104,8 +109,8 @@ export function Planner() {
   const pctValid = Math.abs(pctTotal - 100) < 0.001;
 
   const steps = [
-    { label: "Property", done: !!you },
-    { label: "Neighborhood", done: selected.length > 0 },
+    { label: "Your home", done: !!you },
+    { label: "Neighbors", done: selected.length > 0 },
     { label: "Entrances", done: entrances.length > 0 },
     { label: "Surface", done: pctValid },
   ];
@@ -152,13 +157,13 @@ export function Planner() {
             onToggleEntrance={toggleEntrance}
           />
 
-          <Section step={1} title="Find your property" hint="Search an address in Cedar Hollow" done={!!you}>
+          <Section step={1} icon={Home} title="Which home is yours?" hint="Search an address in Cedar Hollow — the map highlights it in gold." done={!!you}>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="e.g. 101 Cedar Hollow Lane"
+                placeholder="Try 101 Cedar Hollow Lane"
                 className="pl-9"
               />
               {matches.length > 0 && query !== you && (
@@ -182,34 +187,36 @@ export function Planner() {
               <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-gold/15 px-3 py-2 text-xs">
                 <MapPin className="h-3.5 w-3.5 text-gold" />
                 <span className="font-medium text-foreground">{query}</span>
-                <span className="text-muted-foreground">is your property</span>
+                <span className="text-muted-foreground">is your home</span>
               </div>
             )}
           </Section>
 
           <Section
             step={2}
-            title="Select the neighborhood"
-            hint="Tap lots on the map to add them to the group"
+            icon={RouteIcon}
+            title="Add your neighbors"
+            hint="Tap homes on the map to add them to the group that shares the road."
             done={selected.length > 0}
           >
             <div className="flex flex-wrap items-center gap-2">
               <Button size="sm" variant="outline" onClick={() => setSelected(PARCELS.map((p) => p.id))}>
-                Select all
+                Add all homes
               </Button>
               <Button size="sm" variant="outline" onClick={() => setSelected(you ? [you] : [])}>
                 <X className="mr-1 h-3.5 w-3.5" /> Clear
               </Button>
               <span className="ml-auto rounded-full bg-selected/15 px-2.5 py-1 font-mono text-xs font-semibold text-foreground">
-                {selected.length}/{PARCELS.length} lots
+                {selected.length}/{PARCELS.length} homes
               </span>
             </div>
           </Section>
 
           <Section
             step={3}
-            title="Pin the entrances"
-            hint="Where the private road meets a public road"
+            icon={MapPin}
+            title="Where does your road connect?"
+            hint="Tap each spot where your private road meets a public road."
             done={entrances.length > 0}
           >
             <div className="flex flex-wrap gap-2">
@@ -240,8 +247,9 @@ export function Planner() {
 
           <Section
             step={4}
-            title="Road surface & cost"
-            hint="Set the surface mix, unit prices, width and horizon"
+            icon={Sparkles}
+            title="What's the road made of?"
+            hint="Set the surface mix (must total 100%), the road width, and how many years to spread the cost."
             done={pctValid}
           >
             <div className="space-y-3">
