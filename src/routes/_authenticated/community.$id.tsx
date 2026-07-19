@@ -405,7 +405,7 @@ function PropertiesTab({ communityId, parcels, loading }: { communityId: string;
   };
   const del = useMutation({
     mutationFn: (p: Parcel) => deleteParcel(p.id, communityId, p.label),
-    onSuccess: () => { invalidate(); toast.success("Parcel removed"); },
+    onSuccess: () => { invalidate(); toast.success("Home removed"); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -507,7 +507,7 @@ function ParcelDialog({ communityId, parcel, onSaved }: { communityId: string; p
       if (parcel) await updateParcel(parcel.id, communityId, payload);
       else await createParcel(communityId, payload);
     },
-    onSuccess: () => { onSaved(); toast.success(parcel ? "Parcel updated" : "Parcel added"); setOpen(false); },
+    onSuccess: () => { onSaved(); toast.success(parcel ? "Home updated" : "Home added"); setOpen(false); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -521,15 +521,15 @@ function ParcelDialog({ communityId, parcel, onSaved }: { communityId: string; p
             <ClipboardList className="h-4 w-4" />
           </Button>
         ) : (
-          <Button><Plus className="h-4 w-4" /> Add parcel</Button>
+          <Button><Plus className="h-4 w-4" /> Add home</Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{parcel ? `Edit parcel ${parcel.label}` : "Add parcel"}</DialogTitle>
+          <DialogTitle>{parcel ? `Edit home ${parcel.label}` : "Add home"}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-2 sm:grid-cols-2">
-          <Field label="Lot / label"><Input value={form.label ?? ""} onChange={(e) => set({ label: e.target.value })} /></Field>
+          <Field label="Home / lot label"><Input value={form.label ?? ""} onChange={(e) => set({ label: e.target.value })} /></Field>
           <Field label="Owner name"><Input value={form.owner_name ?? ""} onChange={(e) => set({ owner_name: e.target.value })} /></Field>
           <Field label="Address" full><Input value={form.address ?? ""} onChange={(e) => set({ address: e.target.value })} /></Field>
           <Field label="Area (ft²)"><Input type="number" value={form.area_sqft ?? ""} onChange={(e) => set({ area_sqft: e.target.value ? Number(e.target.value) : null })} /></Field>
@@ -549,8 +549,8 @@ function ParcelDialog({ communityId, parcel, onSaved }: { communityId: string; p
             <Select value={form.verification} onValueChange={(v) => set({ verification: v as Verification })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="verified">Verified</SelectItem>
-                <SelectItem value="unverified">Unverified</SelectItem>
+                <SelectItem value="verified">Confirmed</SelectItem>
+                <SelectItem value="unverified">Needs review</SelectItem>
                 <SelectItem value="disputed">Disputed</SelectItem>
               </SelectContent>
             </Select>
