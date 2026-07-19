@@ -1,9 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { GeocodeResult, SuggestHit } from "./geocode.server";
 
 export const geocodeAddress = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((data: { query: string; state?: string }) => ({
     query: String(data.query ?? "").trim(),
     state: data.state ? String(data.state).trim() : undefined,
@@ -15,7 +13,6 @@ export const geocodeAddress = createServerFn({ method: "POST" })
   });
 
 export const searchAddressSuggestions = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((data: { query: string }) => ({
     query: String(data.query ?? "").trim(),
   }))
@@ -27,7 +24,6 @@ export const searchAddressSuggestions = createServerFn({ method: "POST" })
 
 /** Address autocomplete. Mapbox Search Box first, US Census fallback. */
 export const suggestAddresses = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((data: { query: string; sessionToken: string }) => ({
     query: String(data.query ?? "").trim(),
     sessionToken: String(data.sessionToken ?? "").trim(),
@@ -40,7 +36,6 @@ export const suggestAddresses = createServerFn({ method: "POST" })
 
 /** Mapbox Search Box: retrieve final coordinates for a picked suggestion. */
 export const retrieveAddress = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((data: { mapboxId: string; sessionToken: string }) => ({
     mapboxId: String(data.mapboxId ?? "").trim(),
     sessionToken: String(data.sessionToken ?? "").trim(),
