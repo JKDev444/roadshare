@@ -48,9 +48,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ConfidenceBadge, VerificationBadge } from "@/components/community/badges";
 import { CommunityMapEditor } from "@/components/community/CommunityMapEditor";
-import { CommunityHomeTab } from "@/components/community/CommunityHomeTab";
 import { MyRoadTab } from "@/components/community/MyRoadTab";
 import { Confetti } from "@/components/onboarding/Confetti";
 import {
@@ -421,15 +419,13 @@ function PropertiesTab({ communityId, parcels, loading }: { communityId: string;
             <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
               <th className="px-4 py-3 font-semibold">Lot</th>
               <th className="px-4 py-3 font-semibold">Owner</th>
-              <th className="px-4 py-3 font-semibold">Area / frontage</th>
-              <th className="px-4 py-3 font-semibold">Source</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
+              <th className="px-4 py-3 font-semibold">Road frontage</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
+              <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
             ) : parcels.map((p) => (
               <tr key={p.id} className="border-b border-border/60 last:border-0 hover:bg-accent/30">
                 <td className="px-4 py-3 font-semibold">{p.label}</td>
@@ -438,15 +434,7 @@ function PropertiesTab({ communityId, parcels, loading }: { communityId: string;
                   <div className="text-xs text-muted-foreground">{p.address ?? ""}</div>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
-                  {p.area_sqft ? `${Number(p.area_sqft).toLocaleString()} ft²` : "—"}
-                  {p.frontage_ft ? ` · ${p.frontage_ft} ft front` : ""}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">{p.source ?? "—"}</td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1.5">
-                    <VerificationBadge value={p.verification} />
-                    <ConfidenceBadge value={p.confidence} />
-                  </div>
+                  {p.frontage_ft ? `${Number(p.frontage_ft).toLocaleString()} ft` : "—"}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-1">
@@ -475,10 +463,9 @@ function ParcelDialog({ communityId, parcel, onSaved }: { communityId: string; p
       parcel
         ? {
             label: parcel.label, owner_name: parcel.owner_name ?? "", address: parcel.address ?? "",
-            area_sqft: parcel.area_sqft, frontage_ft: parcel.frontage_ft, source: parcel.source ?? "",
-            confidence: parcel.confidence, verification: parcel.verification, effective_date: parcel.effective_date,
+            frontage_ft: parcel.frontage_ft,
           }
-        : { confidence: "medium", verification: "unverified" },
+        : {},
     );
     setOpen(true);
   }
@@ -487,7 +474,6 @@ function ParcelDialog({ communityId, parcel, onSaved }: { communityId: string; p
     mutationFn: async () => {
       const payload: ParcelInput = {
         ...form,
-        area_sqft: form.area_sqft ? Number(form.area_sqft) : null,
         frontage_ft: form.frontage_ft ? Number(form.frontage_ft) : null,
       };
       if (parcel) await updateParcel(parcel.id, communityId, payload);
@@ -515,33 +501,12 @@ function ParcelDialog({ communityId, parcel, onSaved }: { communityId: string; p
           <DialogTitle>{parcel ? `Edit home ${parcel.label}` : "Add home"}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-2 sm:grid-cols-2">
-          <Field label="Home / lot label"><Input value={form.label ?? ""} onChange={(e) => set({ label: e.target.value })} /></Field>
+          <Field label="Home label"><Input value={form.label ?? ""} onChange={(e) => set({ label: e.target.value })} placeholder="e.g. Home 1 or The Smiths" /></Field>
           <Field label="Owner name"><Input value={form.owner_name ?? ""} onChange={(e) => set({ owner_name: e.target.value })} /></Field>
           <Field label="Address" full><Input value={form.address ?? ""} onChange={(e) => set({ address: e.target.value })} /></Field>
-          <Field label="Area (ft²)"><Input type="number" value={form.area_sqft ?? ""} onChange={(e) => set({ area_sqft: e.target.value ? Number(e.target.value) : null })} /></Field>
-          <Field label="Frontage (ft)"><Input type="number" value={form.frontage_ft ?? ""} onChange={(e) => set({ frontage_ft: e.target.value ? Number(e.target.value) : null })} /></Field>
-          <Field label="Source" full><Input value={form.source ?? ""} onChange={(e) => set({ source: e.target.value })} placeholder="County parcel viewer, deed, owner statement…" /></Field>
-          <Field label="Confidence">
-            <Select value={form.confidence} onValueChange={(v) => set({ confidence: v as Confidence })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-              </SelectContent>
-            </Select>
+          <Field label="Feet of road touching this home" full>
+            <Input type="number" value={form.frontage_ft ?? ""} onChange={(e) => set({ frontage_ft: e.target.value ? Number(e.target.value) : null })} placeholder="Optional — used to split cost by frontage" />
           </Field>
-          <Field label="Verification">
-            <Select value={form.verification} onValueChange={(v) => set({ verification: v as Verification })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="verified">Confirmed</SelectItem>
-                <SelectItem value="unverified">Needs review</SelectItem>
-                <SelectItem value="disputed">Disputed</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Effective date"><Input type="date" value={form.effective_date ?? ""} onChange={(e) => set({ effective_date: e.target.value || null })} /></Field>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
