@@ -1,101 +1,136 @@
 
-## Goal
+# RoadShare v3 — Simple by default
 
-Fix the confusing post-onboarding experience so a non-technical homeowner can go from "sign in" to "our shared road with a cost split, ready to send to neighbors" without hitting jargon, hidden panels, or dead ends. Then I actually walk that flow end-to-end as a first-time user who has never seen this tool and report back honestly.
+Goal: any low-tech user goes from "I have a private road" to "here's my fair share" without ever seeing a real map, sidebar tabs, or jargon. Cedar Hollow's look becomes the design language for the whole app — including the Cedar Hollow demo page itself, which stops using Mapbox so it truly mirrors the app.
 
----
-
-## 1. Easter egg = true fresh start
-
-Today `roadshare` only clears wizard flags — the old community, homes, and road stay, so onboarding isn't really fresh.
-
-- `useOnboardingResetEasterEgg` will list the user's communities and delete each one (existing `deleteCommunity` cascades to parcels, segments, documents, decisions).
-- Then clear onboarding flags and route to `/dashboard?welcome=true`.
-- Wrap it in a confirm toast ("Delete everything and restart? Yes / Cancel") so it can't fire by accident.
-
-## 2. Dashboard button label + destination
-
-"Go to Community Home" reads as a jump to "Neighbors" because the destination screen is dense.
-
-- Rename the CTA to **"Open my road"**, point at `/community/$id?tab=roads` (map + cost).
-- Delete the standalone "Community Home" tab (see §3). Old `?tab=home` links normalize to `roads`.
-
-## 3. Collapse Community Home + My Road into one simple page
-
-Today: `CommunityHomeTab` (hero + Continue Setup + 5-step checklist + 4 summary cards + Recent Activity + dashed Neighbors card) AND `MyRoadTab` (Overview / Homes & Access / Cost Sharing sub-tabs + hidden detailed map + callouts). Five sections doing overlapping jobs, plus a nested sub-nav.
-
-Replace both with **one** vertical page at `?tab=roads`:
+## The one happy path
 
 ```text
-┌─ Your shared road ─────────────────────────────┐
-│  [ big simple map: homes as dots, road line ]  │
-│  8 homes · ~1,240 ft of road                   │
-├────────────────────────────────────────────────┤
-│  Split $ [ 10,000 ] using [ Equal ▾ ]          │
-│  → Each home pays $1,250                       │
-│  [ See the breakdown ]  (expands a table)      │
-├────────────────────────────────────────────────┤
-│  Next: 2 things left                           │
-│   • Draw your road          [Draw]             │
-│   • Invite your neighbors   [Invite]           │
-└────────────────────────────────────────────────┘
+1. Create your community      →  Pick ONE of 3 big buttons
+2. We build your road picture →  SVG plat, always the same look
+3. Walk through your project  →  Guided steps, one card at a time
+4. See each home's share      →  One clear results screen
+5. Share with neighbors        →  Link + simple vote
 ```
 
-- No sub-tabs, no "hidden detailed map", no accordion of instructions.
-- Home list becomes a "See the breakdown" expander inside the cost card.
-- Recent activity and the dashed Neighbors card leave this page.
+No sidebar tabs during onboarding. Zero Mapbox in the authenticated app. Mapbox stays only on the setup screen's address autocomplete input (no visible map).
 
-## 4. Kill jargon on the Homes tab
+## 1. Create your community
 
-The list labels every home "Needs review" via `VerificationBadge` — meaningless to a homeowner.
+One screen, three equal big playful buttons:
 
-- Remove verification and confidence badges from the list view.
-- Show a single small yellow dot + tooltip "Missing address" only when `address` is empty.
-- Column headers: "Home" / "Address" / actions. Drop "Confidence".
-- Empty state: "No homes yet — pick your neighbors on the map." + one button.
+- 📄 **Upload your HOA papers** — CC&Rs / rules PDF. We read it and pull out homes, roads, cost language.
+- 📍 **Type your address** — We look up homes near you for you to review.
+- ✍️ **Add homes manually** — Paste addresses, upload a spreadsheet, or type them in.
 
-## 5. Kill jargon on Road details (the screenshot you sent)
+Each opens its own dead-simple flow. No wizard steps, no left rail, no progress dots beyond "Step 1 of 3".
 
-Users don't know what Surface, Maintenance responsibility, Source, Confidence, or "Needs review" mean.
+### CC&R upload — fix the stall
 
-- New "Road details" dialog is 3 fields only: **Name**, **Notes** (free text — replaces Surface / Source / Maintenance responsibility), and length shown read-only.
-- Remove Confidence and Verification dropdowns from the UI entirely. Existing DB columns stay (nothing to migrate); we just stop reading/writing them in the dialog.
-- Save button copy: **"Save road"** (not "Save segment" — homeowners don't call it a segment).
-- Same jargon sweep on the Home edit dialog: keep Label, Address, Frontage (with the label "Feet of road touching this property"). Drop Confidence / Verification controls.
+The attachment shows upload hanging at "Uploading documents" step 1 of 8.
 
-## 6. Simpler basemap in-app
+- Audit the doc pipeline (`src/lib/documents/classify.functions.ts` + `src/lib/onboarding/jobs.functions.ts`); today the checklist advances on optimistic client timers instead of real job progress.
+- Drive the 8-step checklist from actual job status events.
+- Per-step timeout (60s) with a visible error + per-file retry.
+- Keep the inline checklist visual — user liked it — but make it truthful.
 
-Switch the in-app map (editor + roads page) from Mapbox Streets to `mapbox://styles/mapbox/light-v11` — minimal grey basemap, thin road lines, no POI noise. Homes = solid indigo dots, road = thick teal line. Keep Streets only in onboarding lasso where the user needs to recognize their neighborhood. One `MAP_STYLE` constant in `src/lib/mapbox.ts`.
+### Address path
+- Mapbox Search Box for autocomplete only. No visible map, no lasso.
+- Result: a scrollable checklist of nearby homes the user confirms.
 
-## 7. Then I test end-to-end as a brand-new user (desktop only)
+### Manual path
+- Big textarea, "Upload .xlsx / .csv" button, downloadable template.
+- Reuses `parseParcelCsv` and `parseAddressList`.
 
-Ground rule for me: I have never used RoadShare. I don't know what a parcel, segment, frontage, or confidence score is. If a label doesn't tell me what to do, I flag it.
+## 2. The in-app "map" becomes a Cedar Hollow plat
 
-1. Trigger easter egg → confirm the account is actually wiped → land on `?welcome=true`.
-2. Onboarding: address → lasso → name → skip documents → success screen.
-3. New single-page road view loads with one obvious next step.
-4. Guided 3-step draw of the road.
-5. Confirm homes; fix one blank address and verify the yellow dot disappears.
-6. Open Road details — check the dialog only has Name + Notes.
-7. Set cost = $10,000, flip Equal / Frontage / Distance, expand the breakdown.
-8. Upload one PDF into Documents.
-9. Propose one decision.
+Delete every Mapbox map instance from the authenticated app. Build one new component `PlatCanvas`:
 
-Then I answer honestly, in a first-time-user voice: was it easy? Anything confusing or out of place? Did I get the result I wanted (a cost share I could send to neighbors)? Was it fun?
+- SVG, homes as rounded rectangles with labels, roads as thick lines, entrances as pins.
+- **Scales to any community size** (not just 200). For very large communities:
+  - Cluster homes along road segments with automatic pagination / zoom-to-region controls.
+  - "Fit all" / "Zoom to my street" / arrow-key pan.
+  - Homes render as compact dots below a density threshold, expand to labeled rectangles as you zoom in.
+  - Virtualized: only homes inside the current SVG viewBox are rendered as full nodes.
+- Auto-layout: given homes + roads, place homes along road segments deterministically. Real lat/lng stays in the DB but is only used as a layout hint; the picture is abstract.
 
-## Technical notes (skim-safe)
+## 3. Guided steps inside the community
 
-- `useOnboardingResetEasterEgg.tsx` uses a new `deleteAllCommunities()` helper in `src/lib/community/api.ts` (iterates `listCommunities()` + existing `deleteCommunity(id)`).
-- `CommunityHomeTab.tsx` deleted; `MyRoadTab` collapses from `Tabs` to a plain vertical layout; `computeCostShare` reused unchanged.
-- `community.$id.tsx`: default tab `roads`; `normalizeTab("home") → "roads"`.
-- Road details dialog and Home edit dialog: strip Confidence / Verification / Surface / Source / Maintenance form controls. Keep the underlying DB columns untouched.
-- `VerificationBadge` / `ConfidenceBadge` uses removed from list views (files stay in repo, unused).
-- `MAP_STYLE` constant read by `CommunityMapEditorImpl` and the roads-page map. `MapPickStepImpl` keeps Streets.
+Replace `MyRoadTab` / `community.$id` screen with a single-page planner styled like `/tools/cedar-hollow`:
+
+```text
+┌─────────────────────────────────────────────┐
+│  [Plat picture — always visible]            │
+├─────────────────────────────────────────────┤
+│  Step 1 · Which home is yours? →            │
+│  Step 2 · Which road needs work? →          │
+│  Step 3 · What's the project? →             │
+│  Step 4 · How should we split the cost? →   │
+│  Step 5 · Your fair share ✓                 │
+└─────────────────────────────────────────────┘
+```
+
+One card at a time, big buttons, plain language, plat updates live. Cost split methods reuse `costShare.ts`: equal / by frontage / by distance-to-entrance.
+
+## 4. Results & sharing
+
+- Big card per home: address, dollar amount, share %.
+- "Send to neighbors" — copy link or email invite.
+- Neighbor decisions collapse into a single "Vote" screen (👍/👎 + comment).
+
+## 5. Cedar Hollow demo mirrors the app
+
+`/tools/cedar-hollow` is rebuilt around the same `PlatCanvas` + guided-steps components as the in-app experience — no Mapbox, no separate design language. It becomes a preview of what the user will get inside the app, using the fictional Cedar Hollow data. Same buttons, same steps, same visual style.
+
+## 6. Cleanup — hide, don't delete
+
+Per your note, keep the code but remove from nav/routing surface:
+
+- Sidebar reduces to **Home · My road · Settings**.
+- Hidden (routes still exist, links removed everywhere): Neighbors, Documents, Decisions, Ask, Clauses, Pulse, Portfolio, Reports, Map, Project.
+- Old Mapbox-based `CommunityMapEditor*`, `GisEditor`, `MapPickStep` files remain in repo but are unreferenced.
+- Any deep-link that lands on a hidden route still works but is not linked from anywhere.
+
+## 7. Terminology sweep
+
+In-app copy: community, homes, roads, your share, your neighbors. Kill: parcel, frontage (say "feet of road in front of your house"), segment, GIS, plat, geometry, confidence, verification, provenance, needs review.
+
+## Phases
+
+**Phase A — Foundation**
+- Build `PlatCanvas` (large-scale virtualized SVG plat).
+- Fix CC&R upload pipeline (real progress + timeouts + retry).
+- New route shells: `/setup`, `/community/$id/plan`.
+
+**Phase B — New onboarding**
+- 3-button `/setup` screen.
+- Wire each path to create a community and land on `/community/$id/plan`.
+- Retire old `WelcomeWizard` steps that don't feed the 3 paths.
+
+**Phase C — New in-app experience**
+- `/community/$id/plan` with the guided step cards + always-visible plat.
+- Sidebar → 3 items.
+- Remove links to hidden routes.
+
+**Phase D — Cedar Hollow rebuild**
+- Rebuild `/tools/cedar-hollow` on top of `PlatCanvas` + shared step components. No Mapbox.
+
+**Phase E — End-to-end regression as a low-tech user**
+- Fresh account (`roadshare` easter egg).
+- Run all three paths: CC&R upload (the stalling PDF), address in Kalama WA, CSV manual entry.
+- Test on a large community fixture (500+ homes) to verify plat performance.
+- Answer the 4 audit questions after each run.
+
+## Technical notes
+
+- No DB migrations. Existing schema handles it.
+- `PlatCanvas` performance: SVG element virtualization + level-of-detail rendering; measured against a 1,000-home fixture before shipping.
+- Doc pipeline: replace optimistic client timers with real job step events from `jobs.functions.ts`; expose `current_step`, `error`, `retryable` fields.
+- Mapbox usage after this pass: address autocomplete on `/setup` only.
 
 ## Out of scope
 
-- Mobile testing this pass.
-- Real invite emails.
-- Marketing site changes.
-- Cedar Hollow demo.
-- Any DB migration — this pass is purely UI/UX + easter-egg cleanup.
+- Mobile-specific tuning (desktop first).
+- Real invite email sending (link-copy only).
+- Marketing site pages other than `/tools/cedar-hollow`.
+- DB migrations.
