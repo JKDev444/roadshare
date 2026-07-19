@@ -31,8 +31,7 @@ const PRIMARY: NavLink[] = [
   { to: "/settings", label: "Settings", icon: Settings, tint: "bg-slate-500/15 text-slate-600 dark:text-slate-400" },
 ];
 
-const SECONDARY: NavLink[] = [
-];
+// SECONDARY intentionally empty — legacy screens are hidden from primary nav.
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user } = useSession();
