@@ -18,8 +18,15 @@ import { getDashboardStats } from "@/lib/onboarding/api";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — RoadShare" }, { name: "robots", content: "noindex" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({ welcome: s.welcome === "1" || s.welcome === "true" || s.welcome === 1 || s.welcome === true ? true : undefined }),
+  head: () => ({
+    meta: [{ title: "Dashboard — RoadShare" }, { name: "robots", content: "noindex" }],
+  }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    welcome:
+      s.welcome === "1" || s.welcome === "true" || s.welcome === 1 || s.welcome === true
+        ? true
+        : undefined,
+  }),
   component: Dashboard,
 });
 
@@ -45,16 +52,19 @@ function Dashboard() {
       <div className="mx-auto max-w-4xl space-y-6">
         {/* Hero greeting */}
         <div className="rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-fun-2/5 to-fun-3/10 p-6 fun-shadow-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Home
-          </p>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Home</p>
           <h1 className="mt-1 font-display text-2xl font-bold tracking-tight sm:text-3xl">
             Welcome back{name ? `, ${name}` : ""}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {hasCommunity
-              ? <>Pick up where you left off in <span className="font-semibold text-foreground">{stats?.latestCommunity}</span>.</>
-              : "Let's get your shared road set up. It only takes a few minutes."}
+            {hasCommunity ? (
+              <>
+                Pick up where you left off in{" "}
+                <span className="font-semibold text-foreground">{stats?.latestCommunity}</span>.
+              </>
+            ) : (
+              "Let's get your shared road set up. It only takes a few minutes."
+            )}
           </p>
           <div className="mt-4">
             {hasCommunity ? (
@@ -85,9 +95,17 @@ function Dashboard() {
               <Tile
                 icon={HomeIcon}
                 tint="bg-indigo-500/12 text-indigo-600 dark:text-indigo-400"
-                title={parcelCount === 0 ? "No homes yet" : `${parcelCount} home${parcelCount === 1 ? "" : "s"}`}
+                title={
+                  parcelCount === 0
+                    ? "No homes yet"
+                    : `${parcelCount} home${parcelCount === 1 ? "" : "s"}`
+                }
                 body="Review who lives on the road and confirm the details."
-                to={{ path: "/community/$id" as const, params: { id: communityId }, search: { tab: "homes" as const } }}
+                to={{
+                  path: "/community/$id" as const,
+                  params: { id: communityId },
+                  search: { tab: "homes" as const },
+                }}
                 cta="Review Homes"
               />
               <Tile
@@ -95,13 +113,21 @@ function Dashboard() {
                 tint="bg-teal-500/12 text-teal-600 dark:text-teal-400"
                 title="Your shared road"
                 body="Trace, tweak, and confirm the road everyone shares."
-                to={{ path: "/community/$id" as const, params: { id: communityId }, search: { tab: "roads" as const } }}
+                to={{
+                  path: "/community/$id" as const,
+                  params: { id: communityId },
+                  search: { tab: "roads" as const },
+                }}
                 cta="Review My Road"
               />
               <Tile
                 icon={FileText}
                 tint="bg-violet-500/12 text-violet-600 dark:text-violet-400"
-                title={docCount === 0 ? "No documents yet" : `${docCount} document${docCount === 1 ? "" : "s"}`}
+                title={
+                  docCount === 0
+                    ? "No documents yet"
+                    : `${docCount} document${docCount === 1 ? "" : "s"}`
+                }
                 body="Keep CC&Rs, HOA rules, road agreements, and invoices in one place."
                 to={{ path: "/documents" as const }}
                 cta="Open Documents"
@@ -109,7 +135,11 @@ function Dashboard() {
               <Tile
                 icon={Vote}
                 tint="bg-rose-500/12 text-rose-600 dark:text-rose-400"
-                title={openDecisions === 0 ? "No active decisions" : `${openDecisions} decision${openDecisions === 1 ? "" : "s"} open`}
+                title={
+                  openDecisions === 0
+                    ? "No active decisions"
+                    : `${openDecisions} decision${openDecisions === 1 ? "" : "s"} open`
+                }
                 body="Start a proposal when the community needs to vote."
                 to={{ path: "/decisions" as const }}
                 cta="Open Decisions"
@@ -160,7 +190,9 @@ function Tile({
 }) {
   const link =
     to.path === "/community/$id" ? (
-      <Link to={to.path} params={to.params} search={to.search}>{cta}</Link>
+      <Link to={to.path} params={to.params} search={to.search}>
+        {cta}
+      </Link>
     ) : (
       <Link to={to.path}>{cta}</Link>
     );
@@ -176,7 +208,9 @@ function Tile({
         </div>
       </div>
       <div className="mt-3 self-end">
-        <Button asChild variant="outline" size="sm">{link}</Button>
+        <Button asChild variant="outline" size="sm">
+          {link}
+        </Button>
       </div>
     </div>
   );
