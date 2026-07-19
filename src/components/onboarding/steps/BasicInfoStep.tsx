@@ -18,10 +18,13 @@ export type BasicInfo = {
 export type SetupPath = "map" | "docs" | "manual";
 
 type Suggestion = {
-  mapboxId: string;
+  mapboxId?: string;
   label: string;
   city?: string | null;
   state?: string | null;
+  /** Present when the suggestion source (e.g. Census) already returned coords. */
+  lat?: number;
+  lng?: number;
 };
 
 /** Step 1. Basic community information. Plain language, minimal fields. */
@@ -81,6 +84,8 @@ export function BasicInfoStep({
             label: r.label,
             city: r.city,
             state: r.state,
+            lat: r.lat,
+            lng: r.lng,
           }));
           setHits(mapped);
           setOpen(mapped.length > 0);
@@ -116,18 +121,23 @@ export function BasicInfoStep({
     setState(h.state ?? "");
     setPicked(true);
     setOpen(false);
-    // Retrieve coordinates so the map opens on the exact spot.
-    try {
-      const retrieved = await retrieveFn({
-        data: { mapboxId: h.mapboxId, sessionToken: sessionTokenRef.current },
-      });
-      if (retrieved) {
-        setCoords({ lat: retrieved.lat, lng: retrieved.lng });
-        if (retrieved.city) setCity(retrieved.city);
-        if (retrieved.state) setState(retrieved.state);
+    // If the suggestion already carries coords (Census), use them directly.
+    if (h.lat != null && h.lng != null) {
+      setCoords({ lat: h.lat, lng: h.lng });
+    } else if (h.mapboxId) {
+      // Retrieve coordinates so the map opens on the exact spot.
+      try {
+        const retrieved = await retrieveFn({
+          data: { mapboxId: h.mapboxId, sessionToken: sessionTokenRef.current },
+        });
+        if (retrieved) {
+          setCoords({ lat: retrieved.lat, lng: retrieved.lng });
+          if (retrieved.city) setCity(retrieved.city);
+          if (retrieved.state) setState(retrieved.state);
+        }
+      } catch {
+        // Coords are optional — map step can still geocode as a fallback.
       }
-    } catch {
-      // Coords are optional — map step can still geocode as a fallback.
     }
     // New session token after a completed pick.
     sessionTokenRef.current =
