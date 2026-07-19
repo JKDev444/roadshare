@@ -77,16 +77,16 @@ import {
   type Verification,
 } from "@/lib/community/api";
 
-const TABS = ["home", "roads", "homes"] as const;
+const TABS = ["roads", "homes"] as const;
 type Tab = (typeof TABS)[number];
 
 // Backward compatibility for older links / bookmarks.
 function normalizeTab(v: unknown): Tab {
   if (v === "map") return "roads";
   if (v === "properties") return "homes";
-  if (v === "projects") return "home";
+  if (v === "projects" || v === "home") return "roads";
   if (typeof v === "string" && (TABS as readonly string[]).includes(v)) return v as Tab;
-  return "home";
+  return "roads";
 }
 
 export const Route = createFileRoute("/_authenticated/community/$id")({
@@ -127,15 +127,11 @@ function CommunityDetail() {
     <AppShell>
       <div className="relative mx-auto flex h-[calc(100vh-4rem)] max-w-7xl flex-col space-y-4 px-4 py-4">
         <Confetti show={celebrate} />
-        {showWelcome && tab !== "home" && (
+        {showWelcome && (
           <WelcomeBanner
             communityName={community.data?.name ?? "your community"}
             parcelCount={p.length}
             roadCount={s.length}
-            onGoHome={() => {
-              setShowWelcome(false);
-              void navigate({ search: { tab: "home" } });
-            }}
             onDismiss={() => setShowWelcome(false)}
           />
         )}
@@ -176,22 +172,10 @@ function CommunityDetail() {
 
         <Tabs value={tab} onValueChange={(v) => navigate({ search: { tab: v as Tab } })} className="flex min-h-0 flex-1 flex-col">
           <TabsList className="flex-wrap">
-            <TabsTrigger value="home"><HomeIcon className="mr-1.5 h-4 w-4" /> Home</TabsTrigger>
             <TabsTrigger value="roads"><RouteIcon className="mr-1.5 h-4 w-4" /> My Road</TabsTrigger>
             <TabsTrigger value="homes"><Users className="mr-1.5 h-4 w-4" /> Homes</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="home" className="mt-4">
-            <CommunityHomeTab
-              communityId={id}
-              community={community.data ?? null}
-              parcels={p}
-              segments={s}
-              events={events.data ?? []}
-              onGoToRoads={() => navigate({ search: { tab: "roads" } })}
-              onGoToHomes={() => navigate({ search: { tab: "homes" } })}
-            />
-          </TabsContent>
           <TabsContent value="roads" className="mt-4 flex min-h-0 flex-1 flex-col">
             <MyRoadTab
               parcels={p}
