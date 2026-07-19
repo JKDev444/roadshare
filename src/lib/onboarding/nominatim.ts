@@ -109,13 +109,12 @@ async function searchCensusAddress(query: string, signal?: AbortSignal): Promise
     const res = await fetch(url.toString(), { headers: { Accept: "application/json" }, signal });
     if (!res.ok) return [];
     const json = (await res.json()) as CensusResponse;
-    return (json.result?.addressMatches ?? [])
-      .slice(0, 6)
-      .map((match, index) => {
+    const hits: NominatimHit[] = [];
+    for (const [index, match] of (json.result?.addressMatches ?? []).slice(0, 6).entries()) {
         const lat = match.coordinates?.y;
         const lon = match.coordinates?.x;
-        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-        return {
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+        hits.push({
           place_id: -1 - index,
           display_name: match.matchedAddress ?? query,
           lat: String(lat),
@@ -125,9 +124,9 @@ async function searchCensusAddress(query: string, signal?: AbortSignal): Promise
             state: match.addressComponents?.state,
             postcode: match.addressComponents?.zip,
           },
-        } satisfies NominatimHit;
-      })
-      .filter((hit): hit is NominatimHit => hit !== null);
+        });
+    }
+    return hits;
   } catch {
     return [];
   }
