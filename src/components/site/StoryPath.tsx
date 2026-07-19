@@ -20,16 +20,14 @@ export function StoryPath({ stops }: { stops: StoryStop[] }) {
           className="absolute left-0 right-0 top-8 h-16 w-full"
           aria-hidden
         >
-          <path
-            d="M 40 30 C 260 -10, 460 70, 700 30 S 1100 -5, 1160 30"
-            fill="none"
+          <line
+            x1="40" y1="30" x2="1160" y2="30"
             stroke="var(--color-map-asphalt)"
             strokeWidth="18"
             strokeLinecap="round"
           />
-          <motion.path
-            d="M 40 30 C 260 -10, 460 70, 700 30 S 1100 -5, 1160 30"
-            fill="none"
+          <motion.line
+            x1="40" y1="30" x2="1160" y2="30"
             stroke="var(--color-map-lane)"
             strokeWidth="2.5"
             strokeDasharray="14 14"
