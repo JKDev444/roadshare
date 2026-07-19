@@ -62,7 +62,15 @@ export async function searchAddresses(
     signal: opts.signal,
   });
   if (!res.ok) return [];
-  const data = (await res.json()) as NominatimHit[];
+  const raw = (await res.json()) as NominatimHit[];
+  // Nominatim occasionally returns duplicate place_ids across pages; dedupe
+  // so React list keys stay unique in the autocomplete dropdown.
+  const seen = new Set<number>();
+  const data = raw.filter((h) => {
+    if (seen.has(h.place_id)) return false;
+    seen.add(h.place_id);
+    return true;
+  });
   if (cache.size >= MAX_CACHE) {
     const first = cache.keys().next().value;
     if (first) cache.delete(first);
