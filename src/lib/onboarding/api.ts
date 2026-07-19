@@ -251,6 +251,7 @@ export type DashboardStats = {
   documents: number;
   openDecisions: number;
   latestCommunity: string | null;
+  latestCommunityId: string | null;
 };
 
 export async function getDashboardStats(): Promise<DashboardStats> {
@@ -275,12 +276,12 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     (async () => {
       const { data, error } = await supabase
         .from("communities")
-        .select("name")
+        .select("id, name")
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (error) throw new Error(error.message);
-      return data?.name ?? null;
+      return data ?? null;
     })(),
   ]);
 
@@ -289,7 +290,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     parcels,
     documents: docs,
     openDecisions,
-    latestCommunity: latest,
+    latestCommunity: latest?.name ?? null,
+    latestCommunityId: latest?.id ?? null,
   };
 }
 
