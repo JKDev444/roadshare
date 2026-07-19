@@ -69,8 +69,8 @@ function Dashboard() {
           <div className="mt-4">
             {hasCommunity ? (
               <Button asChild size="lg">
-                <Link to="/community/$id" params={{ id: communityId }} search={{ tab: "home" }}>
-                  Go to Community Home
+                <Link to="/community/$id" params={{ id: communityId }} search={{ tab: "roads" }}>
+                  Open my road
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -169,7 +169,7 @@ function Dashboard() {
 }
 
 type TileTo =
-  | { path: "/community/$id"; params: { id: string }; search: { tab: "home" | "roads" | "homes" } }
+  | { path: "/community/$id"; params: { id: string }; search: { tab: "roads" | "homes" } }
   | { path: "/documents" }
   | { path: "/decisions" };
 
