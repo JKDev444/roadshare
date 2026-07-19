@@ -318,7 +318,9 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
               <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">
                 {step === "welcome"
                   ? "Welcome — this takes about 2 minutes"
-                  : step === "review"
+                  : step === "basic"
+                    ? "Takes about 2 minutes"
+                    : step === "review"
                     ? "Review your workspace"
                     : step === "mappick"
                       ? "Pick your neighbors"
