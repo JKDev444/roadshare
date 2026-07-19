@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import { Layers, Map as MapIcon, Route, Satellite, Pencil, Check, X } from "lucide-react";
+import { Home, Route, Satellite, Pencil, X, Undo2, Check, Info } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getMapboxToken } from "@/lib/mapbox";
 import {
+  haversineFt,
   parcelToFeature,
   segmentToFeature,
   type GeoJSONLineString,
@@ -39,7 +40,9 @@ export function CommunityMapEditor({
   const [showParcels, setShowParcels] = useState(true);
   const [showRoads, setShowRoads] = useState(true);
   const [satellite, setSatellite] = useState(false);
-  const [drawing, setDrawing] = useState(false);
+  const [drawStep, setDrawStep] = useState<"idle" | "prepare" | "draw" | "confirm">("idle");
+  const [draftCoords, setDraftCoords] = useState<[number, number][]>([]);
+  const [pendingGeometry, setPendingGeometry] = useState<GeoJSONLineString | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const streets = "mapbox://styles/mapbox/streets-v12";
@@ -193,17 +196,34 @@ export function CommunityMapEditor({
     const onCreate = (e: mapboxgl.MapboxEvent) => {
       const feat = (e as { features?: GeoJSON.Feature[] }).features?.[0];
       if (!feat || feat.geometry.type !== "LineString") return;
-      drawRef.current?.deleteAll();
-      onCreateSegment(feat.geometry as GeoJSONLineString);
-      setDrawing(false);
+      const geom = feat.geometry as GeoJSONLineString;
+      if (geom.coordinates.length < 2) {
+        drawRef.current?.deleteAll();
+        setDrawStep("prepare");
+        setDraftCoords([]);
+        return;
+      }
+      setPendingGeometry(geom);
+      setDraftCoords(geom.coordinates as [number, number][]);
+      setDrawStep("confirm");
     };
     map.on("draw.create", onCreate);
+
+    const onRender = () => {
+      const fc = drawRef.current?.getAll();
+      const feat = fc?.features?.[0];
+      if (feat && feat.geometry.type === "LineString") {
+        setDraftCoords(feat.geometry.coordinates as [number, number][]);
+      }
+    };
+    map.on("draw.render", onRender);
 
     return () => {
       map.off("click", "roads", onClickRoad);
       map.off("mouseenter", "roads", onMouseEnter);
       map.off("mouseleave", "roads", onMouseLeave);
       map.off("draw.create", onCreate);
+      map.off("draw.render", onRender);
       map.off("style.load", setup);
     };
   }, [parcels, segments, selectedSegmentId, onSelectSegment, onCreateSegment]);
@@ -272,15 +292,66 @@ export function CommunityMapEditor({
     }
   }, [showParcels, showRoads]);
 
-  function startDrawing() {
-    setDrawing(true);
+  function prepareDrawing() {
+    setDrawStep("prepare");
+  }
+  function beginDrawing() {
+    setDrawStep("draw");
+    setDraftCoords([]);
+    drawRef.current?.deleteAll();
     drawRef.current?.changeMode("draw_line_string");
   }
+  function undoLastPoint() {
+    const draw = drawRef.current;
+    if (!draw) return;
+    const fc = draw.getAll();
+    const feat = fc?.features?.[0];
+    if (!feat || feat.geometry.type !== "LineString") return;
+    const coords = [...(feat.geometry.coordinates as [number, number][])];
+    if (coords.length <= 1) return;
+    coords.pop();
+    const id = String(feat.id);
+    draw.delete(id);
+    draw.add({
+      ...feat,
+      geometry: { ...feat.geometry, coordinates: coords },
+    } as GeoJSON.Feature);
+    draw.changeMode("draw_line_string", { featureId: id, from: coords[coords.length - 1] });
+    setDraftCoords(coords);
+  }
+  function finishDrawing() {
+    const draw = drawRef.current;
+    if (!draw) return;
+    const fc = draw.getAll();
+    const feat = fc?.features?.[0];
+    if (!feat || feat.geometry.type !== "LineString") return;
+    if (feat.geometry.coordinates.length < 2) return;
+    draw.changeMode("simple_select");
+  }
   function cancelDrawing() {
-    setDrawing(false);
     drawRef.current?.deleteAll();
     drawRef.current?.changeMode("simple_select");
+    setDraftCoords([]);
+    setPendingGeometry(null);
+    setDrawStep("idle");
   }
+  function saveDrawnRoad() {
+    if (!pendingGeometry) return;
+    onCreateSegment(pendingGeometry);
+    drawRef.current?.deleteAll();
+    setDraftCoords([]);
+    setPendingGeometry(null);
+    setDrawStep("idle");
+  }
+  function redrawDrawnRoad() {
+    setPendingGeometry(null);
+    setDraftCoords([]);
+    drawRef.current?.deleteAll();
+    beginDrawing();
+  }
+
+  const liveLengthFt = computeLineLengthFt(draftCoords);
+  const parcelsCount = parcels.length;
 
   return (
     <div className="relative flex h-full min-h-[520px] overflow-hidden rounded-2xl border border-border bg-muted">
@@ -294,29 +365,98 @@ export function CommunityMapEditor({
       <div className="absolute left-3 top-3 z-10 flex flex-col gap-2">
         <div className="rounded-xl border border-border bg-card/95 p-2 shadow-sm backdrop-blur fun-shadow-sm">
           <div className="flex flex-col gap-1.5">
-            <ToggleBtn active={showParcels} onClick={() => setShowParcels((v) => !v)} icon={MapIcon} label="Parcels" />
+            <ToggleBtn active={showParcels} onClick={() => setShowParcels((v) => !v)} icon={Home} label="Homes" />
             <ToggleBtn active={showRoads} onClick={() => setShowRoads((v) => !v)} icon={Route} label="Roads" />
             <ToggleBtn active={satellite} onClick={() => setSatellite((v) => !v)} icon={Satellite} label="Satellite" />
           </div>
         </div>
       </div>
 
-      <div className="absolute right-3 top-3 z-10">
-        <div className="rounded-xl border border-border bg-card/95 p-2 shadow-sm backdrop-blur fun-shadow-sm">
-          {!drawing ? (
-            <Button size="sm" variant="outline" onClick={startDrawing}>
+      {drawStep === "idle" && (
+        <div className="absolute right-3 top-3 z-10">
+          <div className="rounded-xl border border-border bg-card/95 p-2 shadow-sm backdrop-blur fun-shadow-sm">
+            <Button size="sm" variant="outline" onClick={prepareDrawing}>
               <Pencil className="mr-1.5 h-3.5 w-3.5" /> Draw road
             </Button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-primary">Click points, then finish</span>
-              <Button size="sm" variant="ghost" onClick={cancelDrawing}>
-                <X className="h-3.5 w-3.5" />
+          </div>
+        </div>
+      )}
+
+      {drawStep === "prepare" && (
+        <div className="absolute inset-x-3 top-3 z-10 sm:inset-x-auto sm:right-3 sm:max-w-sm">
+          <div className="rounded-2xl border border-border bg-card/95 p-4 shadow-lg backdrop-blur fun-shadow-md">
+            <div className="flex items-start gap-2">
+              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-fun-1/20 text-fun-1-foreground">
+                <Info className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-sm font-semibold">Trace the shared road</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Click along the road on the map — each click drops a point. Finish when the line covers the whole shared stretch. You can undo or redraw at any time.
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 flex justify-end gap-2">
+              <Button size="sm" variant="ghost" onClick={cancelDrawing}>Cancel</Button>
+              <Button size="sm" onClick={beginDrawing}>
+                <Pencil className="mr-1.5 h-3.5 w-3.5" /> Start drawing
               </Button>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {drawStep === "draw" && (
+        <div className="absolute inset-x-3 top-3 z-10 sm:inset-x-auto sm:right-3 sm:max-w-sm">
+          <div className="rounded-2xl border border-primary/40 bg-card/95 p-3 shadow-lg backdrop-blur fun-shadow-md">
+            <p className="text-xs font-semibold text-primary">
+              {draftCoords.length < 2
+                ? "Click on the map to add points"
+                : `${draftCoords.length} points · ~${formatFt(liveLengthFt)}`}
+            </p>
+            <p className="text-[11px] text-muted-foreground">Double-click the last point, or press Finish, when you&apos;re done.</p>
+            <div className="mt-3 flex flex-wrap justify-end gap-2">
+              <Button size="sm" variant="ghost" onClick={cancelDrawing}>
+                <X className="mr-1 h-3.5 w-3.5" /> Cancel
+              </Button>
+              <Button size="sm" variant="outline" onClick={undoLastPoint} disabled={draftCoords.length < 2}>
+                <Undo2 className="mr-1 h-3.5 w-3.5" /> Undo last point
+              </Button>
+              <Button size="sm" onClick={finishDrawing} disabled={draftCoords.length < 2}>
+                <Check className="mr-1 h-3.5 w-3.5" /> Finish road
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {drawStep === "confirm" && pendingGeometry && (
+        <div className="absolute inset-x-3 top-3 z-10 sm:inset-x-auto sm:right-3 sm:max-w-sm">
+          <div className="rounded-2xl border border-border bg-card/95 p-4 shadow-lg backdrop-blur fun-shadow-md">
+            <p className="font-display text-sm font-semibold">Save this road?</p>
+            <dl className="mt-2 space-y-1 text-xs">
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Approximate length</dt>
+                <dd className="font-semibold">{formatFt(liveLengthFt)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Homes on the map</dt>
+                <dd className="font-semibold">{parcelsCount} {parcelsCount === 1 ? "home" : "homes"}</dd>
+              </div>
+            </dl>
+            <p className="mt-2 text-[11px] text-muted-foreground">You can edit the name and other details after saving.</p>
+            <div className="mt-3 flex flex-wrap justify-end gap-2">
+              <Button size="sm" variant="ghost" onClick={cancelDrawing}>Cancel</Button>
+              <Button size="sm" variant="outline" onClick={redrawDrawnRoad}>
+                <Pencil className="mr-1 h-3.5 w-3.5" /> Redraw
+              </Button>
+              <Button size="sm" onClick={saveDrawnRoad}>
+                <Check className="mr-1 h-3.5 w-3.5" /> Save road
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -329,7 +469,7 @@ function ToggleBtn({
 }: {
   active: boolean;
   onClick: () => void;
-  icon: typeof MapIcon;
+  icon: typeof Home;
   label: string;
 }) {
   return (
@@ -344,4 +484,18 @@ function ToggleBtn({
       {label}
     </button>
   );
+}
+
+function computeLineLengthFt(coords: [number, number][]): number {
+  let total = 0;
+  for (let i = 1; i < coords.length; i++) {
+    total += haversineFt(coords[i - 1], coords[i]);
+  }
+  return total;
+}
+
+function formatFt(ft: number): string {
+  if (!Number.isFinite(ft) || ft <= 0) return "0 ft";
+  if (ft >= 5280) return `${(ft / 5280).toFixed(2)} mi`;
+  return `${Math.round(ft)} ft`;
 }
