@@ -1,117 +1,38 @@
-# Plan: Nationwide address search, non-tech sidebar, real neighbor invites, marketing polish
+# Enable external hosting (Vercel) without copying LOVABLE_API_KEY
 
-Big picture: fix the four things that made Kalama fail and made the app feel confusing to a non-tech user, and finish the marketing site so it reads professional + fun edge to edge.
+## Why not just copy it
+`LOVABLE_API_KEY` is a Lovable-managed secret. Its value is never displayed in the UI, never returned by any tool, and rotating it does not reveal the new value either. There is no safe "one-time copy" path we can build without breaking that guarantee — so any Vercel deploy has to authenticate to AI/geocoding **without** that specific key.
 
-## 1. Airbnb-quality address search (fixes Kalama and every other town)
+## Chosen approach
+Give the server functions a fallback so they use a user-supplied key when running outside Lovable, and keep using `LOVABLE_API_KEY` transparently when running inside Lovable.
 
-**Root cause:** we're using OpenStreetMap's Nominatim as the primary geocoder. It rate-limits, has weak coverage in small towns, and doesn't return per-keystroke suggestions the way big-app search does. That's why "787 Five Peaks Dr, Kalama, WA" never appeared.
+Two secrets you already have full control over on Vercel:
+- `MAPBOX_API_KEY` — the Mapbox `sk.` token you already added to Lovable. Copy the same value into Vercel env vars.
+- AI: add a direct provider key on Vercel (e.g. `OPENAI_API_KEY` or `GEMINI_API_KEY` — whichever provider we're actually calling). This replaces `LOVABLE_API_KEY` only when running on Vercel.
 
-**Fix:** switch to **Mapbox Search Box API** (the same tech class that Airbnb/Zillow use) as primary, keep Nominatim as free fallback only.
+Supabase env vars (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and the `VITE_` ones) also need to be set on Vercel — those values *are* visible in Lovable's Cloud settings, so they're straightforward to copy.
 
-- New server function `searchAddress(query, sessionToken)` calls Mapbox Search Box `/suggest` and `/retrieve` — session tokens make it billed as one search regardless of keystrokes (free tier: 100k/mo).
-- Client-side debounced (150ms) hook `useAddressSuggest` returns suggestions as user types.
-- Dropdown renders full formatted address, city, state — user clicks one → we already have `{lng, lat, city, state, zip, address}` — no re-geocoding.
-- Pass coordinates directly into the Map step so it opens centered on the exact house even in rural areas with no OSM buildings.
-- Rural fallback: when 0 building footprints exist within 300m, switch the map to "Drop pins for each home" mode with a friendly one-liner: "We couldn't find home outlines here — tap the map to add homes yourself."
+## Steps
 
-## 2. Sidebar redesign for a non-tech homeowner
+1. **Audit which server functions actually need `LOVABLE_API_KEY`.**
+   Grep `src/` for `LOVABLE_API_KEY` and list every call site (geocoding via Mapbox proxy? AI Gateway chat? embeddings?). This determines whether we need a provider key at all, or only Mapbox + Supabase.
 
-Current: 11 items, gray icons, jargon (Clause Graph, Community Pulse).
+2. **For each Lovable AI Gateway call site**, add a small helper `getAiClient()` that:
+   - If `LOVABLE_API_KEY` is set → use Lovable AI Gateway (current behavior).
+   - Else if `OPENAI_API_KEY` (or the relevant provider key) is set → call the provider directly with the AI SDK.
+   - Else throw a clear error naming which env var is missing.
 
-New primary nav (5 items, colored icons, plain English):
-- **Home** (indigo house icon) — dashboard
-- **My Road** (teal map icon) — map, roads, homes
-- **Neighbors** (amber people icon) — invites + Ask + Pulse combined
-- **Documents** (violet doc icon) — was Documents + Clause Graph
-- **Decisions** (rose gavel icon) — was Decision Rooms + votes
+3. **For Mapbox calls**, confirm they already read `process.env.MAPBOX_API_KEY` directly (they should — that's a user-managed secret, not the Lovable key). Fix any that hardcode a different name.
 
-Under a collapsible **More** group: Reports, Settings.
+4. **Write a `VERCEL_ENV.md`** at the repo root listing every env var Vercel needs, where to get each value, and which are optional. This is the doc you follow when setting up (or re-setting-up) the Vercel project.
 
-- Each item gets a subtle colored icon background (soft tint of the accent) — playful without being childish.
-- "Ask My Community" and "Community Pulse" are folded into the Neighbors hub, not top-level.
+5. **Verify on Vercel** by hitting `/dashboard?welcome=true` on the Vercel URL, typing "787 Five Peaks Dr, Kalama, WA" and confirming (a) suggestions appear and (b) no "Can't reach the address lookup" error. Per your standing preference, I won't call this done until that end-to-end check passes on the Vercel URL.
 
-## 3. Real neighbor system (Owner + Voters, email + magic link)
+## Technical notes
+- Files likely touched: `src/lib/onboarding/geocode.functions.ts`, `src/lib/onboarding/geocode.server.ts`, any `src/lib/ai-gateway.server.ts` helper, and a new `VERCEL_ENV.md`.
+- No schema changes, no new tables, no new secrets stored in Lovable.
+- The Lovable preview keeps working unchanged because `LOVABLE_API_KEY` is still present there and takes precedence.
 
-New concept: every community has exactly one **Owner** (creator) and any number of **Voters**.
-
-**DB (one migration):**
-- `community_members` table: `community_id`, `user_id` (nullable until they sign in), `email`, `role` ('owner' | 'voter'), `invited_at`, `joined_at`, `status`.
-- `community_invites` table: `community_id`, `email`, `token`, `expires_at`, `invited_by`.
-- RLS: owner can insert/delete members of their own community; voters can only read their own row + community metadata; nobody but owner can edit roads/homes/projects/documents.
-- `has_community_role(community_id, role)` security-definer function.
-
-**Invite flow:**
-- Owner opens Neighbors → "Invite neighbors" → paste emails (one per line, or CSV) → we send each a branded magic-link email via Lovable Emails (scaffold auth email templates in same round).
-- Recipient clicks link → signed in → auto-joined to community as Voter → lands on Neighbors page with a "Welcome" banner.
-- Owner sees a live roster: Pending / Joined, resend, revoke.
-
-**Voter permissions (enforced in RLS + UI):**
-- ✅ View community, map, docs, plan, allocations.
-- ✅ Answer surveys (Community Pulse).
-- ✅ Ask/answer in "Ask My Community".
-- ✅ Vote in Decision Rooms.
-- ❌ Cannot edit roads, homes, projects, allocations, or invite others.
-
-**Empty-state fixes:**
-- Ask/Pulse now show real value with 0 voters: "You're the only member so far. Invite your neighbors to unlock voting and surveys." with a big **Invite neighbors** CTA.
-
-## 4. Marketing site polish (all pages)
-
-Design system for the whole marketing site:
-- Straight horizontal dashed road as the recurring motif (not curved) — replace the curvy "How it works" SVG.
-- One consistent icon set (Lucide, rounded, colored fills on soft tinted circles).
-- Photography: 3–5 lifestyle photos (rural road, neighbors on porch, mailbox) from Unsplash via lovable-assets — replaces flat colored blocks.
-- No card walls: at most one card section per page.
-- Playful accents (Sparkles, small illustrations) but professional type + spacing.
-
-Per-page work:
-
-**/** (home)
-- Straighten the "How it works" road (currently curved).
-- Keep StoryPath, SecretSauce, personas, CTA.
-
-**/product**
-- Kill the "1" and "2" numbered blocks that look unfinished.
-- Replace with a 4-chapter zigzag walkthrough (Map → Split → Decide → Report).
-- Rework "What we're building next" — most of that is built. Rename to "What's already inside" and list the actual features (Ask My Community, Pulse, Decision Rooms, Clause Graph) with short plain-English blurbs.
-
-**/solutions/private-road-communities**
-- Full rebuild to match the new visual system: hero with straight road + houses, 3 pain-points, 3 outcomes, one lifestyle photo, single CTA.
-
-**/solutions/*** (other solutions pages)
-- Same treatment: hero, pains, outcomes, one photo, CTA. No card walls.
-
-**/about**
-- Warmer copy, one team/mission photo, drop redundant sections.
-
-**/methodology**
-- Keep the house-share diagram; add a straight-road version alongside; tighten copy.
-
-**/pricing**
-- Reformat plan comparison as a clean table (not stacked cards). Add one FAQ block.
-
-## 5. Verification (before I say done)
-
-- Playwright end-to-end: sign up → onboarding with Kalama address → address dropdown shows suggestions → pick one → map centers on Kalama → finish onboarding → land in community.
-- Send myself a test invite as Owner → open magic link in a second browser context → confirm Voter lands on Neighbors page and cannot edit map (RLS blocks the write).
-- Screenshot every marketing page at 1280 and 393 to confirm consistency.
-- Report back honestly against your three questions (easy for non-tech? got what they wanted? fun design?) — no "done" without evidence.
-
-## Technical section (safe to skip)
-
-- Mapbox Search Box API called from `src/lib/onboarding/geocode.functions.ts` — sk token via connector gateway, session tokens generated client-side.
-- Nominatim kept as a `try/catch` fallback if Mapbox returns 0 results (unlikely).
-- Sidebar in `src/components/AppSidebar.tsx` — colored icon tokens added to `src/styles.css` (`--nav-home`, `--nav-road`, etc.).
-- Auth emails scaffolded via `email_domain--scaffold_auth_email_templates` (magic link template branded).
-- Two migrations: `community_members` + `community_invites` with GRANTs, RLS, and `has_community_role()` security-definer.
-- New server fns: `inviteNeighbors`, `acceptInvite`, `listMembers`, `revokeInvite`.
-- `_authenticated/community.$id.*` write paths gated behind `has_community_role(id, 'owner')` on the server; UI hides edit buttons for voters.
-- Marketing pages: no data changes, pure presentation edits under `src/routes/` and `src/components/site/`.
-
-## Order of build
-
-1. Mapbox Search Box + fix Kalama (unblocks onboarding).
-2. Community members schema + invite flow + magic-link email.
-3. Sidebar redesign.
-4. Marketing polish pass across all pages.
-5. Full Playwright verification + honest Q&A report.
+## Out of scope
+- Exposing or exporting `LOVABLE_API_KEY` itself — not possible.
+- Migrating hosting off Vercel.

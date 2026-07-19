@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { runChatCompletion } from "@/lib/ai-chat.server";
 
 /** A single piece of evidence the model may cite, with a stable [n] index. */
 const EvidenceSchema = z.object({
@@ -52,8 +53,6 @@ export const askCommunity = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => InputSchema.parse(d))
   .handler(async ({ data }): Promise<QaAnswerResult> => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) return abstain("The answer engine is not configured.");
     if (data.evidence.length === 0)
       return abstain("There is no verified record to draw from yet.");
 
@@ -80,21 +79,17 @@ ${evidenceBlock}
 Question: ${data.question}`;
 
     try {
-      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: "You are a precise, evidence-first assistant. Reply with a single JSON object only, no markdown." },
-            { role: "user", content: prompt },
-          ],
-        }),
+      const result = await runChatCompletion({
+        messages: [
+          { role: "system", content: "You are a precise, evidence-first assistant. Reply with a single JSON object only, no markdown." },
+          { role: "user", content: prompt },
+        ],
       });
-      if (!res.ok) return abstain("The answer engine is temporarily unavailable.");
-      const json = await res.json();
-      const content: string = json?.choices?.[0]?.message?.content ?? "";
-      const cleaned = content.replace(/```json|```/g, "").trim();
+      if (!result.ok) {
+        if (result.reason === "unconfigured") return abstain("The answer engine is not configured.");
+        return abstain("The answer engine is temporarily unavailable.");
+      }
+      const cleaned = result.text.replace(/```json|```/g, "").trim();
       const match = cleaned.match(/\{[\s\S]*\}/);
       if (!match) return abstain("The answer engine returned no usable result.");
       const parsed = JSON.parse(match[0]);
