@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Share2, Home, Sparkles, Route as RouteIcon } from "lucide-react";
+import { Share2, Sparkles } from "lucide-react";
 
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Planner } from "@/components/roadshare/Planner";
@@ -29,18 +29,10 @@ function CedarHollow() {
     <SiteLayout>
       <div className="relative overflow-hidden border-b border-border bg-gradient-to-br from-primary/15 via-background to-gold/10">
         <div className="absolute inset-0 topo-grid opacity-30" aria-hidden />
-        <div
-          className="pointer-events-none absolute -top-24 -right-16 h-72 w-72 rounded-full bg-primary/20 blur-3xl"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute -bottom-24 -left-10 h-72 w-72 rounded-full bg-gold/20 blur-3xl"
-          aria-hidden
-        />
         <div className="relative mx-auto max-w-7xl px-4 py-10 sm:py-14">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-card/70 px-3 py-1 text-xs font-semibold text-primary backdrop-blur">
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-card/70 px-3 py-1 text-xs font-semibold text-primary backdrop-blur">
                 <Sparkles className="h-3.5 w-3.5" /> Try it — no sign-up
               </span>
               <h1 className="mt-4 font-display text-3xl font-bold tracking-tight sm:text-5xl">
@@ -50,17 +42,14 @@ function CedarHollow() {
                 Meet Cedar Hollow — a friendly practice neighborhood. Pick your home, add
                 your neighbors, and watch each household's yearly share update live.
               </p>
-              <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <StepPill n={1} icon={Home} label="Pick your home" />
-                <span className="opacity-40">→</span>
-                <StepPill n={2} icon={RouteIcon} label="Add neighbors" />
-                <span className="opacity-40">→</span>
-                <StepPill n={3} icon={Sparkles} label="See your share" />
+              <div className="mt-5 grid max-w-2xl gap-2 text-sm sm:grid-cols-3">
+                <StepCue n={1} label="Pick your home" />
+                <StepCue n={2} label="Choose neighbors" />
+                <StepCue n={3} label="See your share" />
               </div>
             </div>
             <Button
               variant="outline"
-              className="rounded-full"
               onClick={() => {
                 if (typeof navigator !== "undefined" && navigator.clipboard) {
                   navigator.clipboard.writeText(window.location.href);
@@ -86,22 +75,19 @@ function CedarHollow() {
   );
 }
 
-function StepPill({
+function StepCue({
   n,
-  icon: Icon,
   label,
 }: {
   n: number;
-  icon: React.ComponentType<{ className?: string }>;
   label: string;
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/80 px-3 py-1.5 font-medium text-foreground backdrop-blur">
-      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">
+    <span className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-xl border border-border bg-card/80 px-3 py-2 font-medium text-foreground backdrop-blur">
+      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/15 text-xs font-bold text-primary">
         {n}
       </span>
-      <Icon className="h-3.5 w-3.5 text-primary" />
-      {label}
+      <span className="truncate">{label}</span>
     </span>
   );
 }
