@@ -8,9 +8,9 @@ import {
 } from "@/lib/roadshare/engine";
 
 const METHOD_LABEL: Record<Methodology, string> = {
-  distance: "Distance responsibility",
-  frontage: "Frontage length",
-  equal: "Equal per lot",
+  distance: "By distance from entrance",
+  frontage: "By frontage on the road",
+  equal: "Split evenly per home",
 };
 
 function Tile({
@@ -74,7 +74,7 @@ export function ResultsPanel({
       {pctValid && !hasEntrance && (
         <div className="flex items-start gap-2 rounded-lg border border-gold/50 bg-gold/10 p-3 text-sm text-foreground">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
-          <span>Pin at least one entrance to compute distance responsibility.</span>
+          <span>Pin at least one entrance on the map so we can measure distance.</span>
         </div>
       )}
 
@@ -135,7 +135,7 @@ export function ResultsPanel({
 
       {rows.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          Select parcels on the map to build the cost-sharing group.
+          Tap homes on the map to add them to the group sharing the road.
         </p>
       ) : (
         <div className="overflow-hidden rounded-lg border border-border">
