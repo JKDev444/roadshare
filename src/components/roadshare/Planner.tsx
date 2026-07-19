@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentType } from "react";
+import { useMemo, useState, type ComponentType, type Dispatch, type SetStateAction } from "react";
 import {
   ArrowRight,
   Check,
@@ -451,7 +451,7 @@ function SurfaceControls({
   pctValid,
 }: {
   surfaces: { pct: number; cost: number }[];
-  setSurfaces: React.Dispatch<React.SetStateAction<{ pct: number; cost: number }[]>>;
+  setSurfaces: Dispatch<SetStateAction<{ pct: number; cost: number }[]>>;
   pctTotal: number;
   pctValid: boolean;
 }) {
