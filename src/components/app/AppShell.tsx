@@ -2,17 +2,12 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  FileText,
   LayoutDashboard,
   LogOut,
-  FileBarChart,
   Map as MapIcon,
   Menu,
-  Vote,
   Route as RouteIcon,
-  ChevronDown,
   Settings,
-  Users,
   X,
   Home,
 } from "lucide-react";
@@ -46,9 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   useOnboardingResetEasterEgg();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(
-    () => SECONDARY.some((s) => pathname.startsWith(s.to)),
-  );
+  // (secondary nav removed — primary nav has everything)
 
   useEffect(() => setOpen(false), [pathname]);
 
@@ -115,18 +108,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {PRIMARY.map(renderLink)}
-
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => setMoreOpen((v) => !v)}
-              className="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
-            >
-              <span>More</span>
-              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", moreOpen ? "rotate-0" : "-rotate-90")} />
-            </button>
-            {moreOpen && <div className="mt-1 space-y-1">{SECONDARY.map(renderLink)}</div>}
-          </div>
         </nav>
 
         <div className="border-t border-border p-3">
