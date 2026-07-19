@@ -1,5 +1,13 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { CheckCircle2, ChevronDown, ChevronUp, Home as HomeIcon, MapPin, Route as RouteIcon, Ruler } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Home as HomeIcon,
+  MapPin,
+  Route as RouteIcon,
+  Ruler,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +38,11 @@ export function MyRoadTab({ parcels, segments, detailedMap }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <Tabs value={view} onValueChange={(v) => setView(v as typeof view)} className="flex min-h-0 flex-1 flex-col">
+      <Tabs
+        value={view}
+        onValueChange={(v) => setView(v as typeof view)}
+        className="flex min-h-0 flex-1 flex-col"
+      >
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="overview" className="flex-1 sm:flex-none">
             <RouteIcon className="mr-1.5 h-4 w-4" /> Overview
@@ -102,8 +114,8 @@ function OverviewPane({
             parcels.length === 0
               ? "Add the homes that share this road."
               : needReview === 0
-              ? "All home details are confirmed."
-              : `${needReview} home${needReview === 1 ? "" : "s"} still need${needReview === 1 ? "s" : ""} review.`
+                ? "All home details are confirmed."
+                : `${needReview} home${needReview === 1 ? "" : "s"} still need${needReview === 1 ? "s" : ""} review.`
           }
         />
       </div>
@@ -132,9 +144,7 @@ function OverviewPane({
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
           )}
         </button>
-        {showMap && (
-          <div className="mt-3 h-[70vh] min-h-[480px]">{detailedMap}</div>
-        )}
+        {showMap && <div className="mt-3 h-[70vh] min-h-[480px]">{detailedMap}</div>}
       </div>
     </div>
   );
@@ -163,7 +173,9 @@ function HomesAccessPane({ parcels, segments }: { parcels: Parcel[]; segments: R
               <div className="min-w-0">
                 <p className="font-semibold">{p.label}</p>
                 {p.address && <p className="mt-0.5 text-xs text-muted-foreground">{p.address}</p>}
-                {p.owner_name && <p className="mt-0.5 text-xs text-muted-foreground">{p.owner_name}</p>}
+                {p.owner_name && (
+                  <p className="mt-0.5 text-xs text-muted-foreground">{p.owner_name}</p>
+                )}
               </div>
               <VerificationBadge value={p.verification} />
             </div>
@@ -174,7 +186,9 @@ function HomesAccessPane({ parcels, segments }: { parcels: Parcel[]; segments: R
               </span>
               <span className="inline-flex items-center gap-1">
                 <Ruler className="h-3.5 w-3.5" />
-                {dist > 0 ? `${Math.round(dist).toLocaleString()} ft from entrance` : "Distance unknown"}
+                {dist > 0
+                  ? `${Math.round(dist).toLocaleString()} ft from entrance`
+                  : "Distance unknown"}
               </span>
               {p.frontage_ft ? (
                 <span className="inline-flex items-center gap-1">
@@ -213,8 +227,16 @@ function CostSharingPane({ parcels, segments }: { parcels: Parcel[]; segments: R
 
   const methods: { id: CostMethod; label: string; blurb: string }[] = [
     { id: "equal", label: "Split evenly", blurb: "Every home pays the same." },
-    { id: "frontage", label: "By road frontage", blurb: "Homes with more road along them pay more." },
-    { id: "distance", label: "By distance from entrance", blurb: "Homes farther down the road pay more." },
+    {
+      id: "frontage",
+      label: "By road frontage",
+      blurb: "Homes with more road along them pay more.",
+    },
+    {
+      id: "distance",
+      label: "By distance from entrance",
+      blurb: "Homes farther down the road pay more.",
+    },
   ];
 
   return (
@@ -226,7 +248,9 @@ function CostSharingPane({ parcels, segments }: { parcels: Parcel[]; segments: R
               Estimated project cost
             </p>
             <div className="mt-1 flex items-center gap-2">
-              <Label htmlFor="cost-total" className="sr-only">Total cost</Label>
+              <Label htmlFor="cost-total" className="sr-only">
+                Total cost
+              </Label>
               <span className="text-lg font-semibold">$</span>
               <Input
                 id="cost-total"
@@ -238,7 +262,8 @@ function CostSharingPane({ parcels, segments }: { parcels: Parcel[]; segments: R
             </div>
           </div>
           <p className="text-xs text-muted-foreground sm:text-right">
-            Try each method to see how the split changes. The math stays the same as the Fair Share tools.
+            Try each method to see how the split changes. The math stays the same as the Fair Share
+            tools.
           </p>
         </div>
       </div>
@@ -270,8 +295,11 @@ function CostSharingPane({ parcels, segments }: { parcels: Parcel[]; segments: R
 
       {result.fallback === "equal" && method !== "equal" && (
         <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs">
-          We don't have enough data for that method yet, so we split it evenly. Add
-          {" "}{method === "frontage" ? "road frontage on each home" : "the shared road and home locations"} to unlock it.
+          We don't have enough data for that method yet, so we split it evenly. Add{" "}
+          {method === "frontage"
+            ? "road frontage on each home"
+            : "the shared road and home locations"}{" "}
+          to unlock it.
         </p>
       )}
 
