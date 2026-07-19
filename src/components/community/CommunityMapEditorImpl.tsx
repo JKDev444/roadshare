@@ -41,6 +41,7 @@ export function CommunityMapEditor({
   const [satellite, setSatellite] = useState(false);
   const [drawing, setDrawing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const currentStyleRef = useRef(streets);
 
   const streets = "mapbox://styles/mapbox/streets-v12";
   const sat = "mapbox://styles/mapbox/satellite-streets-v12";
@@ -62,16 +63,24 @@ export function CommunityMapEditor({
       center: [-96.8, 32.78],
       zoom: 12,
     });
-    const draw = new MapboxDraw({
-      displayControlsDefault: false,
-      controls: { line_string: true, trash: true },
-      defaultMode: "simple_select",
-    });
-    map.addControl(draw, "top-right");
-    drawRef.current = draw;
     mapRef.current = map;
 
+    const addDrawControl = () => {
+      if (drawRef.current || !mapRef.current) return;
+      const draw = new MapboxDraw({
+        displayControlsDefault: false,
+        controls: { line_string: true, trash: true },
+        defaultMode: "simple_select",
+      });
+      map.addControl(draw, "top-right");
+      drawRef.current = draw;
+    };
+
+    if (map.loaded() && map.isStyleLoaded()) addDrawControl();
+    else map.once("load", addDrawControl);
+
     return () => {
+      map.off("load", addDrawControl);
       map.remove();
       mapRef.current = null;
       drawRef.current = null;
@@ -83,6 +92,7 @@ export function CommunityMapEditor({
     const map = mapRef.current;
     if (!map) return;
     const setup = () => {
+      if (!mapRef.current || !map.isStyleLoaded()) return;
       if (!map.getSource("parcels")) {
         map.addSource("parcels", {
           type: "geojson",
@@ -165,7 +175,7 @@ export function CommunityMapEditor({
       }
     };
 
-    if (map.isStyleLoaded()) setup();
+    if (map.loaded() && map.isStyleLoaded()) setup();
     else map.once("style.load", setup);
 
     const onClickRoad = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
@@ -194,6 +204,7 @@ export function CommunityMapEditor({
       map.off("mouseenter", "roads", onMouseEnter);
       map.off("mouseleave", "roads", onMouseLeave);
       map.off("draw.create", onCreate);
+      map.off("style.load", setup);
     };
   }, [parcels, segments, selectedSegmentId, onSelectSegment, onCreateSegment]);
 
@@ -202,7 +213,8 @@ export function CommunityMapEditor({
     const map = mapRef.current;
     if (!map) return;
     const target = satellite ? sat : streets;
-    if (map.getStyle().sprite?.includes("satellite") ? !satellite : satellite) {
+    if (currentStyleRef.current !== target) {
+      currentStyleRef.current = target;
       map.setStyle(target);
     }
   }, [satellite, sat, streets]);
