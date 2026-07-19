@@ -82,23 +82,22 @@ async function searchWithCensus(query: string): Promise<GeocodeResult[]> {
   const res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
   if (!res.ok) return [];
   const json = (await res.json()) as CensusResponse;
-  return (json.result?.addressMatches ?? [])
-    .slice(0, 6)
-    .map((match) => {
-      const lat = match.coordinates?.y;
-      const lng = match.coordinates?.x;
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-      return {
-        lat: lat as number,
-        lng: lng as number,
-        label: match.matchedAddress || query,
-        city: match.addressComponents?.city ?? null,
-        state: match.addressComponents?.state ?? null,
-        postcode: match.addressComponents?.zip ?? null,
-        source: "census" as const,
-      };
-    })
-    .filter((hit): hit is GeocodeResult => hit !== null);
+  const hits: GeocodeResult[] = [];
+  for (const match of (json.result?.addressMatches ?? []).slice(0, 6)) {
+    const lat = match.coordinates?.y;
+    const lng = match.coordinates?.x;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    hits.push({
+      lat: lat as number,
+      lng: lng as number,
+      label: match.matchedAddress || query,
+      city: match.addressComponents?.city ?? null,
+      state: match.addressComponents?.state ?? null,
+      postcode: match.addressComponents?.zip ?? null,
+      source: "census",
+    });
+  }
+  return hits;
 }
 
 export const geocodeAddress = createServerFn({ method: "POST" })
