@@ -307,13 +307,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
             </div>
           </div>
         )}
-        <div className="relative mb-3 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/15 via-fun-2/10 to-fun-3/15 px-4 py-3">
-          <div className="pointer-events-none absolute right-3 top-3 opacity-30">
-            <Home className="h-10 w-10 text-primary" />
-          </div>
-          <div className="pointer-events-none absolute right-20 top-3 opacity-30">
-            <Sparkles className="h-4 w-4 text-fun-3-foreground" />
-          </div>
+        <div className="relative mb-3 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-fun-2/5 to-fun-3/10 px-4 py-2.5">
           <div className="relative flex items-center gap-2.5">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-md">
               <RouteIcon className="h-5 w-5" />
