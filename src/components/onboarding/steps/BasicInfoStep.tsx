@@ -62,9 +62,13 @@ export function BasicInfoStep({
     const t = setTimeout(async () => {
       try {
         let res = await searchAddresses(q, { signal: ctl.signal });
-        if (!ctl.signal.aborted && res.length === 0) {
+        const streetNumber = q.match(/^\s*(\d+)/)?.[1];
+        const needsExactStreet = Boolean(
+          streetNumber && !res.some((hit) => formatHit(hit).includes(streetNumber)),
+        );
+        if (!ctl.signal.aborted && (res.length === 0 || needsExactStreet)) {
           const fallback = await searchFallback({ data: { query: q } });
-          res = fallback.map((hit, index) => ({
+          const fallbackHits = fallback.map((hit, index) => ({
             place_id: -1000 - index,
             display_name: hit.label,
             lat: String(hit.lat),
@@ -75,6 +79,13 @@ export function BasicInfoStep({
               postcode: hit.postcode ?? undefined,
             },
           }));
+          const seen = new Set<string>();
+          res = [...fallbackHits, ...res].filter((hit) => {
+            const key = formatHit(hit).toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
         }
         if (!ctl.signal.aborted) {
           setHits(res);
