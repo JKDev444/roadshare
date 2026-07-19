@@ -40,6 +40,14 @@ export function isGeoJSONLineString(geometry: unknown): geometry is GeoJSONLineS
   );
 }
 
+function coordinateLooksLikeLegacyPlat([lng, lat]: number[]): boolean {
+  return Number.isFinite(lng) && Number.isFinite(lat) && lng >= 0 && lng <= 100 && lat >= 0 && lat <= 100;
+}
+
+function lineStringUsesLegacyPlatCoordinates(geometry: GeoJSONLineString): boolean {
+  return geometry.coordinates.length > 0 && geometry.coordinates.every(coordinateLooksLikeLegacyPlat);
+}
+
 export function isGeoJSONPolygon(geometry: unknown): geometry is GeoJSONPolygon {
   return (
     !!geometry &&
@@ -47,6 +55,18 @@ export function isGeoJSONPolygon(geometry: unknown): geometry is GeoJSONPolygon 
     (geometry as GeoJSONPolygon).type === "Polygon" &&
     Array.isArray((geometry as GeoJSONPolygon).coordinates)
   );
+}
+
+function polygonUsesLegacyPlatCoordinates(geometry: GeoJSONPolygon): boolean {
+  const ring = geometry.coordinates[0] ?? [];
+  return ring.length > 0 && ring.every(coordinateLooksLikeLegacyPlat);
+}
+
+function remapLegacyPolygon(geometry: GeoJSONPolygon): GeoJSONPolygon {
+  return {
+    type: "Polygon",
+    coordinates: geometry.coordinates.map((ring) => ring.map(([x, y]) => legacyPointToLngLat({ x, y }))),
+  };
 }
 
 export function toPoints(geometry: unknown): Point[] {
@@ -90,7 +110,9 @@ export function segmentToFeature(
   if (isGeoJSONLineString(seg.geometry)) {
     return {
       type: "Feature",
-      geometry: seg.geometry,
+      geometry: lineStringUsesLegacyPlatCoordinates(seg.geometry)
+        ? { type: "LineString", coordinates: seg.geometry.coordinates.map(([x, y]) => legacyPointToLngLat({ x, y })) }
+        : seg.geometry,
       properties: { id: seg.id, name: seg.name, surface: seg.surface, responsibility: seg.responsibility },
     };
   }
@@ -121,7 +143,7 @@ export function parcelToFeature(p: Parcel): {
   if (isGeoJSONPolygon(p.geojson)) {
     return {
       type: "Feature",
-      geometry: p.geojson,
+      geometry: polygonUsesLegacyPlatCoordinates(p.geojson) ? remapLegacyPolygon(p.geojson) : p.geojson,
       properties: { id: p.id, label: p.label, selected: false },
     };
   }
