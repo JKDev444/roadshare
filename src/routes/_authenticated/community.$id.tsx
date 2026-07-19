@@ -437,7 +437,7 @@ function PropertiesTab({ communityId, parcels, loading }: { communityId: string;
               <th className="px-4 py-3 font-semibold">Owner</th>
               <th className="px-4 py-3 font-semibold">Area / frontage</th>
               <th className="px-4 py-3 font-semibold">Source</th>
-              <th className="px-4 py-3 font-semibold">Data quality</th>
+              <th className="px-4 py-3 font-semibold">Status</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -640,8 +640,8 @@ function SegmentPanel({
             <Select value={verification} onValueChange={(v) => setVerification(v as Verification)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="verified">Verified</SelectItem>
-                <SelectItem value="unverified">Unverified</SelectItem>
+                <SelectItem value="verified">Confirmed</SelectItem>
+                <SelectItem value="unverified">Needs review</SelectItem>
                 <SelectItem value="disputed">Disputed</SelectItem>
               </SelectContent>
             </Select>
