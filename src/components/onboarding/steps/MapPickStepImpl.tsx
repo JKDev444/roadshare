@@ -128,6 +128,11 @@ export function MapPickStep({
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // Fast path: BasicInfoStep already retrieved coords via Mapbox.
+      if (basicInfo.lat != null && basicInfo.lng != null) {
+        setCenter({ lat: basicInfo.lat, lng: basicInfo.lng });
+        return;
+      }
       const address = basicInfo.startingAddress?.trim();
       const cityState = [basicInfo.city, basicInfo.state].filter(Boolean).join(", ");
       if (!address && !cityState) {
@@ -155,7 +160,7 @@ export function MapPickStep({
     return () => {
       cancelled = true;
     };
-  }, [basicInfo.startingAddress, basicInfo.city, basicInfo.state, geocodeFn]);
+  }, [basicInfo.startingAddress, basicInfo.city, basicInfo.state, basicInfo.lat, basicInfo.lng, geocodeFn]);
 
   // 2) Initialize Mapbox once center is known.
   useEffect(() => {
