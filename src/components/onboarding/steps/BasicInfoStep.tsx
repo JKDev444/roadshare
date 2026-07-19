@@ -179,14 +179,14 @@ export function BasicInfoStep({
             {open && hits.length > 0 && (
               <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-border bg-popover text-sm shadow-lg">
                 {hits.map((h) => (
-                  <li key={h.place_id}>
+                  <li key={h.mapboxId}>
                     <button
                       type="button"
                       onClick={() => selectHit(h)}
                       className="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-muted"
                     >
                       <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                      <span>{formatHit(h)}</span>
+                      <span>{h.label}</span>
                     </button>
                   </li>
                 ))}
