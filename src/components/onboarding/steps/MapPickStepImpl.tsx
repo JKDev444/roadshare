@@ -24,7 +24,7 @@ import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { searchAddresses } from "@/lib/onboarding/nominatim";
+import { geocodeAddress } from "@/lib/onboarding/geocode.functions";
 import {
   parcelsPointLookup,
   parcelsPolygonLookup,
@@ -97,6 +97,7 @@ export function MapPickStep({
   const pointFn = useServerFn(parcelsPointLookup);
   const polygonFn = useServerFn(parcelsPolygonLookup);
   const detectRoadsFn = useServerFn(detectRoadsInPolygon);
+  const geocodeFn = useServerFn(geocodeAddress);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -135,20 +136,15 @@ export function MapPickStep({
         return;
       }
       try {
-        const q = address
-          ? cityState
-            ? `${address}, ${cityState}`
-            : address
-          : cityState;
-        const hits = await searchAddresses(q, { state: basicInfo.state || undefined });
+        const q = address || cityState;
+        const hit = await geocodeFn({ data: { query: q, state: basicInfo.state || undefined } });
         if (cancelled) return;
-        if (hits.length === 0) {
+        if (!hit) {
           setStatus("error");
           setErrorMsg(`We couldn't find "${address || cityState}" on the map. Check spelling or try adding city and state.`);
           return;
         }
-        const h = hits[0];
-        setCenter({ lat: parseFloat(h.lat), lng: parseFloat(h.lon) });
+        setCenter({ lat: hit.lat, lng: hit.lng });
       } catch {
         if (!cancelled) {
           setStatus("error");
@@ -159,7 +155,7 @@ export function MapPickStep({
     return () => {
       cancelled = true;
     };
-  }, [basicInfo.startingAddress, basicInfo.city, basicInfo.state]);
+  }, [basicInfo.startingAddress, basicInfo.city, basicInfo.state, geocodeFn]);
 
   // 2) Initialize Mapbox once center is known.
   useEffect(() => {
@@ -431,7 +427,22 @@ export function MapPickStep({
   }
 
   async function confirm() {
-    if (selectedList.length === 0) return;
+    if (selectedList.length === 0 && !center) return;
+    if (selectedList.length === 0 && center) {
+      await onSubmit({
+        kind: "map",
+        items: [
+          {
+            label: "My home",
+            address: basicInfo.startingAddress,
+            lat: center.lat,
+            lng: center.lng,
+          },
+        ],
+        roads: roads.filter((r) => r.included).map((r) => ({ ...r })),
+      });
+      return;
+    }
     await onSubmit({
       kind: "map",
       items: selectedList.map((p, i) => ({
@@ -446,6 +457,8 @@ export function MapPickStep({
       roads: roads.filter((r) => r.included).map((r) => ({ ...r })),
     });
   }
+
+  const canUseAddressOnly = !!center && (status === "empty" || status === "error") && selectedList.length === 0;
 
   return (
     <div className="space-y-3">
@@ -520,6 +533,30 @@ export function MapPickStep({
             </div>
           </div>
         )}
+        {status === "empty" && (
+          <div className="absolute inset-x-3 top-3 z-10 rounded-2xl border border-gold/40 bg-background/95 p-3 shadow-lg backdrop-blur sm:inset-x-auto sm:left-3 sm:max-w-sm">
+            <div className="flex items-start gap-2 text-sm">
+              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
+              <div>
+                <p className="font-semibold">We found your road, but not home outlines yet.</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Some rural areas do not have every home drawn in public map data. You can lasso a wider area or continue with your address and add neighbors by hand next.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        {status === "error" && errorMsg && center && (
+          <div className="absolute inset-x-3 top-3 z-10 rounded-2xl border border-destructive/30 bg-background/95 p-3 shadow-lg backdrop-blur sm:inset-x-auto sm:left-3 sm:max-w-sm">
+            <div className="flex items-start gap-2 text-sm">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+              <div>
+                <p className="font-semibold">The map found your address.</p>
+                <p className="mt-1 text-xs text-muted-foreground">{errorMsg}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
@@ -541,10 +578,9 @@ export function MapPickStep({
 
       {status === "empty" && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-          <p className="font-medium">No homes found in that area.</p>
+          <p className="font-medium">We found the address, but not nearby home outlines.</p>
           <p className="mt-0.5">
-            We couldn't find any home outlines near that address. Try zooming out with the lasso to
-            cover a wider area, use a different starting address, or go back and paste addresses instead.
+            Try lassoing a wider area, use a different starting address, or continue with your address and add neighbors by hand.
           </p>
         </div>
       )}
@@ -579,11 +615,11 @@ export function MapPickStep({
         <Button
           size="sm"
           onClick={confirm}
-          disabled={selectedList.length === 0 || submitting}
+          disabled={(!canUseAddressOnly && selectedList.length === 0) || submitting}
           className="bounce hover:scale-105"
         >
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-          Add {selectedList.length} {selectedList.length === 1 ? "property" : "properties"}{" "}
+          {canUseAddressOnly ? "Use my address" : `Add ${selectedList.length} ${selectedList.length === 1 ? "home" : "homes"}`} {" "}
           <ArrowRight className="h-4 w-4" />
         </Button>
       </div>

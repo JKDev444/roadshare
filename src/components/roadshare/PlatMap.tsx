@@ -5,6 +5,7 @@ interface PlatMapProps {
   you: string | null;
   entrances: ("west" | "north")[];
   hovered: string | null;
+  activeStep?: "home" | "neighbors" | "entrances" | "review";
   onToggleParcel: (id: string) => void;
   onHoverParcel: (id: string | null) => void;
   onToggleEntrance: (id: "west" | "north") => void;
@@ -28,6 +29,7 @@ export function PlatMap({
   you,
   entrances,
   hovered,
+  activeStep = "home",
   onToggleParcel,
   onHoverParcel,
   onToggleEntrance,
@@ -42,7 +44,13 @@ export function PlatMap({
             Cedar Hollow
           </span>
           <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            Neighborhood map · 14 homes
+            {activeStep === "home"
+              ? "Tap a home to start"
+              : activeStep === "neighbors"
+                ? "Tap homes to add or remove"
+                : activeStep === "entrances"
+                  ? "Tap entrance pins"
+                  : "Review the selected group"}
           </span>
         </div>
         <div className="hidden items-center gap-3 text-[11px] text-muted-foreground sm:flex">

@@ -179,7 +179,7 @@ export function GettingStarted() {
             const Icon = step.icon;
             return (
               <li
-                key={step.key}
+                key={`${step.key}-${step.title}`}
                 className={cn(
                   "flex items-center gap-3 rounded-xl border p-3 transition-colors",
                   complete ? "border-border bg-muted/40" : "border-border bg-background",

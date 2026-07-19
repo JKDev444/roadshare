@@ -1,67 +1,57 @@
-import { useMemo, useState } from "react";
-import { Check, Home, MapPin, Route as RouteIcon, Search, Sparkles, X } from "lucide-react";
+import { useMemo, useState, type ComponentType, type Dispatch, type SetStateAction } from "react";
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  Home,
+  MapPin,
+  Route as RouteIcon,
+  Search,
+  SlidersHorizontal,
+  Sparkles,
+  X,
+} from "lucide-react";
 
 import { PlatMap } from "@/components/roadshare/PlatMap";
 import { ResultsPanel } from "@/components/roadshare/ResultsPanel";
-import { DEFAULTS, ENTRANCES, PARCELS, SURFACE_TYPES } from "@/lib/roadshare/data";
-import { computeAllocation, type Methodology } from "@/lib/roadshare/engine";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { DEFAULTS, ENTRANCES, PARCELS, SURFACE_TYPES } from "@/lib/roadshare/data";
+import { computeAllocation, type Methodology } from "@/lib/roadshare/engine";
 import { cn } from "@/lib/utils";
 
-function Section({
-  step,
-  title,
-  hint,
-  done,
-  icon: Icon,
-  children,
-}: {
-  step: number;
-  title: string;
-  hint?: string;
-  done?: boolean;
-  icon?: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode;
-}) {
-  return (
-    <section
-      className={cn(
-        "rounded-2xl border bg-card p-4 shadow-sm transition-all",
-        done ? "border-selected/40 bg-gradient-to-br from-selected/5 to-transparent" : "border-border hover:border-primary/30",
-      )}
-    >
-      <div className="mb-3 flex items-center gap-2.5">
-        <span
-          className={cn(
-            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold transition-colors",
-            done ? "bg-selected text-selected-foreground" : "bg-primary text-primary-foreground",
-          )}
-        >
-          {done ? <Check className="h-4 w-4" /> : Icon ? <Icon className="h-3.5 w-3.5" /> : step}
-        </span>
-        <div className="min-w-0">
-          <h2 className="font-display text-sm font-semibold tracking-tight">
-            <span className="mr-1.5 font-mono text-[10px] text-muted-foreground">Step {step}</span>
-            {title}
-          </h2>
-          {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-        </div>
-      </div>
-      {children}
-    </section>
-  );
-}
+type WalkStep = "home" | "neighbors" | "entrances" | "review";
 
-const METHODS: { id: Methodology; label: string }[] = [
-  { id: "distance", label: "By distance" },
-  { id: "frontage", label: "By frontage" },
-  { id: "equal", label: "Split evenly" },
+const METHODS: { id: Methodology; label: string; helper: string }[] = [
+  { id: "distance", label: "Road used", helper: "Homes farther down the road pay more." },
+  { id: "frontage", label: "Road frontage", helper: "Homes with more frontage pay more." },
+  { id: "equal", label: "Equal split", helper: "Every selected home pays the same." },
 ];
 
+const STEP_META: Record<WalkStep, { n: number; title: string; short: string; icon: ComponentType<{ className?: string }> }> = {
+  home: { n: 1, title: "Pick your home", short: "Start here", icon: Home },
+  neighbors: { n: 2, title: "Choose who shares", short: "Neighbors", icon: Sparkles },
+  entrances: { n: 3, title: "Confirm entrances", short: "Entrances", icon: MapPin },
+  review: { n: 4, title: "See your share", short: "Result", icon: RouteIcon },
+};
+
+function homeGroupFor(id: string | null) {
+  if (!id) return PARCELS.slice(0, 10).map((p) => p.id);
+  const home = PARCELS.find((p) => p.id === id);
+  if (!home) return PARCELS.slice(0, 10).map((p) => p.id);
+  const street = home.address.replace(/^\d+\s+/, "");
+  const sameStreet = PARCELS.filter((p) => p.address.includes(street)).map((p) => p.id);
+  return sameStreet.length >= 3 ? sameStreet : PARCELS.map((p) => p.id);
+}
+
+function addressNumber(address: string) {
+  return address.split(" ")[0] || address;
+}
+
 export function Planner() {
+  const [step, setStep] = useState<WalkStep>("home");
   const [you, setYou] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
@@ -70,6 +60,7 @@ export function Planner() {
   const [methodology, setMethodology] = useState<Methodology>("distance");
   const [roadWidth, setRoadWidth] = useState(DEFAULTS.roadWidth);
   const [fundingPeriod, setFundingPeriod] = useState(DEFAULTS.fundingPeriod);
+  const [assumptionsOpen, setAssumptionsOpen] = useState(false);
   const [surfaces, setSurfaces] = useState(
     SURFACE_TYPES.map((s) => ({ pct: s.defaultPct, cost: s.defaultCost })),
   );
@@ -79,6 +70,8 @@ export function Planner() {
     if (!q) return [];
     return PARCELS.filter((p) => p.address.toLowerCase().includes(q)).slice(0, 6);
   }, [query]);
+
+  const suggested = useMemo(() => homeGroupFor(you), [you]);
 
   const result = useMemo(
     () =>
@@ -95,279 +88,425 @@ export function Planner() {
     [selected, entrances, methodology, surfaces, roadWidth, fundingPeriod, you],
   );
 
-  const toggleParcel = (id: string) =>
-    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-  const toggleEntrance = (id: "west" | "north") =>
-    setEntrances((e) => (e.includes(id) ? e.filter((x) => x !== id) : [...e, id]));
-  const pickYou = (id: string, address: string) => {
-    setYou(id);
-    setQuery(address);
-    setSelected((s) => (s.includes(id) ? s : [...s, id]));
-  };
-
+  const pickedHome = PARCELS.find((p) => p.id === you);
   const pctTotal = surfaces.reduce((s, x) => s + (Number(x.pct) || 0), 0);
   const pctValid = Math.abs(pctTotal - 100) < 0.001;
+  const canReview = !!you && selected.length > 0 && entrances.length > 0 && pctValid;
 
-  const steps = [
-    { label: "Your home", done: !!you },
-    { label: "Neighbors", done: selected.length > 0 },
-    { label: "Entrances", done: entrances.length > 0 },
-    { label: "Surface", done: pctValid },
-  ];
-  const completedCount = steps.filter((s) => s.done).length;
+  function pickYou(id: string) {
+    const home = PARCELS.find((p) => p.id === id);
+    if (!home) return;
+    setYou(id);
+    setQuery(home.address);
+    setSelected((current) => (current.includes(id) ? current : [id, ...current]));
+    setStep("neighbors");
+  }
+
+  function toggleParcel(id: string) {
+    if (!you || step === "home") {
+      pickYou(id);
+      return;
+    }
+    setSelected((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]));
+  }
+
+  function useSuggestions() {
+    const withHome = you && !suggested.includes(you) ? [you, ...suggested] : suggested;
+    setSelected(withHome);
+    setStep("entrances");
+  }
+
+  function toggleEntrance(id: "west" | "north") {
+    setEntrances((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]));
+  }
+
+  function useBothEntrances() {
+    setEntrances(["west", "north"]);
+    setStep("review");
+  }
+
+  function resetDemo() {
+    setStep("home");
+    setYou(null);
+    setQuery("");
+    setSelected([]);
+    setEntrances([]);
+    setHovered(null);
+    setMethodology("distance");
+    setRoadWidth(DEFAULTS.roadWidth);
+    setFundingPeriod(DEFAULTS.fundingPeriod);
+    setAssumptionsOpen(false);
+    setSurfaces(SURFACE_TYPES.map((s) => ({ pct: s.defaultPct, cost: s.defaultCost })));
+  }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="mb-6 flex flex-wrap items-center gap-2">
-        {steps.map((s, i) => (
-          <div key={s.label} className="flex items-center gap-2">
-            <div
-              className={cn(
-                "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                s.done
-                  ? "border-selected/50 bg-selected/15 text-foreground"
-                  : "border-border bg-card text-muted-foreground",
-              )}
-            >
-              <span
-                className={cn(
-                  "flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold",
-                  s.done ? "bg-selected text-selected-foreground" : "bg-muted text-muted-foreground",
-                )}
-              >
-                {s.done ? <Check className="h-3 w-3" /> : i + 1}
-              </span>
-              {s.label}
-            </div>
-            {i < steps.length - 1 && <span className="hidden h-px w-4 bg-border sm:block" />}
-          </div>
-        ))}
-        <span className="ml-1 font-mono text-xs text-muted-foreground">{completedCount}/4</span>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        <div className="space-y-4">
-          <PlatMap
-            selected={selected}
-            you={you}
-            entrances={entrances}
-            hovered={hovered}
-            onToggleParcel={toggleParcel}
-            onHoverParcel={setHovered}
-            onToggleEntrance={toggleEntrance}
-          />
-
-          <Section step={1} icon={Home} title="Which home is yours?" hint="Search an address in Cedar Hollow — the map highlights it in gold." done={!!you}>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Try 101 Cedar Hollow Lane"
-                className="pl-9"
-              />
-              {matches.length > 0 && query !== you && (
-                <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
-                  {matches.map((p) => (
-                    <li key={p.id}>
-                      <button
-                        type="button"
-                        onClick={() => pickYou(p.id, p.address)}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
-                      >
-                        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                        {p.address}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            {you && (
-              <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-gold/15 px-3 py-2 text-xs">
-                <MapPin className="h-3.5 w-3.5 text-gold" />
-                <span className="font-medium text-foreground">{query}</span>
-                <span className="text-muted-foreground">is your home</span>
+    <main className="surface-glow">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_390px]">
+          <section className="min-w-0 space-y-3">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-2xl border border-border bg-card/90 p-4 shadow-sm sm:p-5">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">Interactive sample</p>
+                <h2 className="mt-1 font-display text-2xl font-bold tracking-tight sm:text-3xl">
+                  Start with the map. The sample walks you one choice at a time.
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                  This is not a form about road engineering. Pick a home, choose the neighbors who share the road, then see the estimated yearly share.
+                </p>
               </div>
-            )}
-          </Section>
-
-          <Section
-            step={2}
-            icon={RouteIcon}
-            title="Add your neighbors"
-            hint="Tap homes on the map to add them to the group that shares the road."
-            done={selected.length > 0}
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => setSelected(PARCELS.map((p) => p.id))}>
-                Add all homes
+              <Button variant="outline" size="sm" onClick={resetDemo} className="shrink-0">
+                Reset
               </Button>
-              <Button size="sm" variant="outline" onClick={() => setSelected(you ? [you] : [])}>
-                <X className="mr-1 h-3.5 w-3.5" /> Clear
-              </Button>
-              <span className="ml-auto rounded-full bg-selected/15 px-2.5 py-1 font-mono text-xs font-semibold text-foreground">
-                {selected.length}/{PARCELS.length} homes
-              </span>
             </div>
-          </Section>
 
-          <Section
-            step={3}
-            icon={MapPin}
-            title="Where does your road connect?"
-            hint="Tap each spot where your private road meets a public road."
-            done={entrances.length > 0}
-          >
-            <div className="flex flex-wrap gap-2">
-              {ENTRANCES.map((e) => (
-                <button
-                  key={e.id}
-                  type="button"
-                  onClick={() => toggleEntrance(e.id)}
-                  className={cn(
-                    "flex flex-1 items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors",
-                    entrances.includes(e.id) ? "border-primary bg-primary/10" : "border-border hover:bg-accent",
-                  )}
-                >
-                  <MapPin
-                    className={cn(
-                      "h-4 w-4 shrink-0",
-                      entrances.includes(e.id) ? "text-primary" : "text-muted-foreground",
-                    )}
-                  />
-                  <div className="min-w-0">
-                    <div className="font-medium">{e.label}</div>
-                    <div className="truncate text-xs text-muted-foreground">meets {e.meets}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </Section>
+            <PlatMap
+              selected={selected}
+              you={you}
+              entrances={entrances}
+              hovered={hovered}
+              activeStep={step}
+              onToggleParcel={toggleParcel}
+              onHoverParcel={setHovered}
+              onToggleEntrance={toggleEntrance}
+            />
 
-          <Section
-            step={4}
-            icon={Sparkles}
-            title="What's the road made of?"
-            hint="Set the surface mix (must total 100%), the road width, and how many years to spread the cost."
-            done={pctValid}
-          >
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Surface mix</span>
-                <span
-                  className={cn(
-                    "font-mono font-semibold",
-                    pctValid ? "text-selected" : "text-destructive",
-                  )}
-                >
-                  {pctTotal.toFixed(0)}%
-                </span>
-              </div>
-              <div className="space-y-2">
-                {SURFACE_TYPES.map((s, i) => (
-                  <div key={s.id} className="grid grid-cols-[1fr_72px_84px] items-center gap-2">
-                    <Label className="text-sm">{s.label}</Label>
-                    <div className="relative">
-                      <Input
-                        type="number"
-                        value={surfaces[i].pct}
-                        min={0}
-                        max={100}
-                        onChange={(e) =>
-                          setSurfaces((arr) =>
-                            arr.map((x, j) => (j === i ? { ...x, pct: Number(e.target.value) } : x)),
-                          )
-                        }
-                        className="h-8 pr-5 font-mono text-sm"
-                      />
-                      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                        %
-                      </span>
-                    </div>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                        $
-                      </span>
-                      <Input
-                        type="number"
-                        step="0.25"
-                        value={surfaces[i].cost}
-                        onChange={(e) =>
-                          setSurfaces((arr) =>
-                            arr.map((x, j) => (j === i ? { ...x, cost: Number(e.target.value) } : x)),
-                          )
-                        }
-                        className="h-8 pl-5 font-mono text-sm"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">Road width</Label>
-                    <span className="font-mono text-sm">{roadWidth} ft</span>
-                  </div>
-                  <Slider
-                    value={[roadWidth]}
-                    min={8}
-                    max={40}
-                    step={1}
-                    onValueChange={(v) => setRoadWidth(v[0])}
-                    className="mt-2"
-                  />
-                </div>
-                <div>
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">Funding period</Label>
-                    <span className="font-mono text-sm">{fundingPeriod} yr</span>
-                  </div>
-                  <Slider
-                    value={[fundingPeriod]}
-                    min={1}
-                    max={40}
-                    step={1}
-                    onValueChange={(v) => setFundingPeriod(v[0])}
-                    className="mt-2"
-                  />
-                </div>
-              </div>
-            </div>
-          </Section>
-        </div>
-
-        <aside className="lg:sticky lg:top-20 lg:h-fit">
-          <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
-            <div className="mb-4">
-              <h2 className="font-display text-lg font-bold tracking-tight">Allocation</h2>
-              <Label className="mt-3 block text-xs uppercase tracking-wide text-muted-foreground">
-                Method
-              </Label>
-              <div className="mt-2 grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
-                {METHODS.map((m) => (
+            <div className="grid gap-2 rounded-2xl border border-border bg-card/90 p-3 text-xs shadow-sm sm:grid-cols-4">
+              {(Object.keys(STEP_META) as WalkStep[]).map((key) => {
+                const meta = STEP_META[key];
+                const done =
+                  (key === "home" && !!you) ||
+                  (key === "neighbors" && selected.length > 1) ||
+                  (key === "entrances" && entrances.length > 0) ||
+                  (key === "review" && canReview);
+                const active = step === key;
+                const Icon = meta.icon;
+                return (
                   <button
-                    key={m.id}
+                    key={key}
                     type="button"
-                    onClick={() => setMethodology(m.id)}
+                    onClick={() => setStep(key)}
                     className={cn(
-                      "rounded-lg px-2 py-1.5 text-xs font-medium transition-colors",
-                      methodology === m.id
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground",
+                      "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-xl border p-2 text-left transition-colors",
+                      active ? "border-primary bg-primary/10" : "border-border bg-background/60 hover:bg-accent",
                     )}
                   >
-                    {m.label}
+                    <span
+                      className={cn(
+                        "grid h-7 w-7 shrink-0 place-items-center rounded-lg",
+                        done ? "bg-selected text-selected-foreground" : active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">{meta.short}</span>
+                      <span className="block truncate text-muted-foreground">Step {meta.n}</span>
+                    </span>
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
-            <ResultsPanel result={result} methodology={methodology} />
-          </div>
-        </aside>
+          </section>
+
+          <aside className="min-w-0 space-y-3 lg:sticky lg:top-20 lg:h-fit">
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
+              <StepPanel
+                step={step}
+                query={query}
+                setQuery={setQuery}
+                matches={matches}
+                pickedHome={pickedHome}
+                selected={selected}
+                suggested={suggested}
+                entrances={entrances}
+                methodology={methodology}
+                setMethodology={setMethodology}
+                onPickHome={pickYou}
+                onUseSuggestions={useSuggestions}
+                onClearNeighbors={() => setSelected(you ? [you] : [])}
+                onToggleEntrance={toggleEntrance}
+                onUseBothEntrances={useBothEntrances}
+                onGoToReview={() => setStep("review")}
+                canReview={canReview}
+              />
+            </div>
+
+            {step === "review" && (
+              <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
+                <ResultsPanel result={result} methodology={methodology} />
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setAssumptionsOpen((v) => !v)}
+                className="flex w-full items-center justify-between gap-3 text-left"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
+                    <SlidersHorizontal className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-display text-sm font-semibold">Adjust assumptions</span>
+                    <span className="block truncate text-xs text-muted-foreground">Surface, road width, and years</span>
+                  </span>
+                </span>
+                <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", assumptionsOpen && "rotate-180")} />
+              </button>
+
+              {assumptionsOpen && (
+                <div className="mt-4 space-y-4 border-t border-border pt-4">
+                  <SurfaceControls surfaces={surfaces} setSurfaces={setSurfaces} pctTotal={pctTotal} pctValid={pctValid} />
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+                    <SliderControl label="Road width" value={roadWidth} suffix="ft" min={8} max={40} onChange={setRoadWidth} />
+                    <SliderControl label="Spread cost over" value={fundingPeriod} suffix="yr" min={1} max={40} onChange={setFundingPeriod} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </aside>
+        </div>
       </div>
+    </main>
+  );
+}
+
+function StepPanel({
+  step,
+  query,
+  setQuery,
+  matches,
+  pickedHome,
+  selected,
+  suggested,
+  entrances,
+  methodology,
+  setMethodology,
+  onPickHome,
+  onUseSuggestions,
+  onClearNeighbors,
+  onToggleEntrance,
+  onUseBothEntrances,
+  onGoToReview,
+  canReview,
+}: {
+  step: WalkStep;
+  query: string;
+  setQuery: (value: string) => void;
+  matches: typeof PARCELS;
+  pickedHome?: (typeof PARCELS)[number];
+  selected: string[];
+  suggested: string[];
+  entrances: ("west" | "north")[];
+  methodology: Methodology;
+  setMethodology: (value: Methodology) => void;
+  onPickHome: (id: string) => void;
+  onUseSuggestions: () => void;
+  onClearNeighbors: () => void;
+  onToggleEntrance: (id: "west" | "north") => void;
+  onUseBothEntrances: () => void;
+  onGoToReview: () => void;
+  canReview: boolean;
+}) {
+  const meta = STEP_META[step];
+  const Icon = meta.icon;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground">
+          <Icon className="h-5 w-5" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-wider text-primary">Step {meta.n} of 4</p>
+          <h2 className="font-display text-xl font-bold tracking-tight">{meta.title}</h2>
+        </div>
+      </div>
+
+      {step === "home" && (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">Search the sample addresses or tap a home on the map. Your home turns gold.</p>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Try 101 Cedar Hollow Lane" className="h-11 pl-9" />
+          </div>
+          <div className="space-y-2">
+            {(matches.length > 0 ? matches : PARCELS.slice(0, 4)).map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onPickHome(p.id)}
+                className="flex w-full items-center justify-between gap-2 rounded-xl border border-border bg-background p-3 text-left text-sm transition-colors hover:border-primary/50 hover:bg-primary/5"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold">{p.address}</span>
+                  <span className="block text-xs text-muted-foreground">Tap to make this your home</span>
+                </span>
+                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {step === "neighbors" && (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            {pickedHome ? `${pickedHome.address} is your home. Now choose who shares the private road.` : "Pick your home first, then choose who shares the road."}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-xl border border-border bg-muted/40 p-3">
+              <div className="text-xs text-muted-foreground">Selected homes</div>
+              <div className="mt-1 font-display text-2xl font-bold">{selected.length}</div>
+            </div>
+            <div className="rounded-xl border border-border bg-muted/40 p-3">
+              <div className="text-xs text-muted-foreground">Suggested group</div>
+              <div className="mt-1 font-display text-2xl font-bold">{suggested.length}</div>
+            </div>
+          </div>
+          <Button className="w-full" onClick={onUseSuggestions} disabled={!pickedHome}>
+            <Sparkles className="h-4 w-4" /> Use suggested neighbors
+          </Button>
+          <Button className="w-full" variant="outline" onClick={onClearNeighbors} disabled={!pickedHome}>
+            <X className="h-4 w-4" /> Clear and tap homes myself
+          </Button>
+        </div>
+      )}
+
+      {step === "entrances" && (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">Pick where the private road connects to public roads. Most communities use both in this sample.</p>
+          <div className="space-y-2">
+            {ENTRANCES.map((entrance) => {
+              const active = entrances.includes(entrance.id);
+              return (
+                <button
+                  key={entrance.id}
+                  type="button"
+                  onClick={() => onToggleEntrance(entrance.id)}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors",
+                    active ? "border-primary bg-primary/10" : "border-border bg-background hover:bg-accent",
+                  )}
+                >
+                  <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-xl", active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                    {active ? <Check className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-semibold">{entrance.label}</span>
+                    <span className="block text-xs text-muted-foreground">Meets {entrance.meets}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <Button className="w-full" onClick={onUseBothEntrances}>
+            Use both entrances <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {step === "review" && (
+        <div className="space-y-4">
+          {canReview ? (
+            <p className="text-sm text-muted-foreground">Here is the sample estimate. Change the split method below to see how the secret sauce explains who benefits from each road segment.</p>
+          ) : (
+            <div className="rounded-xl border border-gold/40 bg-gold/10 p-3 text-sm">
+              Pick a home, choose neighbors, and confirm an entrance to unlock the yearly-share estimate.
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">How should RoadShare split it?</Label>
+            {METHODS.map((method) => (
+              <button
+                key={method.id}
+                type="button"
+                onClick={() => setMethodology(method.id)}
+                className={cn(
+                  "w-full rounded-xl border p-3 text-left transition-colors",
+                  methodology === method.id ? "border-primary bg-primary/10" : "border-border bg-background hover:bg-accent",
+                )}
+              >
+                <span className="block font-semibold">{method.label}</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">{method.helper}</span>
+              </button>
+            ))}
+          </div>
+          {!canReview && (
+            <Button className="w-full" variant="outline" onClick={onGoToReview} disabled>
+              Result appears here when ready
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SurfaceControls({
+  surfaces,
+  setSurfaces,
+  pctTotal,
+  pctValid,
+}: {
+  surfaces: { pct: number; cost: number }[];
+  setSurfaces: Dispatch<SetStateAction<{ pct: number; cost: number }[]>>;
+  pctTotal: number;
+  pctValid: boolean;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-xs">
+        <Label className="font-semibold">Road surface mix</Label>
+        <span className={cn("font-mono font-bold", pctValid ? "text-selected" : "text-destructive")}>{pctTotal.toFixed(0)}%</span>
+      </div>
+      {SURFACE_TYPES.map((surface, i) => (
+        <div key={surface.id} className="grid grid-cols-[minmax(0,1fr)_68px_82px] items-center gap-2">
+          <Label className="truncate text-xs">{surface.label}</Label>
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            value={surfaces[i].pct}
+            onChange={(e) => setSurfaces((arr) => arr.map((x, j) => (j === i ? { ...x, pct: Number(e.target.value) } : x)))}
+            className="h-8 text-sm"
+          />
+          <Input
+            type="number"
+            step="0.25"
+            value={surfaces[i].cost}
+            onChange={(e) => setSurfaces((arr) => arr.map((x, j) => (j === i ? { ...x, cost: Number(e.target.value) } : x)))}
+            className="h-8 text-sm"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SliderControl({
+  label,
+  value,
+  suffix,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  suffix: string;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <Label className="text-xs font-semibold">{label}</Label>
+        <span className="font-mono text-xs font-bold">{value} {suffix}</span>
+      </div>
+      <Slider value={[value]} min={min} max={max} step={1} onValueChange={(v) => onChange(v[0])} className="mt-2" />
     </div>
   );
 }

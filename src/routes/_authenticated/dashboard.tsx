@@ -117,7 +117,7 @@ function Dashboard() {
               const Icon = q.icon;
               return (
                 <Link
-                  key={q.to}
+                  key={`${q.to}-${q.title}`}
                   to={q.to}
                   className="group flex items-start gap-4 rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/40 hover:bg-accent/40"
                 >
