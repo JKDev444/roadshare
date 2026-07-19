@@ -222,20 +222,43 @@ export function CommunityMapEditor({
   // 4) Fit bounds to parcels when they change.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || parcels.length === 0) return;
+    if (!map || (parcels.length === 0 && segments.length === 0)) return;
+
     const bounds = new mapboxgl.LngLatBounds();
     let added = false;
+    const extend = ([lng, lat]: [number, number]) => {
+      if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+      if (Math.abs(lng) > 180 || Math.abs(lat) > 85) return;
+      bounds.extend([lng, lat]);
+      added = true;
+    };
+
     for (const p of parcels) {
-      const f = parcelToFeature(p);
-      if (!f) continue;
-      const ring = f.geometry.coordinates[0] as [number, number][];
-      for (const [lng, lat] of ring) {
-        bounds.extend([lng, lat]);
-        added = true;
+      const feature = parcelToFeature(p);
+      if (!feature) continue;
+      for (const polygon of feature.geometry.type === "Polygon" ? [feature.geometry.coordinates] : []) {
+        for (const ring of polygon) {
+          for (const coordinate of ring) extend(coordinate as [number, number]);
+        }
       }
     }
-    if (added) map.fitBounds(bounds, { padding: 60, maxZoom: 19, duration: 800 });
-  }, [parcels]);
+    for (const segment of segments) {
+      const feature = segmentToFeature(segment);
+      if (!feature) continue;
+      for (const coordinate of feature.geometry.coordinates) extend(coordinate);
+    }
+
+    if (!added) return;
+    const fit = () => {
+      map.resize();
+      map.fitBounds(bounds, { padding: 70, maxZoom: 17, duration: 0 });
+    };
+    if (map.loaded() && map.isStyleLoaded()) fit();
+    else map.once("idle", fit);
+    return () => {
+      map.off("idle", fit);
+    };
+  }, [parcels, segments]);
 
   // 5) Toggle layer visibility.
   useEffect(() => {
