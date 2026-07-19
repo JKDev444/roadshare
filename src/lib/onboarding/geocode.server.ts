@@ -12,16 +12,49 @@ export type GeocodeResult = {
 // Airbnb/Zillow-tier per-keystroke autocomplete via the Lovable connector gateway.
 // Free tier: 100k sessions/mo. A session token bundles /suggest + /retrieve as one bill.
 
+// Mapbox can be reached two ways depending on where the app runs:
+//   1) Inside Lovable: Lovable connector gateway using LOVABLE_API_KEY +
+//      MAPBOX_API_KEY (an sk. token stored on the workspace connection).
+//   2) Outside Lovable (Vercel/etc.): direct api.mapbox.com using
+//      MAPBOX_ACCESS_TOKEN (an sk. token in the host's env vars).
+// Callers should not care which one is used.
 const MAPBOX_GATEWAY = "https://connector-gateway.lovable.dev/mapbox";
+const MAPBOX_DIRECT = "https://api.mapbox.com";
 
-function mapboxHeaders(): Record<string, string> | null {
+type MapboxBackend =
+  | { mode: "gateway"; base: string; headers: Record<string, string>; extraParams?: Record<string, string> }
+  | { mode: "direct"; base: string; headers: Record<string, string>; extraParams: Record<string, string> };
+
+function mapboxBackend(): MapboxBackend | null {
   const lovableKey = process.env.LOVABLE_API_KEY;
   const connKey = process.env.MAPBOX_API_KEY;
-  if (!lovableKey || !connKey) return null;
-  return {
-    Authorization: `Bearer ${lovableKey}`,
-    "X-Connection-Api-Key": connKey,
-  };
+  if (lovableKey && connKey) {
+    return {
+      mode: "gateway",
+      base: MAPBOX_GATEWAY,
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        "X-Connection-Api-Key": connKey,
+      },
+    };
+  }
+  // Fallback: direct Mapbox using a self-hosted sk. token.
+  const directToken = process.env.MAPBOX_ACCESS_TOKEN || process.env.MAPBOX_SECRET_TOKEN;
+  if (directToken) {
+    return {
+      mode: "direct",
+      base: MAPBOX_DIRECT,
+      headers: {},
+      extraParams: { access_token: directToken },
+    };
+  }
+  return null;
+}
+
+function applyMapboxParams(url: URL, backend: MapboxBackend) {
+  const extras = backend.mode === "direct" ? backend.extraParams : undefined;
+  if (!extras) return;
+  for (const [k, v] of Object.entries(extras)) url.searchParams.set(k, v);
 }
 
 type MapboxSuggestion = {
@@ -51,18 +84,20 @@ async function mapboxSuggest(
   query: string,
   sessionToken: string,
 ): Promise<MapboxSuggestion[] | null> {
-  const headers = mapboxHeaders();
-  if (!headers) return null;
-  const url = new URL(`${MAPBOX_GATEWAY}/search/searchbox/v1/suggest`);
+  const backend = mapboxBackend();
+  if (!backend) return null;
+  const url = new URL(`${backend.base}/search/searchbox/v1/suggest`);
   url.searchParams.set("q", query);
   url.searchParams.set("session_token", sessionToken);
   url.searchParams.set("country", "us");
   url.searchParams.set("types", "address");
   url.searchParams.set("limit", "6");
-  const res = await fetch(url.toString(), { headers });
+  applyMapboxParams(url, backend);
+  const res = await fetch(url.toString(), { headers: backend.headers });
   if (!res.ok) {
-    // Common cause: Mapbox connection has no secret (sk.) token — Search Box
-    // requires it server-side. Signal null so callers fall back to Census.
+    // Common causes: Mapbox connection has no secret (sk.) token, or the
+    // host env lacks MAPBOX_ACCESS_TOKEN. Signal null so callers fall back
+    // to the US Census onelineaddress geocoder.
     console.warn("[geocode] mapbox suggest failed", res.status);
     return null;
   }
@@ -71,11 +106,12 @@ async function mapboxSuggest(
 }
 
 async function mapboxRetrieve(mapboxId: string, sessionToken: string): Promise<GeocodeResult | null> {
-  const headers = mapboxHeaders();
-  if (!headers) return null;
-  const url = new URL(`${MAPBOX_GATEWAY}/search/searchbox/v1/retrieve/${encodeURIComponent(mapboxId)}`);
+  const backend = mapboxBackend();
+  if (!backend) return null;
+  const url = new URL(`${backend.base}/search/searchbox/v1/retrieve/${encodeURIComponent(mapboxId)}`);
   url.searchParams.set("session_token", sessionToken);
-  const res = await fetch(url.toString(), { headers });
+  applyMapboxParams(url, backend);
+  const res = await fetch(url.toString(), { headers: backend.headers });
   if (!res.ok) return null;
   const json = (await res.json()) as { features?: MapboxRetrieveFeature[] };
   const feat = json.features?.[0];
@@ -212,8 +248,7 @@ async function searchWithCensus(query: string): Promise<GeocodeResult[]> {
 
 export async function geocodeAddressQuery(query: string, state?: string): Promise<GeocodeResult | null> {
   // Mapbox one-shot (single-call geocode via suggest+retrieve with a fresh token).
-  const headers = mapboxHeaders();
-  if (headers) {
+  if (mapboxBackend()) {
     const sessionToken = crypto.randomUUID();
     const suggestions = await mapboxSuggest(state ? `${query}, ${state}` : query, sessionToken);
     const first = suggestions?.[0];
@@ -229,8 +264,7 @@ export async function geocodeAddressQuery(query: string, state?: string): Promis
 }
 
 export async function searchAddressCandidates(query: string): Promise<GeocodeResult[]> {
-  const headers = mapboxHeaders();
-  if (headers) {
+  if (mapboxBackend()) {
     const sessionToken = crypto.randomUUID();
     const suggestions = await mapboxSuggest(query, sessionToken);
     if (suggestions && suggestions.length > 0) {
