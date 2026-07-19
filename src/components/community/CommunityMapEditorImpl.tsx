@@ -261,7 +261,7 @@ export function CommunityMapEditor({
 
   return (
     <div className="relative flex h-full min-h-[520px] overflow-hidden rounded-2xl border border-border bg-muted">
-      <div ref={containerRef} className="absolute inset-0" />
+      <div ref={containerRef} className="h-full w-full" />
       {errorMsg && (
         <div className="absolute inset-x-0 top-0 z-20 border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-xs text-destructive">
           {errorMsg}
