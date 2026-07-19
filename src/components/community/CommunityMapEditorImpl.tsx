@@ -5,7 +5,7 @@ import { Home, Route, Satellite, Pencil, X, Undo2, Check, Info } from "lucide-re
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getMapboxToken } from "@/lib/mapbox";
+import { getMapboxToken, MAP_STYLE } from "@/lib/mapbox";
 import {
   haversineFt,
   parcelToFeature,
@@ -45,7 +45,7 @@ export function CommunityMapEditor({
   const [pendingGeometry, setPendingGeometry] = useState<GeoJSONLineString | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const streets = "mapbox://styles/mapbox/streets-v12";
+  const streets = MAP_STYLE;
   const sat = "mapbox://styles/mapbox/satellite-streets-v12";
   const currentStyleRef = useRef(streets);
 
