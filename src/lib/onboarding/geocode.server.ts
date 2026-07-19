@@ -5,8 +5,117 @@ export type GeocodeResult = {
   city?: string | null;
   state?: string | null;
   postcode?: string | null;
-  source: "openstreetmap" | "census";
+  source: "mapbox" | "openstreetmap" | "census";
 };
+
+// ---- Mapbox Search Box API (primary) ---------------------------------------
+// Airbnb/Zillow-tier per-keystroke autocomplete via the Lovable connector gateway.
+// Free tier: 100k sessions/mo. A session token bundles /suggest + /retrieve as one bill.
+
+const MAPBOX_GATEWAY = "https://connector-gateway.lovable.dev/mapbox";
+
+function mapboxHeaders(): Record<string, string> | null {
+  const lovableKey = process.env.LOVABLE_API_KEY;
+  const connKey = process.env.MAPBOX_API_KEY;
+  if (!lovableKey || !connKey) return null;
+  return {
+    Authorization: `Bearer ${lovableKey}`,
+    "X-Connection-Api-Key": connKey,
+  };
+}
+
+type MapboxSuggestion = {
+  name: string;
+  mapbox_id: string;
+  feature_type: string;
+  full_address?: string;
+  place_formatted?: string;
+  context?: {
+    place?: { name?: string };
+    region?: { name?: string; region_code?: string };
+    postcode?: { name?: string };
+  };
+};
+
+type MapboxRetrieveFeature = {
+  properties: {
+    full_address?: string;
+    name?: string;
+    context?: MapboxSuggestion["context"];
+    coordinates?: { longitude: number; latitude: number };
+  };
+  geometry?: { coordinates: [number, number] };
+};
+
+async function mapboxSuggest(query: string, sessionToken: string): Promise<MapboxSuggestion[]> {
+  const headers = mapboxHeaders();
+  if (!headers) return [];
+  const url = new URL(`${MAPBOX_GATEWAY}/search/searchbox/v1/suggest`);
+  url.searchParams.set("q", query);
+  url.searchParams.set("session_token", sessionToken);
+  url.searchParams.set("country", "us");
+  url.searchParams.set("types", "address");
+  url.searchParams.set("limit", "6");
+  const res = await fetch(url.toString(), { headers });
+  if (!res.ok) return [];
+  const json = (await res.json()) as { suggestions?: MapboxSuggestion[] };
+  return json.suggestions ?? [];
+}
+
+async function mapboxRetrieve(mapboxId: string, sessionToken: string): Promise<GeocodeResult | null> {
+  const headers = mapboxHeaders();
+  if (!headers) return null;
+  const url = new URL(`${MAPBOX_GATEWAY}/search/searchbox/v1/retrieve/${encodeURIComponent(mapboxId)}`);
+  url.searchParams.set("session_token", sessionToken);
+  const res = await fetch(url.toString(), { headers });
+  if (!res.ok) return null;
+  const json = (await res.json()) as { features?: MapboxRetrieveFeature[] };
+  const feat = json.features?.[0];
+  if (!feat) return null;
+  const coords = feat.properties.coordinates ?? (feat.geometry ? { longitude: feat.geometry.coordinates[0], latitude: feat.geometry.coordinates[1] } : null);
+  if (!coords) return null;
+  const ctx = feat.properties.context;
+  return {
+    lat: coords.latitude,
+    lng: coords.longitude,
+    label: feat.properties.full_address ?? feat.properties.name ?? "",
+    city: ctx?.place?.name ?? null,
+    state: ctx?.region?.region_code ?? ctx?.region?.name ?? null,
+    postcode: ctx?.postcode?.name ?? null,
+    source: "mapbox",
+  };
+}
+
+function suggestionToResult(s: MapboxSuggestion): GeocodeResult & { mapboxId: string } {
+  const ctx = s.context;
+  return {
+    lat: 0, // placeholder — client calls retrieve on selection
+    lng: 0,
+    label: s.full_address ?? `${s.name}${s.place_formatted ? ", " + s.place_formatted : ""}`,
+    city: ctx?.place?.name ?? null,
+    state: ctx?.region?.region_code ?? ctx?.region?.name ?? null,
+    postcode: ctx?.postcode?.name ?? null,
+    source: "mapbox",
+    mapboxId: s.mapbox_id,
+  };
+}
+
+export async function mapboxSuggestAddresses(
+  query: string,
+  sessionToken: string,
+): Promise<Array<GeocodeResult & { mapboxId: string }>> {
+  const suggestions = await mapboxSuggest(query, sessionToken);
+  return suggestions.map(suggestionToResult);
+}
+
+export async function mapboxRetrieveAddress(
+  mapboxId: string,
+  sessionToken: string,
+): Promise<GeocodeResult | null> {
+  return mapboxRetrieve(mapboxId, sessionToken);
+}
+
+// ---- Fallbacks -------------------------------------------------------------
 
 type NominatimHit = {
   display_name: string;
@@ -93,6 +202,17 @@ async function searchWithCensus(query: string): Promise<GeocodeResult[]> {
 }
 
 export async function geocodeAddressQuery(query: string, state?: string): Promise<GeocodeResult | null> {
+  // Mapbox one-shot (single-call geocode via suggest+retrieve with a fresh token).
+  const headers = mapboxHeaders();
+  if (headers) {
+    const sessionToken = crypto.randomUUID();
+    const suggestions = await mapboxSuggest(state ? `${query}, ${state}` : query, sessionToken);
+    const first = suggestions[0];
+    if (first) {
+      const retrieved = await mapboxRetrieve(first.mapbox_id, sessionToken);
+      if (retrieved) return retrieved;
+    }
+  }
   const osm = await geocodeWithOpenStreetMap(query, state);
   if (osm) return osm;
   const census = await searchWithCensus(query);
@@ -100,5 +220,19 @@ export async function geocodeAddressQuery(query: string, state?: string): Promis
 }
 
 export async function searchAddressCandidates(query: string): Promise<GeocodeResult[]> {
+  const headers = mapboxHeaders();
+  if (headers) {
+    const sessionToken = crypto.randomUUID();
+    const suggestions = await mapboxSuggest(query, sessionToken);
+    if (suggestions.length > 0) {
+      // For legacy callers, retrieve top 3 to get coords.
+      const results: GeocodeResult[] = [];
+      for (const s of suggestions.slice(0, 3)) {
+        const r = await mapboxRetrieve(s.mapbox_id, sessionToken);
+        if (r) results.push(r);
+      }
+      if (results.length) return results;
+    }
+  }
   return searchWithCensus(query);
 }
