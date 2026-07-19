@@ -89,7 +89,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
   const [openOverride, setOpenOverride] = useState<boolean | null>(null);
   const open = openOverride ?? shouldOpen;
 
-  const [step, setStep] = useState<Step>("welcome");
+  const [step, setStep] = useState<Step>("basic");
   const [basicInfo, setBasicInfo] = useState<BasicInfo | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobFilenames, setJobFilenames] = useState<string[]>([]);
@@ -135,7 +135,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
     setOpenOverride(false);
     if (markSkip && !completed) update({ wizard_skipped: true });
     setTimeout(() => {
-      setStep("welcome");
+      setStep("basic");
       setBasicInfo(null);
       setJobId(null);
       setJobFilenames([]);
@@ -318,7 +318,9 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
               <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">
                 {step === "welcome"
                   ? "Welcome — this takes about 2 minutes"
-                  : step === "review"
+                  : step === "basic"
+                    ? "Takes about 2 minutes"
+                    : step === "review"
                     ? "Review your workspace"
                     : step === "mappick"
                       ? "Pick your neighbors"
@@ -331,30 +333,26 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
         </div>
 
         <div className="max-h-[80vh] overflow-y-auto pr-1">
-          {step === "welcome" && (
-            <WelcomeScreen
-              onStart={() => setStep("basic")}
+          {step === "basic" && (
+            <BasicInfoStep
+              initial={basicInfo ?? undefined}
+              onContinue={(info, path) => {
+                setBasicInfo(info);
+                if (path === "map") setStep("mappick");
+                else if (path === "docs") setStep("upload");
+                else setStep("nodocs");
+              }}
+              onNoAddress={(info) => {
+                setBasicInfo(info);
+                setStep("docsQ");
+              }}
+              onBack={() => close(true)}
               onSample={() => {
                 setDraft(SAMPLE_DRAFT);
                 setJobFilenames([]);
                 setStep("review");
               }}
               onLater={() => close(true)}
-            />
-          )}
-
-          {step === "basic" && (
-            <BasicInfoStep
-              initial={basicInfo ?? undefined}
-              onContinue={(info) => {
-                setBasicInfo(info);
-                setStep("docsQ");
-              }}
-              onNoAddress={(info) => {
-                setBasicInfo(info);
-                setStep("docsQ");
-              }}
-              onBack={() => setStep("welcome")}
             />
           )}
 
@@ -383,7 +381,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
               basicInfo={basicInfo}
               onSubmit={handleNoDocs}
               onUploadInstead={() => setStep("upload")}
-              onBack={() => setStep("docsQ")}
+              onBack={() => setStep("basic")}
               submitting={applying}
             />
           )}
@@ -391,7 +389,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
           {step === "mappick" && basicInfo && (
             <MapPickStep
               basicInfo={basicInfo}
-              onCancel={() => setStep("docsQ")}
+              onCancel={() => setStep("basic")}
               onSubmit={handleNoDocs}
               submitting={applying}
             />
