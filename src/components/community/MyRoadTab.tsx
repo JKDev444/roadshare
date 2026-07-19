@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VerificationBadge } from "@/components/community/badges";
 import { cn } from "@/lib/utils";
-import { pathLengthFt, type Parcel, type RoadSegment } from "@/lib/community/api";
+import { haversineFt, pathLengthFt, type Parcel, type RoadSegment } from "@/lib/community/api";
 import { computeCostShare, formatUSD, type CostMethod } from "@/lib/community/costShare";
 
 type Props = {
@@ -351,6 +351,5 @@ function firstEntrance(segments: RoadSegment[]): [number, number] | null {
 
 function distanceFt(p: Parcel, entrance: [number, number] | null): number {
   if (!entrance || p.lat == null || p.lng == null) return 0;
-  const { haversineFt } = require("@/lib/community/api") as typeof import("@/lib/community/api");
   return haversineFt(entrance, [Number(p.lng), Number(p.lat)]);
 }
