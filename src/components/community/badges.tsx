@@ -8,8 +8,8 @@ const CONF: Record<Confidence, { label: string; cls: string }> = {
 };
 
 const VER: Record<Verification, { label: string; cls: string; dot: string }> = {
-  verified: { label: "Verified", cls: "bg-primary/10 text-primary", dot: "bg-primary" },
-  unverified: { label: "Unverified", cls: "bg-muted text-muted-foreground", dot: "bg-muted-foreground/60" },
+  verified: { label: "Confirmed", cls: "bg-primary/10 text-primary", dot: "bg-primary" },
+  unverified: { label: "Needs review", cls: "bg-muted text-muted-foreground", dot: "bg-muted-foreground/60" },
   disputed: { label: "Disputed", cls: "bg-destructive/12 text-destructive", dot: "bg-destructive" },
 };
 
