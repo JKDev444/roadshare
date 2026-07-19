@@ -541,15 +541,11 @@ function SegmentPanel({
   onDelete: () => void;
 }) {
   const [name, setName] = useState(segment.name);
-  const [surface, setSurface] = useState(segment.surface ?? "");
-  const [responsibility, setResponsibility] = useState(segment.responsibility);
-  const [source, setSource] = useState(segment.source ?? "");
-  const [confidence, setConfidence] = useState<Confidence>(segment.confidence);
-  const [verification, setVerification] = useState<Verification>(segment.verification);
+  const [notes, setNotes] = useState(segment.source ?? "");
 
   const save = useMutation({
-    mutationFn: () => updateSegment(segment.id, communityId, { name, surface, responsibility, source, confidence, verification }),
-    onSuccess: () => { onSaved(); toast.success("Segment updated"); },
+    mutationFn: () => updateSegment(segment.id, communityId, { name, source: notes }),
+    onSuccess: () => { onSaved(); toast.success("Road updated"); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -561,46 +557,10 @@ function SegmentPanel({
       </div>
       <div className="mt-4 space-y-4">
         <div className="space-y-1.5"><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-        <div className="space-y-1.5"><Label>Surface</Label><Input value={surface} onChange={(e) => setSurface(e.target.value)} placeholder="Gravel, chip seal, 2&quot; asphalt…" /></div>
-        <div className="space-y-1.5">
-          <Label>Maintenance responsibility</Label>
-          <Select value={responsibility} onValueChange={setResponsibility}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="shared">Shared</SelectItem>
-              <SelectItem value="private">Private</SelectItem>
-              <SelectItem value="public">Public</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5"><Label>Source</Label><Input value={source} onChange={(e) => setSource(e.target.value)} /></div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label>Confidence</Label>
-            <Select value={confidence} onValueChange={(v) => setConfidence(v as Confidence)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Verification</Label>
-            <Select value={verification} onValueChange={(v) => setVerification(v as Verification)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="verified">Confirmed</SelectItem>
-                <SelectItem value="unverified">Needs review</SelectItem>
-                <SelectItem value="disputed">Disputed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <div className="space-y-1.5"><Label>Notes (optional)</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Anything worth remembering about this road" /></div>
         <div className="flex gap-2">
           <Button className="flex-1" onClick={() => save.mutate()} disabled={save.isPending}>
-            {save.isPending ? "Saving…" : "Save segment"}
+            {save.isPending ? "Saving…" : "Save road"}
           </Button>
           <Button variant="destructive" size="icon" onClick={onDelete}>
             <Trash2 className="h-4 w-4" />
