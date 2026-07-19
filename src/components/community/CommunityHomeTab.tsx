@@ -64,7 +64,8 @@ export function CommunityHomeTab({
 
   const docCount = documents.data?.length ?? 0;
   const openDecisionCount =
-    decisions.data?.filter((d) => d.status === "open" || d.status === "draft").length ?? 0;
+    decisions.data?.filter((d) => d.status === "discussion" || d.status === "voting" || d.status === "draft")
+      .length ?? 0;
   const roadFeet = segments.reduce((sum, s) => sum + pathLengthFt(s.geometry), 0);
   const confirmedHomes = parcels.filter((p) => p.verification === "verified").length;
 
