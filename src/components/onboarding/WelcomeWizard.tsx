@@ -381,7 +381,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
               basicInfo={basicInfo}
               onSubmit={handleNoDocs}
               onUploadInstead={() => setStep("upload")}
-              onBack={() => setStep("docsQ")}
+              onBack={() => setStep("basic")}
               submitting={applying}
             />
           )}
