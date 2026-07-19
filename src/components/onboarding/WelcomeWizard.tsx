@@ -279,7 +279,8 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
         className={cn(
           "max-w-2xl overflow-hidden",
           step === "review" && "max-w-4xl",
-          step === "mappick" && "max-w-6xl",
+          step === "mappick" &&
+            "max-w-6xl sm:max-w-6xl max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-screen max-sm:max-w-none max-sm:rounded-none max-sm:p-3",
         )}
       >
         <VisuallyHidden>
