@@ -98,12 +98,19 @@ export function segmentToFeature(
   if (pts.length < 2) return null;
   return {
     type: "Feature",
-    geometry: { type: "LineString", coordinates: pts.map((p) => [p.x, 100 - p.y]) },
+    geometry: { type: "LineString", coordinates: pts.map(legacyPointToLngLat) },
     properties: { id: seg.id, name: seg.name, surface: seg.surface, responsibility: seg.responsibility },
   };
 }
 
 const DEFAULT_SQUARE_OFFSET = 0.00008; // roughly 25 ft in degrees
+const LEGACY_CENTER_LNG = -120.95;
+const LEGACY_CENTER_LAT = 39.08;
+const LEGACY_UNIT_DEGREES = 0.00018;
+
+function legacyPointToLngLat(point: Point): [number, number] {
+  return [LEGACY_CENTER_LNG + (point.x - 50) * LEGACY_UNIT_DEGREES, LEGACY_CENTER_LAT + (50 - point.y) * LEGACY_UNIT_DEGREES];
+}
 
 /** Convert a parcel to a GeoJSON Feature for the map. */
 export function parcelToFeature(p: Parcel): {
@@ -121,6 +128,26 @@ export function parcelToFeature(p: Parcel): {
   const lat = p.lat ?? p.pos_y ?? 0;
   const lng = p.lng ?? p.pos_x ?? 0;
   if (lat === 0 && lng === 0) return null;
+  if (p.lat == null && p.lng == null && p.pos_x != null && p.pos_y != null) {
+    const [legacyLng, legacyLat] = legacyPointToLngLat({ x: p.pos_x, y: p.pos_y });
+    const o = DEFAULT_SQUARE_OFFSET;
+    return {
+      type: "Feature",
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [legacyLng - o, legacyLat - o],
+            [legacyLng + o, legacyLat - o],
+            [legacyLng + o, legacyLat + o],
+            [legacyLng - o, legacyLat + o],
+            [legacyLng - o, legacyLat - o],
+          ],
+        ],
+      },
+      properties: { id: p.id, label: p.label, selected: false },
+    };
+  }
   const o = DEFAULT_SQUARE_OFFSET;
   return {
     type: "Feature",
