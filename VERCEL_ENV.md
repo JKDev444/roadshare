@@ -28,21 +28,16 @@ That is enough to render the app, sign in, and read/write data through RLS.
 
 You need **one** AI key and **one** Mapbox key.
 
-### AI (Q&A, document classify, clause extract)
+### AI (Q&A, document classify, clause extract, PDF upload)
 
 Pick either:
 
 - `OPENAI_API_KEY` — get one at <https://platform.openai.com/api-keys>.
-  The app auto-selects `gpt-4o-mini` for fast calls.
+  The app auto-selects `gpt-4o-mini` for fast calls and `gpt-4o` for PDF
+  document extraction.
 
 (`LOVABLE_API_KEY` would also work, but it can't be exported from Lovable.
 `OPENAI_API_KEY` is the intended Vercel path.)
-
-**PDF document extraction** (the "Upload a document" flow) currently requires
-`LOVABLE_API_KEY` because it uses Lovable's multimodal PDF pipeline. On
-Vercel-only deployments that feature is disabled until we add a direct
-OpenAI/Gemini PDF path. Everything else — Q&A, classify, clause extraction —
-works with `OPENAI_API_KEY` alone.
 
 ### Address search (Mapbox)
 
