@@ -204,13 +204,11 @@ function WelcomeBanner({
   communityName,
   parcelCount,
   roadCount,
-  onGoHome,
   onDismiss,
 }: {
   communityName: string;
   parcelCount: number;
   roadCount: number;
-  onGoHome: () => void;
   onDismiss: () => void;
 }) {
   return (
@@ -235,10 +233,7 @@ function WelcomeBanner({
           </div>
         </div>
         <div className="flex shrink-0 gap-2">
-          <Button variant="ghost" size="sm" onClick={onDismiss}>Not now</Button>
-          <Button size="sm" onClick={onGoHome} className="bounce hover:scale-105">
-            Go to Community Home
-          </Button>
+          <Button size="sm" onClick={onDismiss}>Got it</Button>
         </div>
       </div>
     </div>
