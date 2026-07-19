@@ -4,21 +4,25 @@ import { ArrowRight, MapPin, Loader2, Sparkles, Home, Route as RouteIcon, FileTe
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { searchAddresses, formatHit, type NominatimHit } from "@/lib/onboarding/nominatim";
-import { searchAddressSuggestions } from "@/lib/onboarding/geocode.functions";
+import { suggestAddresses, retrieveAddress } from "@/lib/onboarding/geocode.functions";
 
 export type BasicInfo = {
   communityName: string;
   city: string;
   state: string;
   startingAddress: string;
+  lat?: number;
+  lng?: number;
 };
 
 export type SetupPath = "map" | "docs" | "manual";
 
-function pickCity(a: NominatimHit["address"]): string {
-  return a?.city ?? a?.town ?? a?.village ?? "";
-}
+type Suggestion = {
+  mapboxId: string;
+  label: string;
+  city?: string | null;
+  state?: string | null;
+};
 
 /** Step 1. Basic community information. Plain language, minimal fields. */
 export function BasicInfoStep({
@@ -36,22 +40,29 @@ export function BasicInfoStep({
   onSample?: () => void;
   onLater?: () => void;
 }) {
-  const searchFallback = useServerFn(searchAddressSuggestions);
+  const suggestFn = useServerFn(suggestAddresses);
+  const retrieveFn = useServerFn(retrieveAddress);
   const [communityName, setCommunityName] = useState(initial?.communityName ?? "");
   const [address, setAddress] = useState(initial?.startingAddress ?? "");
   const [city, setCity] = useState(initial?.city ?? "");
   const [state, setState] = useState(initial?.state ?? "");
-  const [hits, setHits] = useState<NominatimHit[]>([]);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
+    initial?.lat != null && initial?.lng != null ? { lat: initial.lat, lng: initial.lng } : null,
+  );
+  const [hits, setHits] = useState<Suggestion[]>([]);
   const [searching, setSearching] = useState(false);
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState(!!initial?.startingAddress);
   const [lookupStatus, setLookupStatus] = useState<"idle" | "ok" | "empty" | "error">("idle");
   const boxRef = useRef<HTMLDivElement | null>(null);
+  const sessionTokenRef = useRef<string>(
+    typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Math.random()),
+  );
 
   // Debounced address suggestions.
   useEffect(() => {
     const q = address.trim();
-    if (picked || q.length < 4) {
+    if (picked || q.length < 3) {
       setHits([]);
       setSearching(false);
       setLookupStatus("idle");
@@ -61,42 +72,19 @@ export function BasicInfoStep({
     const ctl = new AbortController();
     const t = setTimeout(async () => {
       try {
-        let res = await searchAddresses(q, { signal: ctl.signal });
-        const streetNumber = q.match(/^\s*(\d+)/)?.[1];
-        const needsExactStreet = Boolean(
-          streetNumber && !res.some((hit) => formatHit(hit).includes(streetNumber)),
-        );
-        if (!ctl.signal.aborted && (res.length === 0 || needsExactStreet)) {
-          const fallback = await searchFallback({ data: { query: q } });
-          const fallbackHits = fallback.map((hit, index) => {
-            const street = hit.label.split(",")[0]?.trim() ?? "";
-            const streetParts = street.match(/^(\d+)\s+(.+)$/);
-            return {
-              place_id: -1000 - index,
-              display_name: hit.label,
-              lat: String(hit.lat),
-              lon: String(hit.lng),
-              address: {
-                house_number: streetParts?.[1],
-                road: streetParts?.[2],
-                city: hit.city ?? undefined,
-                state: hit.state ?? undefined,
-                postcode: hit.postcode ?? undefined,
-              },
-            };
-          });
-          const seen = new Set<string>();
-          res = [...fallbackHits, ...res].filter((hit) => {
-            const key = formatHit(hit).toLowerCase();
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-          });
-        }
+        const res = await suggestFn({
+          data: { query: q, sessionToken: sessionTokenRef.current },
+        });
         if (!ctl.signal.aborted) {
-          setHits(res);
-          setOpen(res.length > 0);
-          setLookupStatus(res.length > 0 ? "ok" : "empty");
+          const mapped: Suggestion[] = res.map((r) => ({
+            mapboxId: r.mapboxId,
+            label: r.label,
+            city: r.city,
+            state: r.state,
+          }));
+          setHits(mapped);
+          setOpen(mapped.length > 0);
+          setLookupStatus(mapped.length > 0 ? "ok" : "empty");
         }
       } catch {
         if (!ctl.signal.aborted) {
@@ -106,12 +94,12 @@ export function BasicInfoStep({
       } finally {
         setSearching(false);
       }
-    }, 350);
+    }, 180);
     return () => {
       clearTimeout(t);
       ctl.abort();
     };
-  }, [address, picked, searchFallback]);
+  }, [address, picked, suggestFn]);
 
   // Close dropdown on outside click.
   useEffect(() => {
@@ -122,12 +110,28 @@ export function BasicInfoStep({
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  function selectHit(h: NominatimHit) {
-    setAddress(formatHit(h));
-    setCity(pickCity(h.address));
-    setState(h.address?.state ?? "");
+  async function selectHit(h: Suggestion) {
+    setAddress(h.label);
+    setCity(h.city ?? "");
+    setState(h.state ?? "");
     setPicked(true);
     setOpen(false);
+    // Retrieve coordinates so the map opens on the exact spot.
+    try {
+      const retrieved = await retrieveFn({
+        data: { mapboxId: h.mapboxId, sessionToken: sessionTokenRef.current },
+      });
+      if (retrieved) {
+        setCoords({ lat: retrieved.lat, lng: retrieved.lng });
+        if (retrieved.city) setCity(retrieved.city);
+        if (retrieved.state) setState(retrieved.state);
+      }
+    } catch {
+      // Coords are optional — map step can still geocode as a fallback.
+    }
+    // New session token after a completed pick.
+    sessionTokenRef.current =
+      typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Math.random());
   }
 
   return (
@@ -175,14 +179,14 @@ export function BasicInfoStep({
             {open && hits.length > 0 && (
               <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-border bg-popover text-sm shadow-lg">
                 {hits.map((h) => (
-                  <li key={h.place_id}>
+                  <li key={h.mapboxId}>
                     <button
                       type="button"
                       onClick={() => selectHit(h)}
                       className="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-muted"
                     >
                       <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                      <span>{formatHit(h)}</span>
+                      <span>{h.label}</span>
                     </button>
                   </li>
                 ))}
@@ -221,7 +225,10 @@ export function BasicInfoStep({
         size="lg"
         className="h-12 w-full rounded-xl bg-gradient-to-r from-primary to-fun-2 text-base font-semibold shadow-md hover:opacity-95"
         onClick={() =>
-          onContinue({ communityName, city, state, startingAddress: address }, "map")
+          onContinue(
+            { communityName, city, state, startingAddress: address, lat: coords?.lat, lng: coords?.lng },
+            "map",
+          )
         }
         disabled={address.trim().length < 5}
       >
@@ -236,7 +243,10 @@ export function BasicInfoStep({
           <button
             type="button"
             onClick={() =>
-              onContinue({ communityName, city, state, startingAddress: address }, "docs")
+              onContinue(
+                { communityName, city, state, startingAddress: address, lat: coords?.lat, lng: coords?.lng },
+                "docs",
+              )
             }
             className="flex items-start gap-2 rounded-lg border border-border bg-background p-2.5 text-left text-xs transition-colors hover:border-primary/50 hover:bg-primary/5"
           >
@@ -249,7 +259,10 @@ export function BasicInfoStep({
           <button
             type="button"
             onClick={() =>
-              onContinue({ communityName, city, state, startingAddress: address }, "manual")
+              onContinue(
+                { communityName, city, state, startingAddress: address, lat: coords?.lat, lng: coords?.lng },
+                "manual",
+              )
             }
             className="flex items-start gap-2 rounded-lg border border-border bg-background p-2.5 text-left text-xs transition-colors hover:border-primary/50 hover:bg-primary/5"
           >

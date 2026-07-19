@@ -3,20 +3,18 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   FileText,
-  Building2,
   LayoutDashboard,
   LogOut,
   FileBarChart,
   Map as MapIcon,
   Menu,
-  MessageSquare,
-  MessageSquareQuote,
-  PieChart,
+  Vote,
   Route as RouteIcon,
-  Scale,
+  ChevronDown,
   Settings,
   Users,
   X,
+  Home,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -29,20 +27,20 @@ interface NavLink {
   to: string;
   label: string;
   icon: typeof LayoutDashboard;
+  tint: string; // tailwind bg color for the icon chip
 }
 
-const NAV: NavLink[] = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/portfolio", label: "Portfolio", icon: Building2 },
-  { to: "/community", label: "Community Record", icon: Users },
-  { to: "/map", label: "GIS & Roads", icon: MapIcon },
-  { to: "/documents", label: "Documents", icon: FileText },
-  { to: "/clauses", label: "Clause Graph", icon: Scale },
-  { to: "/ask", label: "Ask My Community", icon: MessageSquareQuote },
-  { to: "/pulse", label: "Community Pulse", icon: PieChart },
-  { to: "/decisions", label: "Decision Rooms", icon: MessageSquare },
-  { to: "/reports", label: "Reports", icon: FileBarChart },
-  { to: "/settings", label: "Settings", icon: Settings },
+const PRIMARY: NavLink[] = [
+  { to: "/dashboard", label: "Home", icon: Home, tint: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400" },
+  { to: "/map", label: "My Road", icon: MapIcon, tint: "bg-teal-500/15 text-teal-600 dark:text-teal-400" },
+  { to: "/community", label: "Neighbors", icon: Users, tint: "bg-amber-500/15 text-amber-600 dark:text-amber-500" },
+  { to: "/documents", label: "Documents", icon: FileText, tint: "bg-violet-500/15 text-violet-600 dark:text-violet-400" },
+  { to: "/decisions", label: "Decisions", icon: Vote, tint: "bg-rose-500/15 text-rose-600 dark:text-rose-400" },
+];
+
+const SECONDARY: NavLink[] = [
+  { to: "/reports", label: "Reports", icon: FileBarChart, tint: "bg-slate-500/15 text-slate-600 dark:text-slate-400" },
+  { to: "/settings", label: "Settings", icon: Settings, tint: "bg-slate-500/15 text-slate-600 dark:text-slate-400" },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -52,6 +50,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   useOnboardingResetEasterEgg();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(
+    () => SECONDARY.some((s) => pathname.startsWith(s.to)),
+  );
 
   useEffect(() => setOpen(false), [pathname]);
 
@@ -63,6 +64,33 @@ export function AppShell({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     navigate({ to: "/auth", replace: true });
   }
+
+  const renderLink = (item: NavLink) => {
+    const active = pathname === item.to || pathname.startsWith(item.to + "/");
+    const Icon = item.icon;
+    return (
+      <Link
+        key={item.to}
+        to={item.to}
+        className={cn(
+          "group flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-medium transition-all",
+          active
+            ? "bg-primary/8 text-foreground shadow-sm"
+            : "text-muted-foreground hover:bg-accent hover:text-foreground",
+        )}
+      >
+        <span
+          className={cn(
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-transform group-hover:scale-105",
+            item.tint,
+          )}
+        >
+          <Icon className="h-4 w-4" />
+        </span>
+        <span>{item.label}</span>
+      </Link>
+    );
+  };
 
   return (
     <div className="flex min-h-screen bg-muted/30">
@@ -90,25 +118,19 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-          {NAV.map((item) => {
-            const active = pathname === item.to;
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
+          {PRIMARY.map(renderLink)}
+
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setMoreOpen((v) => !v)}
+              className="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+            >
+              <span>More</span>
+              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", moreOpen ? "rotate-0" : "-rotate-90")} />
+            </button>
+            {moreOpen && <div className="mt-1 space-y-1">{SECONDARY.map(renderLink)}</div>}
+          </div>
         </nav>
 
         <div className="border-t border-border p-3">
