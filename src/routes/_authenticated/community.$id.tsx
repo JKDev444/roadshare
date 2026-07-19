@@ -8,7 +8,6 @@ import {
   ClipboardList,
   Clock,
   Download,
-  HardHat,
   History,
   LayoutGrid,
   Map as MapIcon,
@@ -21,6 +20,7 @@ import {
   Trash2,
   TriangleAlert,
   Users,
+  Home as HomeIcon,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -50,8 +50,8 @@ import {
 } from "@/components/ui/popover";
 import { ConfidenceBadge, VerificationBadge } from "@/components/community/badges";
 import { CommunityMapEditor } from "@/components/community/CommunityMapEditor";
+import { CommunityHomeTab } from "@/components/community/CommunityHomeTab";
 import { Confetti } from "@/components/onboarding/Confetti";
-import { ProjectsTab } from "@/components/planner/ProjectsTab";
 import {
   createParcel,
   createSegment,
@@ -76,13 +76,22 @@ import {
   type Verification,
 } from "@/lib/community/api";
 
-const TABS = ["map", "properties", "projects"] as const;
+const TABS = ["home", "roads", "homes"] as const;
 type Tab = (typeof TABS)[number];
+
+// Backward compatibility for older links / bookmarks.
+function normalizeTab(v: unknown): Tab {
+  if (v === "map") return "roads";
+  if (v === "properties") return "homes";
+  if (v === "projects") return "home";
+  if (typeof v === "string" && (TABS as readonly string[]).includes(v)) return v as Tab;
+  return "home";
+}
 
 export const Route = createFileRoute("/_authenticated/community/$id")({
   head: () => ({ meta: [{ title: "Community Record — RoadShare" }, { name: "robots", content: "noindex" }] }),
   validateSearch: (s: Record<string, unknown>): { tab: Tab; justCreated?: string } => ({
-    tab: TABS.includes(s.tab as Tab) ? (s.tab as Tab) : "map",
+    tab: normalizeTab(s.tab),
     justCreated: s.justCreated === "1" ? "1" : undefined,
   }),
   component: CommunityDetail,
@@ -112,22 +121,19 @@ function CommunityDetail() {
 
   const p = parcels.data ?? [];
   const s = segments.data ?? [];
-  const verified = p.filter((x) => x.verification === "verified").length;
-  const disputed = p.filter((x) => x.verification === "disputed").length;
-  const totalRoad = s.reduce((sum, seg) => sum + pathLengthFt(seg.geometry), 0);
 
   return (
     <AppShell>
       <div className="relative mx-auto flex h-[calc(100vh-4rem)] max-w-7xl flex-col space-y-4 px-4 py-4">
         <Confetti show={celebrate} />
-        {showWelcome && (
+        {showWelcome && tab !== "home" && (
           <WelcomeBanner
             communityName={community.data?.name ?? "your community"}
             parcelCount={p.length}
             roadCount={s.length}
-            onCreateProject={() => {
+            onGoHome={() => {
               setShowWelcome(false);
-              void navigate({ search: { tab: "projects" } });
+              void navigate({ search: { tab: "home" } });
             }}
             onDismiss={() => setShowWelcome(false)}
           />
@@ -167,21 +173,25 @@ function CommunityDetail() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat icon={Users} label="Parcels" value={String(p.length)} />
-          <Stat icon={CheckCircle2} label="Verified" value={`${verified}/${p.length || 0}`} tone="primary" />
-          <Stat icon={Ruler} label="Road mapped" value={`${totalRoad.toLocaleString()} ft`} />
-          <Stat icon={TriangleAlert} label="Disputed" value={String(disputed)} tone={disputed ? "warn" : "muted"} />
-        </div>
-
         <Tabs value={tab} onValueChange={(v) => navigate({ search: { tab: v as Tab } })} className="flex min-h-0 flex-1 flex-col">
           <TabsList className="flex-wrap">
-            <TabsTrigger value="map"><MapIcon className="mr-1.5 h-4 w-4" /> Map</TabsTrigger>
-            <TabsTrigger value="properties"><Users className="mr-1.5 h-4 w-4" /> Properties</TabsTrigger>
-            <TabsTrigger value="projects"><HardHat className="mr-1.5 h-4 w-4" /> Projects</TabsTrigger>
+            <TabsTrigger value="home"><HomeIcon className="mr-1.5 h-4 w-4" /> Home</TabsTrigger>
+            <TabsTrigger value="roads"><RouteIcon className="mr-1.5 h-4 w-4" /> My Road</TabsTrigger>
+            <TabsTrigger value="homes"><Users className="mr-1.5 h-4 w-4" /> Homes</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="map" className="mt-4 flex min-h-0 flex-1 flex-col">
+          <TabsContent value="home" className="mt-4">
+            <CommunityHomeTab
+              communityId={id}
+              community={community.data ?? null}
+              parcels={p}
+              segments={s}
+              events={events.data ?? []}
+              onGoToRoads={() => navigate({ search: { tab: "roads" } })}
+              onGoToHomes={() => navigate({ search: { tab: "homes" } })}
+            />
+          </TabsContent>
+          <TabsContent value="roads" className="mt-4 flex min-h-0 flex-1 flex-col">
             <MapTab
               communityId={id}
               community={community.data ?? null}
@@ -190,11 +200,8 @@ function CommunityDetail() {
               events={events.data ?? []}
             />
           </TabsContent>
-          <TabsContent value="properties" className="mt-4">
+          <TabsContent value="homes" className="mt-4">
             <PropertiesTab communityId={id} parcels={p} loading={parcels.isLoading} />
-          </TabsContent>
-          <TabsContent value="projects" className="mt-4">
-            <ProjectsTab communityId={id} />
           </TabsContent>
         </Tabs>
       </div>
@@ -202,33 +209,17 @@ function CommunityDetail() {
   );
 }
 
-function Stat({ icon: Icon, label, value, tone = "default" }: { icon: typeof Users; label: string; value: string; tone?: "default" | "primary" | "warn" | "muted" }) {
-  const toneCls = {
-    default: "bg-secondary text-secondary-foreground",
-    primary: "bg-primary/10 text-primary",
-    warn: "bg-destructive/10 text-destructive",
-    muted: "bg-muted text-muted-foreground",
-  }[tone];
-  return (
-    <div className="rounded-2xl border border-border bg-card p-4 fun-shadow-sm">
-      <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${toneCls}`}><Icon className="h-4 w-4" /></span>
-      <p className="mt-3 font-display text-2xl font-bold">{value}</p>
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-    </div>
-  );
-}
-
 function WelcomeBanner({
   communityName,
   parcelCount,
   roadCount,
-  onCreateProject,
+  onGoHome,
   onDismiss,
 }: {
   communityName: string;
   parcelCount: number;
   roadCount: number;
-  onCreateProject: () => void;
+  onGoHome: () => void;
   onDismiss: () => void;
 }) {
   return (
@@ -247,15 +238,15 @@ function WelcomeBanner({
             </p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               We added <strong>{parcelCount}</strong> {parcelCount === 1 ? "home" : "homes"}
-              {roadCount > 0 ? ` and ${roadCount} ${roadCount === 1 ? "road" : "roads"}` : ""}. Next
-              step: create your first project to plan a shared cost.
+              {roadCount > 0 ? ` and ${roadCount} ${roadCount === 1 ? "road" : "roads"}` : ""}. Head
+              back to Home to see the next steps.
             </p>
           </div>
         </div>
         <div className="flex shrink-0 gap-2">
           <Button variant="ghost" size="sm" onClick={onDismiss}>Not now</Button>
-          <Button size="sm" onClick={onCreateProject} className="bounce hover:scale-105">
-            Create your first project
+          <Button size="sm" onClick={onGoHome} className="bounce hover:scale-105">
+            Go to Community Home
           </Button>
         </div>
       </div>
