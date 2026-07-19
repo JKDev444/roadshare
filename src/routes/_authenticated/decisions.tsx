@@ -131,7 +131,7 @@ function DecisionsPage() {
                   <div className="mt-2 flex flex-wrap gap-2">
                     {readiness.data.parcels < 2 && (
                       <Button asChild size="sm" variant="outline">
-                        <Link to="/community/$id" params={{ id: cid }} search={{ tab: "properties" }}>Add properties</Link>
+                        <Link to="/community/$id" params={{ id: cid }} search={{ tab: "homes" }}>Add properties</Link>
                       </Button>
                     )}
                     {readiness.data.roads < 1 && (
@@ -637,7 +637,7 @@ function ExplanationTab({ decision, communityId }: { decision: Decision; communi
             Resolve the {readiness?.unresolved} property record{readiness?.unresolved === 1 ? "" : "s"} still missing an address before publishing this decision — the report should not cite unconfirmed properties.
           </span>
           <Button asChild size="sm" variant="outline">
-            <Link to="/community/$id" params={{ id: communityId }} search={{ tab: "properties" }}>
+            <Link to="/community/$id" params={{ id: communityId }} search={{ tab: "homes" }}>
               Review properties
             </Link>
           </Button>

@@ -119,7 +119,7 @@ function ProjectPlanner() {
     <AppShell>
       <div className="mx-auto max-w-6xl space-y-6">
         <div>
-          <Link to="/community/$id" params={{ id: p.community_id }} search={{ tab: "projects" }} className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+          <Link to="/community/$id" params={{ id: p.community_id }} search={{ tab: "home" }} className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> {community.data?.name ?? "Community"}
           </Link>
           <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
