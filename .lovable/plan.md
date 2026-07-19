@@ -1,66 +1,117 @@
-## Goal
-Make `/tools/cedar-hollow` understandable for a first-time, non-technical user and fix the onboarding failure path for `787 Five Peaks Dr, Kalama, WA 98625` so users do not hit a blank map.
+# Plan: Nationwide address search, non-tech sidebar, real neighbor invites, marketing polish
 
-## What I found from the current code
-- The Cedar Hollow page shows the map, address search, neighbor selection, entrances, surface settings, and allocation controls all at once. That creates no clear starting point.
-- The top progress pills mark “Surface” as complete by default because the surface mix starts at 100%, even before the user has picked their home, neighbors, or road entrance.
-- Important controls live below the fold, so the user can miss required steps and the results panel only says what is missing after they have already gotten stuck.
-- The demo styling uses many card/pill elements and does not match the more playful app/onboarding treatment.
-- The onboarding address search currently depends on OpenStreetMap/Nominatim suggestions; if the exact typed address is not returned, the user can continue with text, but the map step then depends on geocoding and building-footprint data that can return empty/blank for rural areas.
+Big picture: fix the four things that made Kalama fail and made the app feel confusing to a non-tech user, and finish the marketing site so it reads professional + fun edge to edge.
 
-## Plan
+## 1. Airbnb-quality address search (fixes Kalama and every other town)
 
-### 1. Redesign Cedar Hollow as a guided walkthrough, not a control panel
-Replace the all-at-once demo with a single focused flow:
+**Root cause:** we're using OpenStreetMap's Nominatim as the primary geocoder. It rate-limits, has weak coverage in small towns, and doesn't return per-keystroke suggestions the way big-app search does. That's why "787 Five Peaks Dr, Kalama, WA" never appeared.
 
-```text
-Start: Pick your home
-  ↓
-Choose who shares the road
-  ↓
-Confirm road entrances
-  ↓
-Review yearly share
-```
+**Fix:** switch to **Mapbox Search Box API** (the same tech class that Airbnb/Zillow use) as primary, keep Nominatim as free fallback only.
 
-- Remove the confusing pill progress bar at the top.
-- Add a clear “Start here” panel above the map.
-- Show only the current step’s primary controls prominently.
-- Keep advanced items like surface mix, funding period, and allocation method tucked into a plain-language “Adjust assumptions” area after the basic result is visible.
-- Keep the result panel visible, but make it explain the next missing action in plain language instead of showing technical empty states.
+- New server function `searchAddress(query, sessionToken)` calls Mapbox Search Box `/suggest` and `/retrieve` — session tokens make it billed as one search regardless of keystrokes (free tier: 100k/mo).
+- Client-side debounced (150ms) hook `useAddressSuggest` returns suggestions as user types.
+- Dropdown renders full formatted address, city, state — user clicks one → we already have `{lng, lat, city, state, zip, address}` — no re-geocoding.
+- Pass coordinates directly into the Map step so it opens centered on the exact house even in rural areas with no OSM buildings.
+- Rural fallback: when 0 building footprints exist within 300m, switch the map to "Drop pins for each home" mode with a friendly one-liner: "We couldn't find home outlines here — tap the map to add homes yourself."
 
-### 2. Make the demo produce a useful result faster
-- Preload sane demo defaults so the user is not punished for not knowing road-engineering settings.
-- After the user picks their home, auto-suggest nearby homes and provide one obvious action: “Use suggested neighbors.”
-- After neighbors are selected, prompt them to confirm entrances directly on the map or with two clear buttons.
-- Once enough information exists, scroll/advance to a result state that says “Here’s your estimated yearly share.”
+## 2. Sidebar redesign for a non-tech homeowner
 
-### 3. Clean up visual style to match the newer app direction
-- Reduce nested cards and pill-shaped navigation.
-- Use a more playful “map workspace” composition: large map first, soft colored step rail, friendly helper copy, and tactile action buttons.
-- Use existing semantic tokens from `src/styles.css`; no hardcoded color utility styling.
-- Keep the map fun and legible: selected home, sharing homes, and road entrances should be visually obvious without reading a legend first.
+Current: 11 items, gray icons, jargon (Clause Graph, Community Pulse).
 
-### 4. Fix onboarding address/map failure handling
-For the specific failure pattern with `787 Five Peaks Dr, Kalama, WA 98625`:
-- Improve the address lookup flow so typed full addresses can still be geocoded even when autocomplete suggestions are missing.
-- In the map step, show a real loading/error/empty state inside the map area rather than a blank panel.
-- If building/home polygons are unavailable for a rural area, fall back to a usable manual map mode: center on the address, show the pin, and let the user continue by drawing/selecting an area or adding addresses manually.
-- Add friendlier copy that explains “We found your road, but public map data may not have every home here yet” instead of surfacing technical map/provider failure.
+New primary nav (5 items, colored icons, plain English):
+- **Home** (indigo house icon) — dashboard
+- **My Road** (teal map icon) — map, roads, homes
+- **Neighbors** (amber people icon) — invites + Ask + Pulse combined
+- **Documents** (violet doc icon) — was Documents + Clause Graph
+- **Decisions** (rose gavel icon) — was Decision Rooms + votes
 
-### 5. Testing I will run before reporting back
-I will not call this done until I verify:
-- `/tools/cedar-hollow` starts with an obvious first action and no “Surface” pill active at launch.
-- A non-technical path through the sample reaches a visible yearly-share result without needing to scroll-hunt.
-- The Cedar Hollow page works at the current desktop viewport and a mobile-width viewport.
-- Onboarding with `787 Five Peaks Dr, Kalama, WA 98625` does not show a blank map; it must show either nearby selectable homes or a clear fallback state with next actions.
-- Console errors are checked during both flows.
+Under a collapsible **More** group: Reports, Settings.
 
-## Technical areas to change
-- `src/routes/tools.cedar-hollow.tsx`
-- `src/components/roadshare/Planner.tsx`
-- `src/components/roadshare/PlatMap.tsx`
-- `src/components/roadshare/ResultsPanel.tsx`
-- `src/components/onboarding/steps/BasicInfoStep.tsx`
-- `src/components/onboarding/steps/MapPickStepImpl.tsx`
-- Potentially `src/lib/onboarding/nominatim.ts` and `src/lib/onboarding/parcels.functions.ts` for lookup/fallback behavior
+- Each item gets a subtle colored icon background (soft tint of the accent) — playful without being childish.
+- "Ask My Community" and "Community Pulse" are folded into the Neighbors hub, not top-level.
+
+## 3. Real neighbor system (Owner + Voters, email + magic link)
+
+New concept: every community has exactly one **Owner** (creator) and any number of **Voters**.
+
+**DB (one migration):**
+- `community_members` table: `community_id`, `user_id` (nullable until they sign in), `email`, `role` ('owner' | 'voter'), `invited_at`, `joined_at`, `status`.
+- `community_invites` table: `community_id`, `email`, `token`, `expires_at`, `invited_by`.
+- RLS: owner can insert/delete members of their own community; voters can only read their own row + community metadata; nobody but owner can edit roads/homes/projects/documents.
+- `has_community_role(community_id, role)` security-definer function.
+
+**Invite flow:**
+- Owner opens Neighbors → "Invite neighbors" → paste emails (one per line, or CSV) → we send each a branded magic-link email via Lovable Emails (scaffold auth email templates in same round).
+- Recipient clicks link → signed in → auto-joined to community as Voter → lands on Neighbors page with a "Welcome" banner.
+- Owner sees a live roster: Pending / Joined, resend, revoke.
+
+**Voter permissions (enforced in RLS + UI):**
+- ✅ View community, map, docs, plan, allocations.
+- ✅ Answer surveys (Community Pulse).
+- ✅ Ask/answer in "Ask My Community".
+- ✅ Vote in Decision Rooms.
+- ❌ Cannot edit roads, homes, projects, allocations, or invite others.
+
+**Empty-state fixes:**
+- Ask/Pulse now show real value with 0 voters: "You're the only member so far. Invite your neighbors to unlock voting and surveys." with a big **Invite neighbors** CTA.
+
+## 4. Marketing site polish (all pages)
+
+Design system for the whole marketing site:
+- Straight horizontal dashed road as the recurring motif (not curved) — replace the curvy "How it works" SVG.
+- One consistent icon set (Lucide, rounded, colored fills on soft tinted circles).
+- Photography: 3–5 lifestyle photos (rural road, neighbors on porch, mailbox) from Unsplash via lovable-assets — replaces flat colored blocks.
+- No card walls: at most one card section per page.
+- Playful accents (Sparkles, small illustrations) but professional type + spacing.
+
+Per-page work:
+
+**/** (home)
+- Straighten the "How it works" road (currently curved).
+- Keep StoryPath, SecretSauce, personas, CTA.
+
+**/product**
+- Kill the "1" and "2" numbered blocks that look unfinished.
+- Replace with a 4-chapter zigzag walkthrough (Map → Split → Decide → Report).
+- Rework "What we're building next" — most of that is built. Rename to "What's already inside" and list the actual features (Ask My Community, Pulse, Decision Rooms, Clause Graph) with short plain-English blurbs.
+
+**/solutions/private-road-communities**
+- Full rebuild to match the new visual system: hero with straight road + houses, 3 pain-points, 3 outcomes, one lifestyle photo, single CTA.
+
+**/solutions/*** (other solutions pages)
+- Same treatment: hero, pains, outcomes, one photo, CTA. No card walls.
+
+**/about**
+- Warmer copy, one team/mission photo, drop redundant sections.
+
+**/methodology**
+- Keep the house-share diagram; add a straight-road version alongside; tighten copy.
+
+**/pricing**
+- Reformat plan comparison as a clean table (not stacked cards). Add one FAQ block.
+
+## 5. Verification (before I say done)
+
+- Playwright end-to-end: sign up → onboarding with Kalama address → address dropdown shows suggestions → pick one → map centers on Kalama → finish onboarding → land in community.
+- Send myself a test invite as Owner → open magic link in a second browser context → confirm Voter lands on Neighbors page and cannot edit map (RLS blocks the write).
+- Screenshot every marketing page at 1280 and 393 to confirm consistency.
+- Report back honestly against your three questions (easy for non-tech? got what they wanted? fun design?) — no "done" without evidence.
+
+## Technical section (safe to skip)
+
+- Mapbox Search Box API called from `src/lib/onboarding/geocode.functions.ts` — sk token via connector gateway, session tokens generated client-side.
+- Nominatim kept as a `try/catch` fallback if Mapbox returns 0 results (unlikely).
+- Sidebar in `src/components/AppSidebar.tsx` — colored icon tokens added to `src/styles.css` (`--nav-home`, `--nav-road`, etc.).
+- Auth emails scaffolded via `email_domain--scaffold_auth_email_templates` (magic link template branded).
+- Two migrations: `community_members` + `community_invites` with GRANTs, RLS, and `has_community_role()` security-definer.
+- New server fns: `inviteNeighbors`, `acceptInvite`, `listMembers`, `revokeInvite`.
+- `_authenticated/community.$id.*` write paths gated behind `has_community_role(id, 'owner')` on the server; UI hides edit buttons for voters.
+- Marketing pages: no data changes, pure presentation edits under `src/routes/` and `src/components/site/`.
+
+## Order of build
+
+1. Mapbox Search Box + fix Kalama (unblocks onboarding).
+2. Community members schema + invite flow + magic-link email.
+3. Sidebar redesign.
+4. Marketing polish pass across all pages.
+5. Full Playwright verification + honest Q&A report.
