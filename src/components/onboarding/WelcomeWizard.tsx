@@ -389,7 +389,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
           {step === "mappick" && basicInfo && (
             <MapPickStep
               basicInfo={basicInfo}
-              onCancel={() => setStep("docsQ")}
+              onCancel={() => setStep("basic")}
               onSubmit={handleNoDocs}
               submitting={applying}
             />
