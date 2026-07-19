@@ -132,10 +132,17 @@ async function runProcessing(jobId: string) {
     if (!(await setStage(supabase, jobId, 3, 45))) return;
 
     const { generateText } = await import("ai");
-    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) {
-      await failJob(supabase, jobId, "AI processing isn't configured for this project.");
+    const { createLovableAiGatewayProvider, createDirectOpenAIProvider } = await import(
+      "@/lib/ai-gateway.server"
+    );
+    const lovableKey = process.env.LOVABLE_API_KEY;
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (!lovableKey && !openaiKey) {
+      await failJob(
+        supabase,
+        jobId,
+        "AI processing isn't configured for this project. Add OPENAI_API_KEY in Vercel or host on Lovable.",
+      );
       return;
     }
 
@@ -164,9 +171,11 @@ Rules:
 
     let text = "";
     try {
-      const gateway = createLovableAiGatewayProvider(apiKey);
+      const gateway = lovableKey
+        ? createLovableAiGatewayProvider(lovableKey)
+        : createDirectOpenAIProvider(openaiKey!);
       const result = await generateText({
-        model: gateway("openai/gpt-5.5"),
+        model: lovableKey ? gateway("openai/gpt-5.5") : gateway("gpt-4o"),
         system: "You extract facts from road-community documents. Reply with one JSON object only.",
         messages: [
           {

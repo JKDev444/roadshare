@@ -67,6 +67,18 @@ export function createLovableAiGatewayProvider(
   });
 }
 
+/** OpenAI-compatible provider that calls api.openai.com directly.
+ *  Used for Vercel/external hosting where the Lovable AI Gateway is
+ *  unavailable because LOVABLE_API_KEY is a managed secret. */
+export function createDirectOpenAIProvider(openaiApiKey: string) {
+  return createOpenAICompatible({
+    name: "openai",
+    baseURL: "https://api.openai.com/v1",
+    apiKey: openaiApiKey,
+    supportsStructuredOutputs: false,
+  });
+}
+
 export function getLovableAiGatewayRunId(request: Request) {
   return request.headers.get(LOVABLE_AIG_RUN_ID_HEADER)?.trim() || undefined;
 }
