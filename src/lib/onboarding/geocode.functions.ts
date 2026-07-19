@@ -7,6 +7,7 @@ export type GeocodeResult = {
   label: string;
   city?: string | null;
   state?: string | null;
+  postcode?: string | null;
   source: "openstreetmap" | "census";
 };
 
@@ -27,7 +28,7 @@ type CensusResponse = {
     addressMatches?: Array<{
       matchedAddress?: string;
       coordinates?: { x?: number; y?: number };
-      addressComponents?: { city?: string; state?: string };
+      addressComponents?: { city?: string; state?: string; zip?: string };
     }>;
   };
 };
@@ -68,26 +69,36 @@ async function geocodeWithOpenStreetMap(query: string, state?: string): Promise<
 }
 
 async function geocodeWithCensus(query: string): Promise<GeocodeResult | null> {
+  const matches = await searchWithCensus(query);
+  return matches[0] ?? null;
+}
+
+async function searchWithCensus(query: string): Promise<GeocodeResult[]> {
   const url = new URL("https://geocoding.geo.census.gov/geocoder/locations/onelineaddress");
   url.searchParams.set("address", query);
   url.searchParams.set("benchmark", "Public_AR_Current");
   url.searchParams.set("format", "json");
 
   const res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
-  if (!res.ok) return null;
+  if (!res.ok) return [];
   const json = (await res.json()) as CensusResponse;
-  const match = json.result?.addressMatches?.[0];
-  const lat = match?.coordinates?.y;
-  const lng = match?.coordinates?.x;
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  return {
-    lat: lat as number,
-    lng: lng as number,
-    label: match?.matchedAddress || query,
-    city: match?.addressComponents?.city ?? null,
-    state: match?.addressComponents?.state ?? null,
-    source: "census",
-  };
+  return (json.result?.addressMatches ?? [])
+    .slice(0, 6)
+    .map((match) => {
+      const lat = match.coordinates?.y;
+      const lng = match.coordinates?.x;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      return {
+        lat: lat as number,
+        lng: lng as number,
+        label: match.matchedAddress || query,
+        city: match.addressComponents?.city ?? null,
+        state: match.addressComponents?.state ?? null,
+        postcode: match.addressComponents?.zip ?? null,
+        source: "census" as const,
+      };
+    })
+    .filter((hit): hit is GeocodeResult => hit !== null);
 }
 
 export const geocodeAddress = createServerFn({ method: "POST" })
@@ -101,4 +112,14 @@ export const geocodeAddress = createServerFn({ method: "POST" })
     const osm = await geocodeWithOpenStreetMap(data.query, data.state);
     if (osm) return osm;
     return geocodeWithCensus(data.query);
+  });
+
+export const searchAddressSuggestions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { query: string }) => ({
+    query: String(data.query ?? "").trim(),
+  }))
+  .handler(async ({ data }): Promise<GeocodeResult[]> => {
+    if (data.query.length < 5) return [];
+    return searchWithCensus(data.query);
   });
