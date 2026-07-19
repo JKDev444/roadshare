@@ -47,9 +47,12 @@ type MapboxRetrieveFeature = {
   geometry?: { coordinates: [number, number] };
 };
 
-async function mapboxSuggest(query: string, sessionToken: string): Promise<MapboxSuggestion[]> {
+async function mapboxSuggest(
+  query: string,
+  sessionToken: string,
+): Promise<MapboxSuggestion[] | null> {
   const headers = mapboxHeaders();
-  if (!headers) return [];
+  if (!headers) return null;
   const url = new URL(`${MAPBOX_GATEWAY}/search/searchbox/v1/suggest`);
   url.searchParams.set("q", query);
   url.searchParams.set("session_token", sessionToken);
@@ -57,7 +60,12 @@ async function mapboxSuggest(query: string, sessionToken: string): Promise<Mapbo
   url.searchParams.set("types", "address");
   url.searchParams.set("limit", "6");
   const res = await fetch(url.toString(), { headers });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    // Common cause: Mapbox connection has no secret (sk.) token — Search Box
+    // requires it server-side. Signal null so callers fall back to Census.
+    console.warn("[geocode] mapbox suggest failed", res.status);
+    return null;
+  }
   const json = (await res.json()) as { suggestions?: MapboxSuggestion[] };
   return json.suggestions ?? [];
 }
@@ -105,6 +113,7 @@ export async function mapboxSuggestAddresses(
   sessionToken: string,
 ): Promise<Array<GeocodeResult & { mapboxId: string }>> {
   const suggestions = await mapboxSuggest(query, sessionToken);
+  if (!suggestions) return [];
   return suggestions.map(suggestionToResult);
 }
 
@@ -207,7 +216,7 @@ export async function geocodeAddressQuery(query: string, state?: string): Promis
   if (headers) {
     const sessionToken = crypto.randomUUID();
     const suggestions = await mapboxSuggest(state ? `${query}, ${state}` : query, sessionToken);
-    const first = suggestions[0];
+    const first = suggestions?.[0];
     if (first) {
       const retrieved = await mapboxRetrieve(first.mapbox_id, sessionToken);
       if (retrieved) return retrieved;
@@ -224,7 +233,7 @@ export async function searchAddressCandidates(query: string): Promise<GeocodeRes
   if (headers) {
     const sessionToken = crypto.randomUUID();
     const suggestions = await mapboxSuggest(query, sessionToken);
-    if (suggestions.length > 0) {
+    if (suggestions && suggestions.length > 0) {
       // For legacy callers, retrieve top 3 to get coords.
       const results: GeocodeResult[] = [];
       for (const s of suggestions.slice(0, 3)) {
@@ -235,4 +244,52 @@ export async function searchAddressCandidates(query: string): Promise<GeocodeRes
     }
   }
   return searchWithCensus(query);
+}
+
+// ---- Unified suggest with fallbacks ----------------------------------------
+// Airbnb-like: try Mapbox Search Box, but if it fails (no sk. token, rate
+// limit, network), fall back to the US Census onelineaddress endpoint so rural
+// addresses like "787 Five Peaks Dr, Kalama, WA 98625" still resolve.
+export type SuggestHit = {
+  label: string;
+  city?: string | null;
+  state?: string | null;
+  postcode?: string | null;
+  /** Present when the suggestion source already returned coordinates. */
+  lat?: number;
+  lng?: number;
+  /** Present when the caller must call retrieveAddress to get coords. */
+  mapboxId?: string;
+  source: "mapbox" | "census";
+};
+
+export async function suggestAddressesUnified(
+  query: string,
+  sessionToken: string,
+): Promise<SuggestHit[]> {
+  const mapbox = await mapboxSuggest(query, sessionToken);
+  if (mapbox && mapbox.length > 0) {
+    return mapbox.map((s) => {
+      const ctx = s.context;
+      return {
+        label: s.full_address ?? `${s.name}${s.place_formatted ? ", " + s.place_formatted : ""}`,
+        city: ctx?.place?.name ?? null,
+        state: ctx?.region?.region_code ?? ctx?.region?.name ?? null,
+        postcode: ctx?.postcode?.name ?? null,
+        mapboxId: s.mapbox_id,
+        source: "mapbox" as const,
+      };
+    });
+  }
+  // Census fallback — coords come back directly, so callers can skip retrieve.
+  const census = await searchWithCensus(query);
+  return census.map((c) => ({
+    label: c.label,
+    city: c.city,
+    state: c.state,
+    postcode: c.postcode,
+    lat: c.lat,
+    lng: c.lng,
+    source: "census" as const,
+  }));
 }
