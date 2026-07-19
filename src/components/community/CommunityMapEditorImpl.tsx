@@ -196,17 +196,34 @@ export function CommunityMapEditor({
     const onCreate = (e: mapboxgl.MapboxEvent) => {
       const feat = (e as { features?: GeoJSON.Feature[] }).features?.[0];
       if (!feat || feat.geometry.type !== "LineString") return;
-      drawRef.current?.deleteAll();
-      onCreateSegment(feat.geometry as GeoJSONLineString);
-      setDrawing(false);
+      const geom = feat.geometry as GeoJSONLineString;
+      if (geom.coordinates.length < 2) {
+        drawRef.current?.deleteAll();
+        setDrawStep("prepare");
+        setDraftCoords([]);
+        return;
+      }
+      setPendingGeometry(geom);
+      setDraftCoords(geom.coordinates as [number, number][]);
+      setDrawStep("confirm");
     };
     map.on("draw.create", onCreate);
+
+    const onRender = () => {
+      const fc = drawRef.current?.getAll();
+      const feat = fc?.features?.[0];
+      if (feat && feat.geometry.type === "LineString") {
+        setDraftCoords(feat.geometry.coordinates as [number, number][]);
+      }
+    };
+    map.on("draw.render", onRender);
 
     return () => {
       map.off("click", "roads", onClickRoad);
       map.off("mouseenter", "roads", onMouseEnter);
       map.off("mouseleave", "roads", onMouseLeave);
       map.off("draw.create", onCreate);
+      map.off("draw.render", onRender);
       map.off("style.load", setup);
     };
   }, [parcels, segments, selectedSegmentId, onSelectSegment, onCreateSegment]);
