@@ -188,8 +188,8 @@ export function BasicInfoStep({
             )}
             {open && hits.length > 0 && (
               <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-border bg-popover text-sm shadow-lg">
-                {hits.map((h) => (
-                  <li key={h.mapboxId}>
+                {hits.map((h, i) => (
+                  <li key={h.mapboxId ?? `${h.label}-${i}`}>
                     <button
                       type="button"
                       onClick={() => selectHit(h)}
@@ -295,19 +295,15 @@ export function BasicInfoStep({
               <Sparkles className="h-3.5 w-3.5" /> See sample
             </Button>
           )}
-          {onLater && (
-            <Button variant="ghost" size="sm" onClick={onLater}>
-              Do this later
-            </Button>
-          )}
           <Button
             variant="ghost"
             size="sm"
-            onClick={() =>
-              onNoAddress({ communityName, city: "", state: "", startingAddress: "" })
-            }
+            onClick={() => {
+              if (onLater) onLater();
+              else onNoAddress({ communityName, city: "", state: "", startingAddress: "" });
+            }}
           >
-            No address yet
+            Skip for now
           </Button>
         </div>
       </div>
