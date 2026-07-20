@@ -24,6 +24,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ToolsIndexRouteImport } from './routes/tools.index'
 import { Route as ProductIndexRouteImport } from './routes/product.index'
+import { Route as VoteDecisionIdRouteImport } from './routes/vote.$decisionId'
 import { Route as ToolsCedarHollowRouteImport } from './routes/tools.cedar-hollow'
 import { Route as SolutionsAudienceRouteImport } from './routes/solutions.$audience'
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
@@ -115,6 +116,11 @@ const ProductIndexRoute = ProductIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => ProductRoute,
+} as any)
+const VoteDecisionIdRoute = VoteDecisionIdRouteImport.update({
+  id: '/vote/$decisionId',
+  path: '/vote/$decisionId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ToolsCedarHollowRoute = ToolsCedarHollowRouteImport.update({
   id: '/cedar-hollow',
@@ -232,6 +238,7 @@ export interface FileRoutesByFullPath {
   '/product/$slug': typeof ProductSlugRoute
   '/solutions/$audience': typeof SolutionsAudienceRoute
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
+  '/vote/$decisionId': typeof VoteDecisionIdRoute
   '/product/': typeof ProductIndexRoute
   '/tools/': typeof ToolsIndexRoute
   '/community/$id': typeof AuthenticatedCommunityIdRoute
@@ -263,6 +270,7 @@ export interface FileRoutesByTo {
   '/product/$slug': typeof ProductSlugRoute
   '/solutions/$audience': typeof SolutionsAudienceRoute
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
+  '/vote/$decisionId': typeof VoteDecisionIdRoute
   '/product': typeof ProductIndexRoute
   '/tools': typeof ToolsIndexRoute
   '/community/$id': typeof AuthenticatedCommunityIdRoute
@@ -298,6 +306,7 @@ export interface FileRoutesById {
   '/product/$slug': typeof ProductSlugRoute
   '/solutions/$audience': typeof SolutionsAudienceRoute
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
+  '/vote/$decisionId': typeof VoteDecisionIdRoute
   '/product/': typeof ProductIndexRoute
   '/tools/': typeof ToolsIndexRoute
   '/_authenticated/community/$id': typeof AuthenticatedCommunityIdRoute
@@ -333,6 +342,7 @@ export interface FileRouteTypes {
     | '/product/$slug'
     | '/solutions/$audience'
     | '/tools/cedar-hollow'
+    | '/vote/$decisionId'
     | '/product/'
     | '/tools/'
     | '/community/$id'
@@ -364,6 +374,7 @@ export interface FileRouteTypes {
     | '/product/$slug'
     | '/solutions/$audience'
     | '/tools/cedar-hollow'
+    | '/vote/$decisionId'
     | '/product'
     | '/tools'
     | '/community/$id'
@@ -398,6 +409,7 @@ export interface FileRouteTypes {
     | '/product/$slug'
     | '/solutions/$audience'
     | '/tools/cedar-hollow'
+    | '/vote/$decisionId'
     | '/product/'
     | '/tools/'
     | '/_authenticated/community/$id'
@@ -420,6 +432,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ToolsRoute: typeof ToolsRouteWithChildren
   SolutionsAudienceRoute: typeof SolutionsAudienceRoute
+  VoteDecisionIdRoute: typeof VoteDecisionIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -528,6 +541,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/product/'
       preLoaderRoute: typeof ProductIndexRouteImport
       parentRoute: typeof ProductRoute
+    }
+    '/vote/$decisionId': {
+      id: '/vote/$decisionId'
+      path: '/vote/$decisionId'
+      fullPath: '/vote/$decisionId'
+      preLoaderRoute: typeof VoteDecisionIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/tools/cedar-hollow': {
       id: '/tools/cedar-hollow'
@@ -736,6 +756,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ToolsRoute: ToolsRouteWithChildren,
   SolutionsAudienceRoute: SolutionsAudienceRoute,
+  VoteDecisionIdRoute: VoteDecisionIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
