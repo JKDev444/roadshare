@@ -191,10 +191,8 @@ function ClausesPage() {
                         <div className="mt-1.5 font-semibold">{c.title}</div>
                         {c.clause_text && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{c.clause_text}</p>}
                         <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <VerificationBadge value={c.verification} />
-                          <ConfidenceBadge value={c.confidence} />
                           {c.supersedes_id && <span className="text-xs text-muted-foreground">Supersedes an earlier clause</span>}
-                          {c.ai_summary && c.verification === "unverified" && <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground"><Sparkles className="h-3 w-3" /> AI-extracted</span>}
+                          {c.verification !== "verified" && <span className="text-xs text-muted-foreground">Needs a human check</span>}
                         </div>
                       </button>
                     </li>

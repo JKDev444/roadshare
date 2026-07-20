@@ -13,29 +13,29 @@ export const Route = createFileRoute("/security")({
           "How RoadShare protects community data: row-level isolation, explicit visibility, verified-fact separation, and immutable history.",
       },
       { property: "og:title", content: "Security — RoadShare" },
-      { property: "og:description", content: "Data isolation, provenance, and privacy by design." },
+        { property: "og:description", content: "How your community's records stay private, honest, and easy to trust." },
     ],
   }),
   component: () => (
     <SiteLayout>
       <PageHero
         eyebrow="Trust"
-        title="Security and data isolation by design."
-        subtitle="Community data is walled off, provenance is tracked, and AI output never masquerades as verified fact."
+        title="Your community's records, kept private and honest."
+        subtitle="Each community's records are walled off from every other. Every change keeps a plain-English history, and anything the AI reads is clearly labeled — never mixed with what a human confirmed."
       />
       <ContentPage
         blocks={[
           {
-            heading: "Isolation",
-            body: ["Every community's records are isolated. Access is governed by row-level security defined before any production data is stored."],
+            heading: "One community can't see another",
+            body: ["Your community's records are only visible to your community. We set that boundary at the database itself, before a single record is ever saved."],
           },
           {
-            heading: "Provenance and history",
-            body: ["Each fact carries a source, confidence, verification status, and effective date. History is versioned and never silently overwritten."],
+            heading: "A history you can trust",
+            body: ["Every fact we store carries where it came from and when it took effect. Nothing gets quietly overwritten — you can always see what changed and who changed it."],
           },
           {
-            heading: "AI safeguards",
-            body: ["AI-extracted output is stored separately from human-verified facts. The Q&A engine cites sources, shows confidence, and abstains when the record is incomplete."],
+            heading: "AI is clearly labeled",
+            body: ["When the AI reads a document for you, we keep that separate from the things a person on your board has actually confirmed. If the AI isn't sure, it says so instead of guessing."],
           },
         ]}
       />

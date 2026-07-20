@@ -1,86 +1,56 @@
+## Where we actually stand
 
-# Finish the v3 plan — the 7 missed items
+Verified against the code right now (`rg`/`ls` this turn):
 
-This is the delta between `.lovable/plan.md` (v3) and what's actually in the code today. No new direction — just finishing what was already agreed.
+| # | Item | Status |
+|---|------|--------|
+| 1 | Three-button "Create your community" | Done — `StartChoiceStep.tsx` present, wired in `WelcomeWizard` |
+| 2 | CC&R upload real progress | Done — `ProcessingStep` polls `getJob` every 2s off real DB `stage_index` / `progress` / `status` (confirmed last turn, no optimistic timers) |
+| 3 | Guided step-cards in community | Done — `MyRoadTab` has `StepCard` + 5-step flow |
+| 4 | Results & sharing | **Partial** — "Your fair share" card done; "Copy link" now embeds `project`/`total`/`method` in URL and neighbor view banners it; **but** no neighbor Vote screen (👍/👎 + comment) reusing `decisions` yet |
+| 5 | Cedar Hollow shares planner components | **Not done** — `tools.cedar-hollow.tsx` does not import `PlatCanvas` or `StepCard`; it still renders its own UI |
+| 6 | Terminology sweep | **Partial** — still visible: `ProvenancePopover` on `/community/$id`, `ConfidenceBadge`/`VerificationBadge` + "AI confidence" on `/clauses`, "provenance/confidence" copy on `/security`, `provenance: "sample"/"entered"` literals in `WelcomeWizard` sample data |
+| 7 | Phase E regression (3 paths + scale + audit questions) | **Not done as evidence-backed sweep** — pieces have been tested ad-hoc, no consolidated pass/fail per path with screenshots |
 
-## What's still outstanding
+So: honestly, 3 of 7 are fully complete, 2 are partial, 2 are open.
 
-### 1. Three-button "Create your community" screen (plan §1)
-**Today:** `BasicInfoStep` leads with a big address field; docs and manual are in a tiny "Or another way" strip.
-**Do:** Replace Step 1 with a chooser that has three equal, playful cards:
-- 📄 Upload your HOA papers → existing `DocsQuestionStep` / `UploadStep` flow
-- 📍 Type your address → focused address-only screen (autocomplete + community name only)
-- ✍️ Add homes manually → existing `NoDocsStep`
+## Plan to finish
 
-New file `StartChoiceStep.tsx`. `BasicInfoStep` becomes `AddressLookupStep` (address field + community name + Continue, nothing else). `WelcomeWizard` machine gets a `start` step before `basic`. Each sub-screen has a "← Change how I start" link.
+### A. Complete item 4 — neighbor Vote screen
+- Add a `plan` decision kind (or reuse the existing shape) so a "Copy link" URL can also open a Vote view under `/community/$id?vote=1` for signed-in neighbors.
+- New `VoteCard` component: shows project name, total, method, your fair share, and a 👍 / 👎 + optional comment box; writes to existing `decision_votes` table.
+- Empty state when no active plan; result summary once ≥1 vote exists.
 
-### 2. CC&R upload — real progress, not fake timers (plan §1)
-**Today:** The 8-step checklist advances on optimistic client timers in `ProcessingStep.tsx`; the pipeline can stall silently.
-**Do:**
-- Add `current_step`, `error`, `retryable` fields to the job row and expose them from `jobs.functions.ts`.
-- Drive the checklist off real job events (poll every 1.5s or subscribe).
-- Per-step 60s timeout that surfaces a red "This step took too long — retry" state with a per-file retry button.
-- Keep the visual — user liked it.
+### B. Complete item 5 — Cedar Hollow uses the real planner
+- Refactor `tools.cedar-hollow.tsx` to render `<PlatCanvas>` + the same `MyRoadTab` step-card flow against a hardcoded in-memory Cedar Hollow dataset (no DB writes).
+- If `MyRoadTab` needs decoupling from DB-shaped types, extract minimal props; do not create a separate `src/components/planner/*` tree just for filename cosmetics.
 
-### 3. Guided step-cards inside the community (plan §3)
-**Today:** `MyRoadTab` is a scrollable overview with a `PlatCanvas` and detail cards. Not the step-card walkthrough the plan calls for.
-**Do:** Replace `/community/$id` body with a single-page planner styled like `/tools/cedar-hollow`:
-```
-[Plat picture — always visible]
-Step 1 · Which home is yours? →
-Step 2 · Which road needs work? →
-Step 3 · What's the project? →
-Step 4 · How should we split the cost? →
-Step 5 · Your fair share ✓
-```
-One card at a time; plat updates live; cost split via existing `costShare.ts` (equal / by frontage / by distance).
+### C. Finish item 6 — terminology sweep
+User-facing copy only, code identifiers untouched:
+- `/community/$id`: replace `ProvenancePopover` label "History" trigger stays, but drop "Provenance" heading + rename internal-facing copy; remove `Confidence` badge column if surfaced.
+- `/clauses`: remove `ConfidenceBadge`/`VerificationBadge` from the UI or hide behind an "advanced" toggle; drop "AI confidence %" strings.
+- `/security` marketing page: rewrite "Provenance and history" / "confidence" sentences into plain language ("Every fact shows where it came from and when", "AI answers cite the document").
+- `WelcomeWizard` sample data: keep the literal `provenance: "sample"` values (they're required by the DB schema) — only rewrite any user-visible text derived from them.
 
-### 4. Results & sharing (plan §4)
-**Today:** No shareable results view.
-**Do:** Build the "Your fair share" card and share screen:
-- Big card per home: address, dollar amount, share %.
-- "Send to neighbors" — copy link (email invite is out of scope per plan).
-- Neighbor decisions collapse into a single Vote screen (👍 / 👎 + comment) reusing existing `decisions` schema.
+### D. Phase E — evidence-backed regression
+Run headless Playwright against localhost, one reset per path via the `roadshare` easter egg. For each path capture:
+1. Screenshot at "community created"
+2. Screenshot at Step 5 "Your fair share"
+3. Screenshot after opening the copied share URL in a fresh context (Path A only)
+4. Four-question audit answers
 
-### 5. Cedar Hollow demo shares components with the app (plan §5)
-**Today:** `Planner.tsx` renders its own 4-step UI; it doesn't share `PlatCanvas` or the step-card components with `/community/$id`.
-**Do:** Extract the step-card + plat components into `src/components/planner/*` and use the same components from both `/tools/cedar-hollow` and the in-app community view. Cedar Hollow becomes a preview of the real thing.
+Paths:
+- **A · CC&R upload** — use a small public HOA CC&R PDF (pick one, cache under `/tmp/browser/samples/`); confirm the 8-step checklist advances on real DB state and lands on a populated community.
+- **B · Address (rural)** — `787 Five Peaks Dr, Kalama, WA 98625` end-to-end.
+- **C · Manual entry** — paste 5 addresses.
+- **Scale** — separate script that seeds a 500-home fixture straight into the DB for one community and loads `/community/$id` to confirm `PlatCanvas` pan/zoom stays responsive.
 
-### 6. Terminology sweep (plan §7)
-**Today:** "plat", "frontage", "segment", "provenance", "confidence", "needs review", "parcel" still appear in `PlatCanvas`, `MyRoadTab`, `GisEditor`, `badges.tsx`, and elsewhere.
-**Do:** Global rename in user-facing copy only (code identifiers stay):
-- plat → road picture
-- frontage → feet of road in front of your house
-- segment → stretch of road
-- provenance / confidence / needs review → drop entirely
-- parcel → home
+Report is a single message with a pass/fail line per item plus the four audit answers.
 
-Grep pass on `src/components/**` and `src/routes/**`; leave `src/lib/**` variable names alone.
+### Phasing
+1. A + C together (both are contained edits) → typecheck.
+2. B (bigger refactor of Cedar Hollow) → typecheck.
+3. D last, only after 1 + 2 are in.
 
-### 7. Phase E — end-to-end regression as a low-tech user
-Run after 1–6 are in place. Use the "roadshare" easter egg to reset the account each time.
-- **Path A — CC&R upload:** use a public sample HOA CC&R PDF (I'll source one). Confirm the 8-step checklist reflects real progress, no stall, homes populate, road picture renders.
-- **Path B — Address (rural):** `787 Five Peaks Dr, Kalama, WA 98625`. Confirm autocomplete returns the address, homes populate, road picture renders.
-- **Path C — Manual entry:** paste 5 addresses. Confirm homes populate, road picture renders.
-- **Scale test:** load a 500-home fixture into `PlatCanvas` (headless script, not through onboarding) and confirm pan/zoom stays responsive.
-- After each path, answer the four audit questions in the report:
-  1. Was the flow easy enough for a non-tech user?
-  2. Did anything on the screens confuse me or seem out of place?
-  3. Was it confusing?
-  4. Did I get the result I wanted?
-
-Nothing is marked done until the regression evidence (screenshots + a short pass/fail line per item) is in the reply.
-
-## Phasing
-
-- **Phase 1 — Onboarding (items 1 + 2).** Ships the three-button screen and the honest CC&R progress. Regression paths A, B, C stop at "community created".
-- **Phase 2 — In-app experience (items 3 + 5 + 6).** Guided step-cards, shared with Cedar Hollow, terminology cleaned. Regression continues through the planner to "Your fair share".
-- **Phase 3 — Results & sharing (item 4).** Vote screen + share link. Full end-to-end run.
-- **Phase 4 — Scale + final audit (item 7).** 500-home fixture and the four-question report.
-
-## Out of scope (unchanged from v3)
-
-- Mobile tuning
-- Real invite email sending
-- Marketing pages other than `/tools/cedar-hollow`
-- DB migrations beyond the three new job fields in item 2
+### Out of scope (unchanged)
+Mobile-only tuning, real invite emails, other marketing pages, DB migrations beyond what item A needs (likely none — reuse `decisions` + `decision_votes`).

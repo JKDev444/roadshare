@@ -26,6 +26,9 @@ type Props = {
   initialProject?: string;
   initialTotal?: number;
   initialMethod?: CostMethod;
+  /** Called when the user asks their neighbors to vote. Should create a decision
+   *  and typically writes the id back into the URL. Returns the share URL. */
+  onAskForVotes?: (input: { projectName: string; total: number; method: CostMethod }) => Promise<string>;
 };
 
 type StepId = "home" | "road" | "project" | "split" | "result";
@@ -54,6 +57,7 @@ export function MyRoadTab({
   initialProject,
   initialTotal,
   initialMethod,
+  onAskForVotes,
 }: Props) {
   const sharedIn = !!(initialProject || initialTotal || initialMethod);
   const [step, setStep] = useState<StepId>(sharedIn ? "home" : "home");
@@ -206,6 +210,7 @@ export function MyRoadTab({
               method={method}
               rows={result.rows}
               yourRow={yourRow}
+              onAskForVotes={onAskForVotes}
             />
           )}
         </StepCard>
@@ -451,18 +456,22 @@ function ResultStep({
   method,
   rows,
   yourRow,
+  onAskForVotes,
 }: {
   projectName: string;
   total: number;
   method: CostMethod;
   rows: ReturnType<typeof computeCostShare>["rows"];
   yourRow: ReturnType<typeof computeCostShare>["rows"][number] | null;
+  onAskForVotes?: (input: { projectName: string; total: number; method: CostMethod }) => Promise<string>;
 }) {
   const methodLabel: Record<CostMethod, string> = {
     equal: "even shares",
     frontage: "by feet of road in front",
     distance: "by distance from the entrance",
   };
+
+  const [asking, setAsking] = useState(false);
 
   async function copyLink() {
     if (typeof window === "undefined") return;
@@ -478,6 +487,24 @@ function ResultStep({
       toast.success("Link copied — paste it in a text or email to your neighbors");
     } catch {
       toast.error("Couldn't copy — long-press the address bar instead");
+    }
+  }
+
+  async function askForVotes() {
+    if (!onAskForVotes) return;
+    setAsking(true);
+    try {
+      const url = await onAskForVotes({ projectName, total, method });
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success("Vote link copied — text or email it to your neighbors");
+      } catch {
+        toast.success("Vote is open — copy the link from the top of the page");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't open the vote");
+    } finally {
+      setAsking(false);
     }
   }
 
@@ -552,8 +579,18 @@ function ResultStep({
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <Button className="flex-1" onClick={copyLink}>
-          <Copy className="h-4 w-4" /> Copy link to send to my neighbors
+        {onAskForVotes && (
+          <Button className="flex-1" onClick={askForVotes} disabled={asking}>
+            <Sparkles className="h-4 w-4" />{" "}
+            {asking ? "Opening the vote…" : "Ask my neighbors to vote"}
+          </Button>
+        )}
+        <Button
+          variant={onAskForVotes ? "outline" : "default"}
+          className="flex-1"
+          onClick={copyLink}
+        >
+          <Copy className="h-4 w-4" /> Just copy the plan link
         </Button>
       </div>
     </div>
