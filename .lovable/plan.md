@@ -1,56 +1,86 @@
-## Where we actually stand
 
-Verified against the code right now (`rg`/`ls` this turn):
+## Phase 1 — Documentation refresh (this is the primary ask)
 
-| # | Item | Status |
-|---|------|--------|
-| 1 | Three-button "Create your community" | Done — `StartChoiceStep.tsx` present, wired in `WelcomeWizard` |
-| 2 | CC&R upload real progress | Done — `ProcessingStep` polls `getJob` every 2s off real DB `stage_index` / `progress` / `status` (confirmed last turn, no optimistic timers) |
-| 3 | Guided step-cards in community | Done — `MyRoadTab` has `StepCard` + 5-step flow |
-| 4 | Results & sharing | **Partial** — "Your fair share" card done; "Copy link" now embeds `project`/`total`/`method` in URL and neighbor view banners it; **but** no neighbor Vote screen (👍/👎 + comment) reusing `decisions` yet |
-| 5 | Cedar Hollow shares planner components | **Not done** — `tools.cedar-hollow.tsx` does not import `PlatCanvas` or `StepCard`; it still renders its own UI |
-| 6 | Terminology sweep | **Partial** — still visible: `ProvenancePopover` on `/community/$id`, `ConfidenceBadge`/`VerificationBadge` + "AI confidence" on `/clauses`, "provenance/confidence" copy on `/security`, `provenance: "sample"/"entered"` literals in `WelcomeWizard` sample data |
-| 7 | Phase E regression (3 paths + scale + audit questions) | **Not done as evidence-backed sweep** — pieces have been tested ad-hoc, no consolidated pass/fail per path with screenshots |
+### 1a. `docs/user-workflow.md` — rewrite to match current app
+- Sign in → Dashboard "Home Hub" ("Open my road" / "Create community")
+- **Onboarding wizard, Step 1 = three playful choice cards** (`StartChoiceStep`):
+  - Upload HOA papers → `ProcessingStep` real DB polling (8-stage, no fake timers)
+  - Type your address → Mapbox Search Box + US Census + Nominatim fallback (rural works, e.g. Kalama WA)
+  - Add homes by hand → paste list or one-by-one
+- Step 2 review → Step 3 community created (Confetti + WelcomeBanner)
+- Inside community: single-page `MyRoadTab` with 5 guided step cards + SVG `PlatCanvas`
+- "Your fair share" card + "Ask my neighbors to vote" → share URL `?decision=…` opens `VoteCard` (👍/👎, comment, reuses `decisions` + `decision_votes`)
+- Sidebar: Home / My Road / Settings only
+- Easter egg: type `roadshare` → wipes projects + wizard flags, restarts onboarding
+- Terminology conventions: "homes", "HOA rules", "Needs a human check"
+- Cedar Hollow demo at `/tools/cedar-hollow` as the no-signup try-it
+- "First-time user, screen by screen" walkthrough section
 
-So: honestly, 3 of 7 are fully complete, 2 are partial, 2 are open.
+### 1b. `docs/developer-guide.md` — rewrite to match current architecture
+- Stack: TanStack Start v1, React 19, Vite 7, Tailwind v4, shadcn, Lovable Cloud (Supabase) with RLS + `has_role`
+- Routing: file-based `src/routes/`, `_authenticated/` gate, `__root.tsx` shell; no `src/pages/`
+- Server functions: `createServerFn` in `*.functions.ts`, `requireSupabaseAuth` + `attachSupabaseAuth` in `src/start.ts`; public webhooks under `src/routes/api/public/*`
+- Maps: Mapbox removed in-app; SVG `PlatCanvas` renders plats. Mapbox Search Box used only for address autocomplete, with Census + Nominatim fallbacks
+- Parcels: `parcels.functions.ts` → DCAD in Dallas, OSM footprints elsewhere; batch insert in `lib/community/api.ts`
+- Cost sharing: `lib/community/costShare.ts` (distance / frontage / equal)
+- Decisions & voting: `lib/decisions/api.ts`, `VoteCard`, `decision_votes`, share URL params
+- Onboarding jobs: `jobs.functions.ts` real DB `stage_index`/`progress`/`status`, polled 2s
+- AI: Lovable AI Gateway (`ai-gateway.server.ts`)
+- Env: `MAPBOX_ACCESS_TOKEN`, `LOVABLE_API_KEY`, Supabase publishable key; see `VERCEL_ENV.md`
+- Testing: Playwright under `/tmp/browser/`, `roadshare` easter egg for resets
+- Key-files map so a new dev can navigate
 
-## Plan to finish
+### 1c. `docs/CHANGELOG.md` (new)
+Short summary of the "nuke plan" pass: Mapbox removed in-app, three-button onboarding, PlatCanvas, real job polling, neighbor voting, terminology sweep, easter-egg reset, marketing rewrite.
 
-### A. Complete item 4 — neighbor Vote screen
-- Add a `plan` decision kind (or reuse the existing shape) so a "Copy link" URL can also open a Vote view under `/community/$id?vote=1` for signed-in neighbors.
-- New `VoteCard` component: shows project name, total, method, your fair share, and a 👍 / 👎 + optional comment box; writes to existing `decision_votes` table.
-- Empty state when no active plan; result summary once ≥1 vote exists.
+### 1d. `.lovable/plan.md`
+Mark items 1–6 done; carry Phase E regression as the open evidence-backed sweep.
 
-### B. Complete item 5 — Cedar Hollow uses the real planner
-- Refactor `tools.cedar-hollow.tsx` to render `<PlatCanvas>` + the same `MyRoadTab` step-card flow against a hardcoded in-memory Cedar Hollow dataset (no DB writes).
-- If `MyRoadTab` needs decoupling from DB-shaped types, extract minimal props; do not create a separate `src/components/planner/*` tree just for filename cosmetics.
+## Phase 2 — Evidence-backed regression pass (Phase E from `.lovable/plan.md`)
 
-### C. Finish item 6 — terminology sweep
-User-facing copy only, code identifiers untouched:
-- `/community/$id`: replace `ProvenancePopover` label "History" trigger stays, but drop "Provenance" heading + rename internal-facing copy; remove `Confidence` badge column if surfaced.
-- `/clauses`: remove `ConfidenceBadge`/`VerificationBadge` from the UI or hide behind an "advanced" toggle; drop "AI confidence %" strings.
-- `/security` marketing page: rewrite "Provenance and history" / "confidence" sentences into plain language ("Every fact shows where it came from and when", "AI answers cite the document").
-- `WelcomeWizard` sample data: keep the literal `provenance: "sample"` values (they're required by the DB schema) — only rewrite any user-visible text derived from them.
+Playwright, headless, `roadshare` reset between paths. Screenshots kept under `/tmp/browser/`, results summarized into `docs/qa/phase-e-report.md`.
 
-### D. Phase E — evidence-backed regression
-Run headless Playwright against localhost, one reset per path via the `roadshare` easter egg. For each path capture:
-1. Screenshot at "community created"
-2. Screenshot at Step 5 "Your fair share"
-3. Screenshot after opening the copied share URL in a fresh context (Path A only)
-4. Four-question audit answers
+For each of the three onboarding paths capture:
+1. "Community created" screen
+2. Step 5 "Your fair share"
+3. Share URL opened in a fresh context (Path A only)
+4. Four audit answers (easy? confusing? out of place? got the result I wanted?)
 
 Paths:
-- **A · CC&R upload** — use a small public HOA CC&R PDF (pick one, cache under `/tmp/browser/samples/`); confirm the 8-step checklist advances on real DB state and lands on a populated community.
-- **B · Address (rural)** — `787 Five Peaks Dr, Kalama, WA 98625` end-to-end.
-- **C · Manual entry** — paste 5 addresses.
-- **Scale** — separate script that seeds a 500-home fixture straight into the DB for one community and loads `/community/$id` to confirm `PlatCanvas` pan/zoom stays responsive.
+- **A — CC&R upload**: cache one small public HOA CC&R PDF under `/tmp/browser/samples/`; confirm the 8-step checklist advances on real DB state and the resulting community is populated.
+- **B — Address (rural)**: `787 Five Peaks Dr, Kalama, WA 98625` end-to-end.
+- **C — Manual entry**: paste 5 addresses.
+- **Scale**: separate script seeds a 500-home fixture straight into the DB and loads `/community/$id` to confirm `PlatCanvas` pan/zoom stays responsive.
 
-Report is a single message with a pass/fail line per item plus the four audit answers.
+Do not update the docs' "verified working" claims until this phase's report exists.
 
-### Phasing
-1. A + C together (both are contained edits) → typecheck.
-2. B (bigger refactor of Cedar Hollow) → typecheck.
-3. D last, only after 1 + 2 are in.
+## Phase 3 — Launch blockers found in Phase 2
 
-### Out of scope (unchanged)
-Mobile-only tuning, real invite emails, other marketing pages, DB migrations beyond what item A needs (likely none — reuse `decisions` + `decision_votes`).
+Fix only what Phase 2 proves is broken. Expected candidates based on current state:
+- CC&R upload accuracy on a real PDF (biggest single risk — button #1's promise)
+- Neighbor vote link for a signed-out neighbor: today `/community/$id` is under `_authenticated`, so a share recipient hits `/auth` first. Decide: allow anonymous vote (public route + rate limit) or add a lightweight magic-link invite. Pick one, implement.
+- Empty-state deadends on `/dashboard`, `/documents`, `/decisions` — every "you need a community" message must have a working CTA to create one.
+- Auth polish: Google sign-in configured, confirmation copy, name capitalization already fixed but verify across all greetings.
+
+## Phase 4 — Responsible-adult launch checklist
+
+- Pricing page tied to a real plan (free beta or paid) — currently `/pricing` exists but not wired to checkout
+- ToS + Privacy tied to a real legal entity
+- User-visible data-deletion path (settings → delete my account/community)
+- `og:image` per leaf route where a meaningful image exists (methodology, security, tools/cedar-hollow); leave root without one so hosting injects the screenshot
+- Security scan (`security--run_security_scan`) and address anything critical before publish
+
+## Phase 5 — Publish
+
+- `publish_settings--update_visibility` if the user wants public
+- `preview_ui--publish`
+- Post-publish: verify live URL loads, `roadshare` easter egg works against prod, share-link round trip against prod
+
+## Launch-readiness verdict (my honest take, unchanged)
+
+Not quite MVP-launchable yet. Genuinely ready: onboarding across 3 paths, single-page planner, fair-share + neighbor vote round trip, easter-egg reset for QA/support. Not ready: no evidence-backed regression report yet, CC&R upload accuracy unverified against a real PDF, vote link assumes recipient already has an account, some empty states still dead-end, no pricing/ToS/deletion path wired.
+
+If "launch" means **private beta with 3–5 friendly HOAs I hand-hold**, ship after Phase 2. If "launch" means **public sign-ups**, Phases 2–4 are the gate.
+
+## Order of execution
+Phase 1 (docs) → Phase 2 (regression pass) → Phase 3 (fixes proven by Phase 2) → Phase 4 (legal/billing/polish) → Phase 5 (publish). Phases 1 and 2 can run in parallel if desired; Phase 3 must wait for Phase 2's report.
