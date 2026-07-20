@@ -453,8 +453,14 @@ function ResultStep({
   };
 
   async function copyLink() {
-    const url =
-      typeof window !== "undefined" ? window.location.href.split("?")[0] : "";
+    if (typeof window === "undefined") return;
+    const base = window.location.href.split("?")[0];
+    const params = new URLSearchParams({
+      project: projectName,
+      total: String(total),
+      method,
+    });
+    const url = `${base}?${params.toString()}`;
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Link copied — paste it in a text or email to your neighbors");
