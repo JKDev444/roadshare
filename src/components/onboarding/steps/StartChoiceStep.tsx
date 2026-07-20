@@ -1,4 +1,4 @@
-import { FileText, MapPin, PenLine, Sparkles, ArrowRight } from "lucide-react";
+import { MapPin, PenLine, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export type StartChoice = "docs" | "address" | "manual";
@@ -24,26 +24,18 @@ export function StartChoiceStep({
         </div>
         <div className="relative">
           <p className="inline-flex items-center gap-1.5 rounded-full bg-background/70 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
-            Step 1 of 3
+            Step 1 of 2
           </p>
           <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">
-            How do you want to start?
+            Let's find your road
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Pick whatever's easiest — you can change your mind later.
+            Pick whatever's easiest — you can add your HOA papers later.
           </p>
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <ChoiceCard
-          icon={<FileText className="h-6 w-6" />}
-          title="Upload your HOA papers"
-          sub="CC&Rs, plat, or road agreement PDF."
-          hint="Best if you have a PDF"
-          accent="from-primary/15 to-primary/5 text-primary"
-          onClick={() => onPick("docs")}
-        />
+      <div className="grid gap-3 sm:grid-cols-2">
         <ChoiceCard
           icon={<MapPin className="h-6 w-6" />}
           title="Type your address"
@@ -61,6 +53,10 @@ export function StartChoiceStep({
           onClick={() => onPick("manual")}
         />
       </div>
+
+      <p className="rounded-xl border border-dashed border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+        Have a CC&R or HOA PDF? You'll upload it after we build your map — that's when we pull out the cost-share formula and maintenance rules.
+      </p>
 
       <div className="flex items-center justify-end gap-2 pt-1 text-xs">
         <div className="flex items-center gap-1">
