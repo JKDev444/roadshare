@@ -6,6 +6,7 @@ import {
   Copy,
   Home as HomeIcon,
   Route as RouteIcon,
+  Search,
   Sparkles,
   Wallet,
   Wrench,
@@ -249,18 +250,60 @@ function HomeStep({
   value: string | null;
   onPick: (id: string) => void;
 }) {
+  const [query, setQuery] = useState("");
+  const sorted = useMemo(
+    () =>
+      [...parcels].sort((a, b) =>
+        (a.label ?? "").localeCompare(b.label ?? "", undefined, {
+          numeric: true,
+          sensitivity: "base",
+        }),
+      ),
+    [parcels],
+  );
+  const q = query.trim().toLowerCase();
+  const filtered = useMemo(
+    () =>
+      q === ""
+        ? sorted
+        : sorted.filter((p) => {
+            const hay = `${p.label ?? ""} ${p.owner_name ?? ""} ${p.address ?? ""}`.toLowerCase();
+            return hay.includes(q);
+          }),
+    [sorted, q],
+  );
+  const bigList = parcels.length > 12;
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
         Pick which home is yours. We'll highlight it on the road picture and show your fair share at
         the end.
       </p>
-      <ul className="grid gap-2 sm:grid-cols-2">
-        {[...parcels]
-          .sort((a, b) =>
-            (a.label ?? "").localeCompare(b.label ?? "", undefined, { numeric: true, sensitivity: "base" }),
-          )
-          .map((p) => {
+      {bigList && (
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            aria-label="Find your home"
+            placeholder={`Find your home (search ${parcels.length.toLocaleString()} homes by lot, name, or address)`}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      )}
+      {bigList && (
+        <p className="text-xs text-muted-foreground">
+          Showing <strong className="text-foreground">{filtered.length.toLocaleString()}</strong> of{" "}
+          {parcels.length.toLocaleString()} homes
+        </p>
+      )}
+      <ul className={cn("grid gap-2 sm:grid-cols-2", bigList && "max-h-[420px] overflow-y-auto pr-1")}>
+        {filtered.length === 0 ? (
+          <li className="col-span-full rounded-xl border border-dashed border-border bg-background/60 p-4 text-center text-sm text-muted-foreground">
+            No homes match “{query}”. Try a lot number or a street name.
+          </li>
+        ) : (
+          filtered.map((p) => {
           const active = p.id === value;
           return (
             <li key={p.id}>
@@ -290,7 +333,8 @@ function HomeStep({
               </button>
             </li>
           );
-        })}
+          })
+        )}
       </ul>
     </div>
   );
