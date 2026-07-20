@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { useOnboarding } from "@/lib/onboarding/useOnboarding";
 import { applyCcrDraft } from "@/lib/onboarding/api";
 import { coerceCcrDraft, type CcrDraft } from "@/lib/onboarding/ccrDraft";
-import { createJob, listActiveJob, dismissJob, type OnboardingJobRow } from "@/lib/onboarding/jobs.functions";
+import { createJob, listActiveJob, dismissJob, processJob, type OnboardingJobRow } from "@/lib/onboarding/jobs.functions";
 
 import { BasicInfoStep, type BasicInfo } from "./steps/BasicInfoStep";
 import { DocsQuestionStep } from "./steps/DocsQuestionStep";
@@ -82,6 +82,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
   const createJobFn = useServerFn(createJob);
   const listActiveJobFn = useServerFn(listActiveJob);
   const dismissJobFn = useServerFn(dismissJob);
+  const processJobFn = useServerFn(processJob);
 
   const hasCommunity = progress?.community ?? false;
   const skipped = state?.wizard_skipped ?? false;
@@ -201,6 +202,13 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
       setJobId(res.jobId);
       setJobFilenames(files.map((f) => f.file.name));
       setStep("processing");
+      // Fire processing in the background. The request stays open so the
+      // serverless worker keeps running until extraction completes. If the
+      // browser disconnects, ProcessingStep's stall detector will call
+      // resumeJob after 60s. Errors are surfaced via the job row.
+      void processJobFn({ data: { jobId: res.jobId } }).catch(() => {
+        // The polling loop reads job status; nothing to do here.
+      });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed.");
     } finally {
