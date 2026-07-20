@@ -224,7 +224,7 @@ function SearchAddresses({
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="font-display text-lg font-semibold">Search and Add Addresses</h2>
+        <h2 className="font-display text-lg font-semibold">Look up addresses</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
           Powered by OpenStreetMap. Rural roads sometimes take a moment.
         </p>
@@ -314,8 +314,8 @@ function PasteList({
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="font-display text-lg font-semibold">Paste an Address List</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">One address per line. We'll create one property for each line.</p>
+        <h2 className="font-display text-lg font-semibold">Paste your address list</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">One address per line — we'll add one home for each.</p>
       </div>
       <Textarea
         rows={8}
@@ -367,8 +367,8 @@ function ManualLots({
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="font-display text-lg font-semibold">Add Lots Manually</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">All fields optional — fill in what you know.</p>
+        <h2 className="font-display text-lg font-semibold">Add homes by hand</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">All fields are optional — fill in whatever you know.</p>
       </div>
 
       <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
@@ -410,8 +410,8 @@ function ManualLots({
         ))}
       </div>
 
-      <button type="button" onClick={add} className="flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-        <Plus className="h-3.5 w-3.5" /> Add another lot
+        <button type="button" onClick={add} className="flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+        <Plus className="h-3.5 w-3.5" /> Add another home
       </button>
 
       <div className="flex items-center justify-between pt-1">
@@ -441,17 +441,17 @@ function EmptyWorkspace({
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="font-display text-lg font-semibold">Create an Empty Workspace</h2>
+        <h2 className="font-display text-lg font-semibold">Start with just a name</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          We'll create your community with just the name and location. You can add properties,
-          roads, and documents whenever you're ready.
+          We'll set up your community with the name and location. Add homes, roads, and
+          documents whenever you're ready.
         </p>
       </div>
       <div className="flex items-center justify-between pt-1">
         <Button variant="ghost" size="sm" onClick={onCancel}>Back</Button>
         <Button size="sm" onClick={() => onSubmit({ kind: "empty" })} disabled={submitting}>
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-          Create Empty Workspace <ArrowRight className="h-4 w-4" />
+          Create my community <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
     </div>
