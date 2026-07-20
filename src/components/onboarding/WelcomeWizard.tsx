@@ -566,3 +566,12 @@ function WelcomeScreen({
     </div>
   );
 }
+
+function WizardBodyLock({ open }: { open: boolean }) {
+  useEffect(() => {
+    if (!open) return;
+    document.body.setAttribute("data-wizard-open", "true");
+    return () => document.body.removeAttribute("data-wizard-open");
+  }, [open]);
+  return null;
+}
