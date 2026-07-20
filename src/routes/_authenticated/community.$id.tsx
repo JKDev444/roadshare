@@ -85,18 +85,35 @@ function normalizeTab(v: unknown): Tab {
   return "roads";
 }
 
+export type CommunitySearch = {
+  tab: Tab;
+  justCreated?: string;
+  project?: string;
+  total?: number;
+  method?: CostMethod;
+};
+
 export const Route = createFileRoute("/_authenticated/community/$id")({
   head: () => ({ meta: [{ title: "Community Record — RoadShare" }, { name: "robots", content: "noindex" }] }),
-  validateSearch: (s: Record<string, unknown>): { tab: Tab; justCreated?: string } => ({
-    tab: normalizeTab(s.tab),
-    justCreated: s.justCreated === "1" ? "1" : undefined,
-  }),
+  validateSearch: (s: Record<string, unknown>): CommunitySearch => {
+    const method = s.method === "equal" || s.method === "frontage" || s.method === "distance"
+      ? (s.method as CostMethod)
+      : undefined;
+    const totalNum = typeof s.total === "number" ? s.total : Number(s.total);
+    return {
+      tab: normalizeTab(s.tab),
+      justCreated: s.justCreated === "1" ? "1" : undefined,
+      project: typeof s.project === "string" && s.project.trim() ? s.project : undefined,
+      total: Number.isFinite(totalNum) && totalNum > 0 ? totalNum : undefined,
+      method,
+    };
+  },
   component: CommunityDetail,
 });
 
 function CommunityDetail() {
   const { id } = Route.useParams();
-  const { tab, justCreated } = Route.useSearch();
+  const { tab, justCreated, project, total, method } = Route.useSearch();
   const navigate = Route.useNavigate();
 
   const [celebrate, setCelebrate] = useState(false);
@@ -167,7 +184,13 @@ function CommunityDetail() {
         </div>
 
         <div className="flex flex-col space-y-8">
-          <MyRoadTab parcels={p} segments={s} />
+          <MyRoadTab
+            parcels={p}
+            segments={s}
+            initialProject={project}
+            initialTotal={total}
+            initialMethod={method}
+          />
           <div className="border-t border-border pt-6">
             <h2 className="mb-3 font-display text-lg font-bold tracking-tight">Manage homes</h2>
             <PropertiesTab communityId={id} parcels={p} loading={parcels.isLoading} />
