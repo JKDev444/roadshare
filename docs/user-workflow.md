@@ -1,128 +1,155 @@
 # RoadShare — User Workflow Guide
 
-A plain-language walkthrough for homeowners, HOA boards, and neighbors sharing a private road.
+_Last refreshed: July 2026 — reflects the current shipped app._
+
+A plain-language walkthrough for homeowners, HOA boards, and neighbors sharing
+a private road. If a screen you see doesn't match this doc, this doc is wrong —
+please open an issue.
 
 ---
 
 ## 1. What RoadShare is
 
-RoadShare helps a group of neighbors who share a private road agree on **who pays what, and why**. You add your home, add your neighbors, upload any existing rules or invoices, and RoadShare turns that into a fair yearly cost share plus a clear place to vote on decisions.
+RoadShare helps a group of neighbors who share a private road agree on **who
+pays what, and why**. You describe your community (upload the HOA papers, type
+an address, or add homes by hand), and RoadShare turns that into a fair yearly
+cost share plus a shared place to vote on decisions.
 
-No spreadsheets. No arguing about whose driveway is longer. Everyone sees the same map and the same math.
+No spreadsheets. No arguing about whose driveway is longer. Everyone sees the
+same plat and the same math.
 
 ---
 
 ## 2. Who uses RoadShare
 
-| Role | What they can do |
+| Role | What they do |
 | --- | --- |
-| **Homeowner** | Sign in, see their share, vote on decisions, upload documents they've received. |
-| **Road committee lead / HOA board** | Create the community, invite neighbors, propose decisions, upload the master CC&Rs / HOA rules. |
-| **Invited neighbor** | Join an existing community by link, confirm their home, vote. |
-| **Curious visitor** | Try the **Cedar Hollow** sandbox on the marketing site — no sign-up needed. |
+| Homeowner | Sign in, see their share, vote on shared decisions. |
+| Road lead / HOA board | Create the community, add neighbors, propose projects, upload the HOA rules. |
+| Curious visitor | Try the Cedar Hollow demo at `/tools/cedar-hollow` — no sign-up. |
 
 ---
 
-## 3. First-time onboarding, step by step
+## 3. Language we use in the UI
 
-When you sign in for the first time you'll see a **Welcome** card. Click **Get started**.
+We deliberately avoid technical/legal jargon in the product itself. When you
+write UI copy or docs, use the left column.
 
-1. **Your address.** Start typing. Suggestions appear from Mapbox (and the US Census as a backup). Rural addresses work — we tested Kalama, WA. If your address isn't in the dropdown, you can still type it in full and click **Continue**.
-2. **Pick my neighborhood on a map.** A map opens centered on your address.
-   - **Tap a home** to add or remove it.
-   - **Lasso** — drag a loop around your whole community. We auto-detect the roads inside.
-   - **Select all** grabs every nearby home in view.
-   - **Reset** starts over.
-3. **Review your homes.** You'll see a count like *"8 selected of 207 nearby homes"* and a list. Fix anything wrong.
-4. **Name your community.** e.g. *"Cedar Hollow HOA"*.
-5. **Documents (optional).** Upload your CC&Rs, HOA rules, or a recent road invoice as PDFs. RoadShare classifies them and pulls out clauses like assessment rules or quorum.
-6. **You're in.** Confetti, a welcome banner with your community stats, and clear next-step buttons.
-
-**Skip for now** on any step drops you into the dashboard where you can come back later.
-
-**Reset it all:** on any page after sign-in, type the word `roadshare` (yes, just start typing — it's a hidden shortcut). You'll be sent back to step 1 with a fresh onboarding.
-
----
-
-## 4. The dashboard
-
-After onboarding you land on **Home**. The **Welcome banner** shows:
-
-- Your community name and how many homes are in it.
-- The next 2–3 things worth doing (upload rules, invite a neighbor, propose a decision).
-
-Left-side navigation is intentionally short:
-
-- **Home** — overview.
-- **My Road** — the map, road segments, and cost math.
-- **Neighbors** — everyone in the community.
-- **Documents** — every PDF you've uploaded, plus extracted clauses.
-- **Decisions** — proposals, votes, and results.
-
----
-
-## 5. Adding neighbors after onboarding
-
-Go to **Neighbors → Add**. Three paths:
-
-1. **Lasso the map again** — same tool as onboarding.
-2. **Type an address** — Mapbox autocomplete, one at a time.
-3. **Paste a list** — one address per line. We geocode each and add them in a batch.
-
----
-
-## 6. Documents
-
-**Documents → Upload PDF.** Drag in your file. RoadShare:
-
-1. Detects what it is (HOA rules, CC&Rs, minutes, invoice).
-2. Extracts clauses like *"Assessments are due January 1"* or *"Quorum is 60%"*.
-3. Files them under your community so anyone with access can search them later.
-
-You can rename, re-classify, or delete anything you upload.
-
----
-
-## 7. Decisions
-
-**Decisions → Propose.** Give it a title (*"Repave the east segment"*), a description, and optionally a dollar amount. Neighbors vote yes / no / abstain. When quorum is met the decision closes automatically and is logged in the timeline.
-
----
-
-## 8. The Fair Share calculator
-
-Three ways to split cost:
-
-| Method | When it's fairest |
+| Say this | Not this |
 | --- | --- |
-| **By distance from the entrance** | The home at the end of the road drives the whole road. It's fair for them to pay more of the far segments. |
-| **By road frontage** | Big lots with lots of road touching their property pay more. |
-| **Equal per home** | Simple. Fair when every home uses the road the same way. |
-
-The Cedar Hollow sandbox lets you flip between all three on a real map and see who pays more or less under each.
-
----
-
-## 9. The Cedar Hollow sandbox
-
-`roadshare-iota.vercel.app/tools/cedar-hollow` — no sign-up. Cedar Hollow is a made-up neighborhood we use for teaching. The math is real; the neighbors aren't. Sign up to run the same thing on your own road.
+| Homes | Parcels / lots / properties |
+| HOA rules | CC&Rs (in UI — the term is fine in help docs) |
+| Needs a human check | Low AI confidence |
+| My road | Workspace / project |
+| Ask my neighbors to vote | Create a decision |
 
 ---
 
-## 10. FAQ / troubleshooting
+## 4. The happy path, screen by screen
 
-**The map is blank.** Wait 5 seconds — we're pulling home outlines from OpenStreetMap. If it stays blank, tap **Lasso** and draw around your community; that path always works.
+### 4.1 Landing → sign in
+`/` is the marketing site with the `StoryPath` narrative and the "Fair Share"
+calculator (`SecretSauce`). "Get started" leads to `/auth`. A brand-new visitor
+can also try `/tools/cedar-hollow` first with no account.
 
-**My address isn't in the dropdown.** Just finish typing it and click **Continue**. Rural addresses sometimes take a moment to appear.
+### 4.2 Dashboard "Home Hub" (`/dashboard`)
+First screen after sign-in. Greeting uses the capitalized first name. Two
+primary CTAs:
 
-**Only 2 homes came back from my community of 100+.** That was an old bug — parcels used to come from Dallas County only. Now they come from OpenStreetMap everywhere. If you still see this, lasso the whole neighborhood and we'll pick up every building inside.
+- **Open my road** — jumps into `/community/$id` when the user already has one.
+- **Create community** — opens the onboarding wizard.
 
-**Clicking a home zooms the map out.** Fixed — the map now only re-frames when you first load or re-lasso, never on a single click.
+### 4.3 Onboarding — Step 1: how do you want to start?
+Component: `StartChoiceStep`. Three big, playful choice cards. Pick one:
 
-**I want to start over.** Type `roadshare` on any signed-in page.
+1. **Upload your HOA papers** (CC&Rs / plat / road agreement PDF)
+2. **Type your address** (we find neighbors near you)
+3. **Add homes by hand** (paste a list, or add lot by lot)
 
-**I invited a neighbor but they don't see the community.** Invites are still coming — for now, ask them to sign up with the same email you used, then reach out and we'll link them.
+There is no "Back" on Step 1. "Skip for now" and "See sample" are secondary.
+
+### 4.4 Step 2a — CC&R upload path
+`UploadStep` accepts a PDF. `ProcessingStep` then polls the real job row every
+2 seconds and shows an 8-stage checklist driven by `stage_index`, `progress`,
+and `status` in the database — no fake timers. If parsing fails, `FailureStep`
+offers a clean fallback to the address or manual paths.
+
+### 4.5 Step 2b — Address path
+`BasicInfoStep` uses **Mapbox Search Box** for autocomplete, with **US Census
+Geocoder** and **Nominatim** as fallbacks so rural addresses (e.g.
+`787 Five Peaks Dr, Kalama, WA 98625`) still resolve. Once confirmed, we call
+`parcels.functions.ts`:
+
+- Dallas County → DCAD parcel records
+- Everywhere else → OpenStreetMap building footprints
+
+Batch insert into `community_parcels` (via `lib/community/api.ts`) so a
+neighborhood of ~200 homes lands in ~1–2 seconds.
+
+### 4.6 Step 2c — Manual path
+Paste one address per line, or add rows one at a time. Same batch insert. Good
+fallback for communities where the automatic lookups return sparse data.
+
+### 4.7 Step 3 — Community created
+`SuccessSummaryStep` + `Confetti` + `WelcomeBanner`. Shows the community name,
+home count, and a single primary CTA into `/community/$id`.
+
+### 4.8 Inside the community (`/community/$id`)
+A single-page `MyRoadTab` with five guided step cards and an SVG **PlatCanvas**
+(no Mapbox in-app — the plat is drawn from parcel geometry we already have).
+
+```
+  Step 1  Confirm your homes
+  Step 2  Pick your project (repave, seal, patch…)
+  Step 3  Enter the total cost
+  Step 4  Choose how to split it (equal / distance / frontage)
+  Step 5  Your fair share  →  Ask my neighbors to vote
+```
+
+"Your fair share" is a per-household card. The **Ask my neighbors to vote**
+button generates a share URL that carries `project`, `total`, `method`, and
+`decision` params.
+
+### 4.9 Neighbor voting
+When a neighbor opens the share URL, the `VoteCard` (in
+`src/components/community/VoteCard.tsx`) renders above the planner. They pick
+their household, hit 👍 or 👎, and optionally leave a comment. Votes are stored
+in `decision_votes` and reuse the existing `decisions` schema — no new tables
+for the vote round trip.
+
+> ⚠️ Known limitation: `/community/$id` is under `_authenticated`, so a share
+> recipient has to sign in first. Anonymous voting is on the Phase 3 list.
+
+### 4.10 Sidebar
+Kept intentionally small: **Home**, **My Road**, **Settings**. Everything else
+(clauses, documents, decisions, pulse, ask) is reachable from inside the
+community, not the top-level nav.
 
 ---
 
-*Last updated: July 2026.*
+## 5. Escape hatches
+
+### 5.1 The `roadshare` easter egg
+Type `roadshare` anywhere on an authenticated page. Wipes the current user's
+communities and wizard flags and drops you back at the start of onboarding.
+Used constantly by QA and support.
+
+### 5.2 `?welcome=1`
+Appending `?welcome=1` to any authed route re-opens the onboarding wizard
+without wiping data. Handy for testing copy changes.
+
+### 5.3 Cedar Hollow demo
+`/tools/cedar-hollow` is the no-signup sandbox. Same math engine, cosmetic
+fake dataset. Use it in sales conversations and screenshots.
+
+---
+
+## 6. What's intentionally NOT here yet
+
+- Anonymous neighbor voting (link recipient must sign in today).
+- Real invite emails — sharing is copy-a-link only.
+- Pricing / checkout — `/pricing` exists as a marketing page, not wired.
+- Account/community deletion from the settings UI.
+- Mobile-native tuning beyond what Tailwind gives us.
+
+See `.lovable/plan.md` for the current phased plan to close these.

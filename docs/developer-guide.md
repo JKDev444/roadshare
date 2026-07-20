@@ -1,213 +1,237 @@
 # RoadShare — Developer & Architecture Guide
 
+_Last refreshed: July 2026. Reflects the current shipped state after the "nuke
+plan" pass (Mapbox-out-of-app, three-button onboarding, SVG PlatCanvas, real
+job polling, neighbor voting, terminology sweep)._
+
 A tour for a new engineer picking up the codebase.
 
 ---
 
-## 1. Stack at a glance
+## 1. Stack
 
 | Layer | Choice |
 | --- | --- |
 | Framework | TanStack Start v1 (SSR + server functions) on React 19 |
 | Bundler | Vite 7 |
-| Routing | TanStack Router, file-based, under `src/routes/` |
-| Data fetching | TanStack Query, integrated via router context |
+| Routing | TanStack Router, file-based under `src/routes/` |
+| Data | TanStack Query wired via router context (`ensureQueryData` in loaders, `useSuspenseQuery` in components) |
 | Styling | Tailwind v4 (native `@import` + `@theme` in `src/styles.css`) |
-| UI kit | shadcn/ui, Radix primitives, Lucide icons, Framer Motion |
-| Map | Mapbox GL JS + `mapbox-gl-draw` (freehand mode) |
-| Legacy map (Cedar Hollow planner) | Leaflet + Leaflet.draw |
+| UI kit | shadcn/ui, Radix, Lucide, Framer Motion |
+| In-app plat rendering | **SVG `PlatCanvas`** — no Mapbox in-app |
+| Address search | **Mapbox Search Box** with US Census + Nominatim fallbacks |
+| Cedar Hollow demo (`/tools/cedar-hollow`) | Leaflet — legacy, self-contained |
 | Validation | Zod v4 |
-| Backend | Supabase via Lovable Cloud — Postgres, Auth, Storage, RLS |
-| AI | Lovable AI Gateway (primary), OpenAI direct (Vercel fallback) |
-| Package manager | Bun |
+| Backend | Supabase via **Lovable Cloud** — Postgres, Auth, Storage, RLS |
+| AI | Lovable AI Gateway (`src/lib/ai-gateway.server.ts`) |
+| Host | Vercel (Nitro) or Cloudflare Workers (`nodejs_compat`) |
 
 ---
 
-## 2. Runtime targets
+## 2. Routing
 
-Two hosts are supported:
+File-based under `src/routes/`. **Never** create `src/pages/` or Next/Remix
+layout files — the auto-generated `src/routeTree.gen.ts` will conflict.
 
-### Lovable Publish (default)
+Root shell: `src/routes/__root.tsx`. Authenticated subtree gate:
+`src/routes/_authenticated/route.tsx`. Public webhooks/cron live under
+`src/routes/api/public/*` (that prefix bypasses auth on published sites — always
+verify the caller inside the handler).
 
-Cloudflare Workers via nitro. All secrets — `LOVABLE_API_KEY`, `MAPBOX_API_KEY`, Supabase URL/keys, Mapbox public token — are injected by the platform. Zero manual env config.
+Key routes:
 
-### Vercel
-
-`vite.config.ts` switches to the `vercel` nitro preset when `process.env.VERCEL` is set. `vercel.json` at the root pins `buildCommand`/`installCommand`. See `VERCEL_ENV.md` for the exact 5 env vars a fresh Vercel deploy needs. Because `LOVABLE_API_KEY` cannot leave Lovable, the AI and geocoding layers fall back to direct provider keys (`OPENAI_API_KEY`, `MAPBOX_ACCESS_TOKEN`).
+```
+/                                marketing home (StoryPath + SecretSauce)
+/tools/cedar-hollow              no-signup demo
+/auth, /auth/callback            sign-in
+/_authenticated/dashboard        Home Hub after sign-in
+/_authenticated/community/$id    single-page MyRoadTab + PlatCanvas + VoteCard
+/_authenticated/{documents,decisions,settings,...}
+```
 
 ---
 
-## 3. Routing map
+## 3. Server functions
 
-`src/routes/` is the source of truth; `src/routeTree.gen.ts` is auto-generated — **never edit it by hand**.
+App-internal server code = `createServerFn` from `@tanstack/react-start`, in
+`*.functions.ts` files that live in client-safe paths (`src/lib/...`). Helpers
+that must never ship to the client end in `.server.ts`.
 
-| Path pattern | Purpose |
+Protected functions use `requireSupabaseAuth` middleware, and the client-side
+companion `attachSupabaseAuth` is registered in `src/start.ts`:
+
+```ts
+// src/start.ts
+export const startInstance = createStart(() => ({
+  functionMiddleware: [attachSupabaseAuth],
+  requestMiddleware: [errorMiddleware],
+}));
+```
+
+Never call a `requireSupabaseAuth` server function from a public route's
+`loader` — SSR/prerender has no session and it 401s the build. Move the call
+into a component (`useServerFn` + `useQuery`) or into an `_authenticated/`
+route's loader.
+
+---
+
+## 4. Supabase clients
+
+| Import | Use |
 | --- | --- |
-| `__root.tsx` | HTML shell, global providers, head metadata |
-| `_authenticated/*` | Gated subtree — auth middleware redirects to `/auth` if signed out |
-| `_authenticated/dashboard.tsx`, `.../community.$id.tsx`, etc. | The app |
-| `index.tsx`, `about.tsx`, `pricing.tsx`, `solutions.$audience.tsx` | Marketing site |
-| `tools/cedar-hollow.tsx` | Public sandbox |
-| `api/public/*` (future) | Webhooks / cron endpoints, external callers only |
+| `@/integrations/supabase/client` | Browser only — auth flows, realtime |
+| `context.supabase` from `requireSupabaseAuth` | Authed user, RLS applies as them |
+| `@/integrations/supabase/client.server` → `supabaseAdmin` | Verified webhooks / admin only — bypasses RLS; import inside handler bodies |
 
-Do **not** introduce `src/pages/` — that's a different framework's convention.
+Every new `public.*` table needs: `CREATE TABLE`, then `GRANT` to the right
+roles, then `ALTER … ENABLE ROW LEVEL SECURITY`, then policies — in that order,
+in the same migration. Roles go in a **separate** `user_roles` table with a
+`SECURITY DEFINER` `has_role()` function.
 
 ---
 
-## 4. Server functions vs. server routes
+## 5. Maps — read this before touching parcels
 
-App-internal server logic uses `createServerFn` from `@tanstack/react-start`. Files ending in `.functions.ts` are safe to import from client components.
+- **In-app: no Mapbox.** Plats are rendered by `src/components/community/PlatCanvas.tsx`
+  as an SVG driven by parcel geometry we already have in the DB. Do not
+  re-introduce Mapbox inside `_authenticated/*` — it caused the "horrible map"
+  and cost-runaway feedback that started the nuke plan.
+- **Address autocomplete:** Mapbox Search Box (server token
+  `MAPBOX_ACCESS_TOKEN`) with **US Census Geocoder** and **Nominatim**
+  fallbacks so rural US addresses resolve.
+- **Parcel discovery** (`src/lib/onboarding/parcels.functions.ts`):
+  - Dallas County → DCAD parcel records
+  - Everywhere else → OSM building footprints via Overpass
+  - Results batch-inserted through `src/lib/community/api.ts`.
+- **Cedar Hollow (`/tools/cedar-hollow`)** still uses Leaflet with hardcoded
+  fake data. It is intentionally isolated from the in-app planner.
 
-| Server function | Auth | Notes |
+---
+
+## 6. Cost sharing engine
+
+`src/lib/community/costShare.ts` implements three allocation methods:
+
+- **Equal split** — total ÷ homes
+- **Distance** — weighted by distance from the road entry
+- **Frontage** — weighted by parcel road frontage
+
+Rendered inside `MyRoadTab` Step 4 → Step 5 ("Your fair share").
+
+---
+
+## 7. Decisions & neighbor voting
+
+- `src/lib/decisions/api.ts` — CRUD + `parseOptions` + `tally`.
+- `decisions` and `decision_votes` tables (already exist, do not duplicate).
+- Share URL shape (generated at Step 5 of `MyRoadTab`):
+
+  ```
+  /community/<id>?project=<slug>&total=<cents>&method=<equal|distance|frontage>&decision=<uuid>
+  ```
+
+- Recipient sees `VoteCard` (`src/components/community/VoteCard.tsx`) above the
+  planner. Picks a household, casts 👍/👎, optional comment. Reuses the
+  existing schema.
+- **Open item:** `/community/$id` is under `_authenticated`, so today the
+  recipient must sign in first. Phase 3 will decide between "anonymous vote on
+  a public route + rate limit" or "magic-link invite".
+
+---
+
+## 8. Onboarding jobs
+
+`src/lib/onboarding/jobs.functions.ts` owns background work (CC&R parse,
+parcel discovery). It writes real progress to the DB (`stage_index`,
+`progress`, `status`). `ProcessingStep` polls `getJob` every 2s and renders the
+8-stage checklist off that state — never optimistic timers.
+
+---
+
+## 9. AI
+
+Lovable AI Gateway via `src/lib/ai-gateway.server.ts`. Used by clause
+extraction (`src/lib/clauses/extract.functions.ts`) and Q&A
+(`src/lib/qa/ask.functions.ts`). Do not add third-party AI keys unless the
+user has explicitly requested a specific provider.
+
+---
+
+## 10. Environment variables
+
+| Var | Where | Purpose |
 | --- | --- | --- |
-| `geocode.functions.ts` — `suggestAddresses`, `retrieveAddress` | **Public** | Address lookup is not user-scoped. Adding `requireSupabaseAuth` here was the Vercel 401 bug — do not re-add it. |
-| `parcels.functions.ts` | **Public** | Same reason. |
-| `osm.functions.ts` | **Public** | Overpass building/road detection. |
-| `dcad.functions.ts` | **Public** | Dallas County GIS shortcut. |
-| `classify.functions.ts`, `extract.functions.ts`, `ask.functions.ts`, `jobs.functions.ts` | Authenticated | User-scoped document + Q&A work. Uses `requireSupabaseAuth` and reads/writes as the signed-in user. |
+| `MAPBOX_ACCESS_TOKEN` | server | Search Box + geocoding |
+| `LOVABLE_API_KEY` | server | AI Gateway |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID` | build-time | Supabase client (auto-generated — do not edit) |
 
-Webhooks and cron would live under `src/routes/api/public/*` as `createFileRoute` server blocks — that prefix bypasses the auth wall on published sites, so every such handler must verify its own signature.
-
----
-
-## 5. AI layer
-
-`src/lib/ai-gateway.server.ts` picks the right provider at runtime:
-
-1. If `LOVABLE_API_KEY` is present → route through the Lovable AI Gateway.
-2. Else if `OPENAI_API_KEY` is present → hit OpenAI directly via `@ai-sdk/openai-compatible`.
-3. Else → throw a clear "no AI provider configured" error.
-
-`src/lib/ai-chat.server.ts` is the shared chat completion helper. Model choices:
-
-| Task | Model |
-| --- | --- |
-| Document classification | `gpt-4o-mini` (cheap, fast) |
-| Q&A / assistant | `gpt-4o-mini` |
-| PDF clause extraction | `gpt-4o` (higher recall needed) |
+Vercel-specific setup lives in `VERCEL_ENV.md`. `.env` for Supabase is
+auto-generated — never hand-edit it.
 
 ---
 
-## 6. Geocoding pipeline
+## 11. Server runtime notes
+
+Worker runtime with `nodejs_compat`. Do **not** use `child_process`, `sharp`,
+`canvas`, `puppeteer`, or `fs.watch` in server code — they either stub or crash
+at runtime. See `server-runtime` knowledge card if you hit
+`[unenv] X is not implemented yet!`.
+
+---
+
+## 12. Testing & QA
+
+- Playwright scripts under `/tmp/browser/<slug>/` — headless Chromium is
+  preinstalled. Set `viewport={"width": 1280, "height": 1800}` and never use
+  `full_page=True`.
+- Use the **`roadshare` easter egg** to reset a signed-in test account between
+  runs — cheaper than re-provisioning.
+- Managed Supabase session env vars are injected into the sandbox — see the
+  browser-use knowledge card for how to restore both the localStorage token
+  and the `@supabase/ssr` cookies before navigation.
+
+---
+
+## 13. Key files map
 
 ```
-user keystroke
-   ↓
-suggestAddresses()  ── Mapbox Search Box (suggest + retrieve, session token)
-   ↓  on failure/timeout
-US Census Geocoder (free, unlimited, US only)
-   ↓
-toTitleCase()  ── Census returns ALL CAPS
-   ↓
-dropdown
+src/
+  routes/
+    __root.tsx                     app shell — head/meta, Outlet, providers
+    index.tsx                      marketing home
+    tools.cedar-hollow.tsx         no-signup demo (Leaflet, isolated)
+    _authenticated/
+      route.tsx                    auth gate
+      dashboard.tsx                Home Hub
+      community.$id.tsx            single-page planner + VoteCard
+  components/
+    onboarding/
+      WelcomeWizard.tsx            wizard shell
+      steps/StartChoiceStep.tsx    three-button Step 1
+      steps/{Upload,Processing,NoDocs,BasicInfo,Review,SuccessSummary,Failure}Step.tsx
+    community/
+      MyRoadTab.tsx                5-step guided planner
+      PlatCanvas.tsx               SVG plat renderer
+      VoteCard.tsx                 neighbor vote UI
+    app/
+      AppShell.tsx                 sidebar (Home / My Road / Settings)
+      useOnboardingResetEasterEgg.tsx   'roadshare' easter egg
+  lib/
+    community/{api.ts,costShare.ts}
+    decisions/api.ts
+    onboarding/{jobs,parcels,geocode,dcad,osm}.functions.ts
+    onboarding/geocode.server.ts   Census + Nominatim fallbacks
+    ai-gateway.server.ts           Lovable AI Gateway
+  integrations/supabase/           auto-generated — do not hand-edit
+  start.ts                         TanStack Start config (middleware wiring)
 ```
 
-We used to use Nominatim (OSM). It failed for rural addresses like Kalama, WA and rate-limits aggressively. Do not reintroduce it.
-
 ---
 
-## 7. Parcel pipeline
+## 14. Where to look next
 
-```
-lat/lng OR drawn polygon
-   ↓
-In Dallas County?  ── DCAD GIS returns real parcel polygons
-   ↓  everywhere else
-OSM Overpass building footprints (timeout 8s)
-   ↓  0 results
-status = "empty" → UI prompts user to lasso
-   ↓
-batch insert via src/lib/community/api.ts (down from 40s to ~1.4s)
-```
-
-No provider will give us US-wide parcel polygons for free, so OSM buildings + user-drawn lasso is the plan of record.
-
----
-
-## 8. Onboarding state machine
-
-Lives in `src/lib/onboarding/useOnboarding.ts`. Steps:
-
-`Welcome → BasicInfo → MapPick → DocsQuestion → (Upload | NoDocs) → ReviewWorkspace → SuccessSummary`
-
-Handy handles:
-
-- `?welcome=1` on `/dashboard` re-triggers the wizard.
-- Typing `roadshare` anywhere (hook: `useOnboardingResetEasterEgg`) wipes `onboarded_at` flags and pushes to step 1.
-- `MapPickStepImpl.tsx` splits its render effects: one repaints the parcel colors on selection change, one calls `fitBounds` **only when the parcel list identity changes** — that's what stops the "click a home → zoom out" bug.
-
----
-
-## 9. Data model (high level)
-
-```
-auth.users
-   ↓ trigger handle_new_user()
-public.profiles ── 1:1 with auth user
-public.user_roles ── (user_id, role enum)     ← roles NEVER on profiles
-
-public.communities ── (id, name, owner_id)
-public.parcels     ── (id, community_id, address, geometry, headline)
-public.documents   ── (id, community_id, storage_path, doc_type)
-public.clauses     ── (id, document_id, kind, text)
-public.decisions   ── (id, community_id, title, status)
-public.votes       ── (id, decision_id, user_id, choice)
-```
-
-Every RLS policy that checks admin status calls `public.has_role(auth.uid(), 'admin')` — a `SECURITY DEFINER` function that reads `user_roles`. This is intentional and documented in the security memory; do not revoke it or move roles onto `profiles`.
-
----
-
-## 10. Front-end architecture
-
-- `src/components/app/AppShell.tsx` — post-login shell. Nav is intentionally 5 items: Home, My Road, Neighbors, Documents, Decisions. "Ask my community" and "Community pulse" are hidden until invites ship.
-- Design tokens live in `src/styles.css` (`@theme`). No hardcoded colors in components — always go through tokens or shadcn variants.
-- `src/components/site/*` is the marketing site. `StoryPath` replaced the old card grid; `SecretSauce` is the interactive Fair Share calculator on the home page.
-
----
-
-## 11. Marketing site
-
-- Home = one long narrative (`StoryPath`) + `SecretSauce`. No hero-plus-features-grid.
-- Subpages under `/solutions/$audience` and `/product/$slug` use editorial chapters, not pill-shaped filter buttons.
-- Every route sets its own `head()` — never inherits home's title/description.
-
----
-
-## 12. Deployment
-
-**Lovable:** click Publish. Done.
-
-**Vercel:** merge to `main`, Vercel picks up `vercel.json`, `vite.config.ts` sees `process.env.VERCEL=1` and switches nitro to the `vercel` preset. You must have the 5 env vars from `VERCEL_ENV.md` set. Verify at `/dashboard?welcome=true` by typing a rural address — you should see Mapbox suggestions with no error toast.
-
----
-
-## 13. Known limitations & follow-ups
-
-- OSM building coverage is thin in some rural areas — lasso is the fallback.
-- Vercel Hobby caps serverless functions at 10s; if long Overpass calls come back, add `functions.maxDuration: 60` in `vercel.json`.
-- No realtime updates yet (Supabase Realtime is available; not wired).
-- Invites, "Ask my community," and "Community pulse" are stubbed out of the nav.
-- No native mobile app — the site is responsive and works well on phones, but there's no wrapper.
-
----
-
-## 14. Running locally
-
-```
-bun install
-bun dev
-# open http://localhost:8080
-```
-
-QA shortcuts:
-
-- `/dashboard?welcome=1` — force the onboarding wizard.
-- Type `roadshare` on any signed-in page — reset your account.
-- `/tools/cedar-hollow` — the public sandbox, no auth.
-
-Typecheck: `bunx tsgo --noEmit`.
-
----
-
-*Last updated: July 2026.*
+- `.lovable/plan.md` — current phased plan (docs → regression → blockers →
+  legal/billing → publish).
+- `docs/CHANGELOG.md` — the "nuke plan" delta from the previous architecture.
+- `docs/user-workflow.md` — the user-facing walkthrough this doc's structure
+  intentionally mirrors.
