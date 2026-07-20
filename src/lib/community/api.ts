@@ -281,7 +281,7 @@ export async function deleteAllCommunities(): Promise<number> {
 // ---------------- Parcels ----------------
 
 export async function listParcels(communityId: string): Promise<Parcel[]> {
-  const rows = await unwrap<Parcel[]>(
+  const rows: Parcel[] = await unwrap(
     supabase.from("parcels").select("*").eq("community_id", communityId).order("label"),
   );
   // Natural sort so "Lot 2" comes before "Lot 10".
