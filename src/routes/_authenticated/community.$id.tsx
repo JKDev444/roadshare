@@ -49,6 +49,9 @@ import {
 } from "@/components/ui/popover";
 import { MyRoadTab } from "@/components/community/MyRoadTab";
 import type { CostMethod } from "@/lib/community/costShare";
+import { VoteCard } from "@/components/community/VoteCard";
+import { castVote, createDecision, listVotes, setDecisionStatus } from "@/lib/decisions/api";
+import { supabase } from "@/integrations/supabase/client";
 import { Confetti } from "@/components/onboarding/Confetti";
 import {
   createParcel,
@@ -92,6 +95,7 @@ export type CommunitySearch = {
   project?: string;
   total?: number;
   method?: CostMethod;
+  decision?: string;
 };
 
 export const Route = createFileRoute("/_authenticated/community/$id")({
@@ -107,6 +111,8 @@ export const Route = createFileRoute("/_authenticated/community/$id")({
       project: typeof s.project === "string" && s.project.trim() ? s.project : undefined,
       total: Number.isFinite(totalNum) && totalNum > 0 ? totalNum : undefined,
       method,
+      decision:
+        typeof s.decision === "string" && s.decision.trim() ? s.decision : undefined,
     };
   },
   component: CommunityDetail,
@@ -114,8 +120,9 @@ export const Route = createFileRoute("/_authenticated/community/$id")({
 
 function CommunityDetail() {
   const { id } = Route.useParams();
-  const { tab, justCreated, project, total, method } = Route.useSearch();
+  const { tab, justCreated, project, total, method, decision } = Route.useSearch();
   const navigate = Route.useNavigate();
+  const qc = useQueryClient();
 
   const [celebrate, setCelebrate] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -133,9 +140,64 @@ function CommunityDetail() {
   const parcels = useQuery({ queryKey: ["parcels", id], queryFn: () => listParcels(id) });
   const segments = useQuery({ queryKey: ["segments", id], queryFn: () => listSegments(id) });
   const events = useQuery({ queryKey: ["events", id], queryFn: () => listEvents(id) });
+  const votes = useQuery({
+    queryKey: ["votes", decision],
+    queryFn: () => listVotes(decision!),
+    enabled: !!decision,
+  });
+  const decisionRow = useQuery({
+    queryKey: ["decision", decision],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("decisions")
+        .select("*")
+        .eq("id", decision!)
+        .single();
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    enabled: !!decision,
+  });
 
   const p = parcels.data ?? [];
   const s = segments.data ?? [];
+
+  async function askForVotes({
+    projectName,
+    total,
+    method,
+  }: {
+    projectName: string;
+    total: number;
+    method: CostMethod;
+  }): Promise<string> {
+    const methodLabel: Record<CostMethod, string> = {
+      equal: "even shares",
+      frontage: "by feet of road in front",
+      distance: "by distance from the entrance",
+    };
+    const dec = await createDecision(id, {
+      title: projectName,
+      question: `Should we do ${projectName} at $${total.toLocaleString()}, split ${methodLabel[method]}?`,
+      options: ["👍 Yes, let's do it", "👎 Not yet"],
+      quorum: Math.max(1, Math.ceil(p.length / 2)),
+    });
+    await setDecisionStatus(dec, "voting");
+    qc.invalidateQueries({ queryKey: ["events", id] });
+    await navigate({
+      search: { tab, project: projectName, total, method, decision: dec.id },
+      replace: true,
+    });
+    if (typeof window === "undefined") return "";
+    const base = window.location.href.split("?")[0];
+    const params = new URLSearchParams({
+      project: projectName,
+      total: String(total),
+      method,
+      decision: dec.id,
+    });
+    return `${base}?${params.toString()}`;
+  }
 
   return (
     <AppShell>
@@ -185,12 +247,24 @@ function CommunityDetail() {
         </div>
 
         <div className="flex flex-col space-y-8">
+          {decision && decisionRow.data && (
+            <VoteCard
+              decision={decisionRow.data}
+              votes={votes.data ?? []}
+              parcels={p}
+              onVote={async (household, choice, comment) => {
+                await castVote(decisionRow.data!, household, choice, comment);
+                qc.invalidateQueries({ queryKey: ["votes", decision] });
+              }}
+            />
+          )}
           <MyRoadTab
             parcels={p}
             segments={s}
             initialProject={project}
             initialTotal={total}
             initialMethod={method}
+            onAskForVotes={askForVotes}
           />
           <div className="border-t border-border pt-6">
             <h2 className="mb-3 font-display text-lg font-bold tracking-tight">Manage homes</h2>
