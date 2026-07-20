@@ -1,5 +1,5 @@
-import { useMemo, useState, type ReactNode } from "react";
-import { CheckCircle2, ChevronDown, ChevronUp, Home as HomeIcon, MapPin, Pencil, Route as RouteIcon, Ruler } from "lucide-react";
+import { useMemo, useState } from "react";
+import { CheckCircle2, Home as HomeIcon, MapPin, Route as RouteIcon, Ruler } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +12,6 @@ import { PlatCanvas } from "@/components/community/PlatCanvas";
 type Props = {
   parcels: Parcel[];
   segments: RoadSegment[];
-  /** The full geographic map + segment editor from the current route. */
-  detailedMap: ReactNode;
 };
 
 /**
@@ -22,11 +20,10 @@ type Props = {
  *   2. Homes & Access      — per-home list (address, status, distance).
  *   3. Cost sharing        — three Fair Share methods with editable total.
  *
- * The Mapbox map is still the source of truth; Overview just presents it.
+ * Everything renders through the plat SVG — no third-party map dependency.
  */
-export function MyRoadTab({ parcels, segments, detailedMap }: Props) {
+export function MyRoadTab({ parcels, segments }: Props) {
   const roadFeet = segments.reduce((sum, s) => sum + pathLengthFt(s.geometry), 0);
-  const [showDetailed, setShowDetailed] = useState(false);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col space-y-4">
@@ -67,25 +64,6 @@ export function MyRoadTab({ parcels, segments, detailedMap }: Props) {
         title="Your community"
         className="fun-shadow-sm"
       />
-
-      <div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setShowDetailed((v) => !v)}
-          className="gap-1.5"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-          {showDetailed ? "Hide precise map" : "Edit precisely on satellite map"}
-          {showDetailed ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-        </Button>
-        {showDetailed && (
-          <div className="mt-3 h-[60vh] min-h-[420px] overflow-hidden rounded-2xl border border-border bg-card fun-shadow-sm">
-            {detailedMap}
-          </div>
-        )}
-      </div>
 
       <HomesAccessPane parcels={parcels} segments={segments} />
       <CostSharingPane parcels={parcels} segments={segments} />

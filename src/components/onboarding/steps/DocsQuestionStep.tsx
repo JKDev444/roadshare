@@ -1,7 +1,7 @@
-import { FileText, HelpCircle, Map as MapIcon, X } from "lucide-react";
+import { FileText, HelpCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export type DocsAnswer = "yes" | "no" | "unsure" | "map";
+export type DocsAnswer = "yes" | "no" | "unsure";
 
 /** Step 2. "Do you have any documents about the road or community?" */
 export function DocsQuestionStep({
@@ -19,18 +19,12 @@ export function DocsQuestionStep({
     recommended?: boolean;
   }> = [
     {
-      id: "map",
-      icon: MapIcon,
-      title: "Pick your neighbors on a map",
-      body: "Fastest for real neighborhoods. We'll show every home near your address — just tap or lasso the ones on your road.",
-      recommended: true,
-    },
-    {
       id: "yes",
       icon: FileText,
       title: "Yes, I Have Documents",
       body:
         "Upload what you have — HOA rules, a plat map, a road agreement, an easement, or an amendment. RoadShare figures out what each one is.",
+      recommended: true,
     },
     {
       id: "no",

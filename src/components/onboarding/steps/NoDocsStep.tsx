@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Loader2, Map as MapIcon, MapPin, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowRight, Loader2, MapPin, Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatHit, searchAddresses, type NominatimHit } from "@/lib/onboarding/nominatim";
 import { parseAddressList } from "@/lib/onboarding/parseAddressList";
-import { MapPickStep, type MapPickResult } from "./MapPickStep";
 import type { BasicInfo } from "./BasicInfoStep";
 
-type Mode = "menu" | "map" | "search" | "paste" | "manual" | "empty";
+type Mode = "menu" | "search" | "paste" | "manual" | "empty";
 
 export type ManualLot = {
   address?: string;
@@ -21,7 +20,6 @@ export type ManualLot = {
 export type NoDocsResult =
   | { kind: "addresses"; items: Array<{ label: string; address?: string }> }
   | { kind: "manual"; items: ManualLot[] }
-  | MapPickResult
   | { kind: "empty" };
 
 /** Step 3B. Shown when the user picks "No documents" or "I'm not sure". */
@@ -43,7 +41,6 @@ export function NoDocsStep({
   const [mode, setMode] = useState<Mode>("menu");
 
   if (mode === "menu") {
-    const hasAddress = !!basicInfo.startingAddress?.trim();
     return (
       <div className="space-y-4">
         <div>
@@ -55,19 +52,9 @@ export function NoDocsStep({
 
         <div className="space-y-2">
           <MenuTile
-            title="Pick your neighbors on a map"
-            body={
-              hasAddress
-                ? "We'll show every home near your address. Lasso the ones on your road. Fastest for real neighborhoods."
-                : "Draw around your community on the map. Fastest for real neighborhoods. (Tip: add a starting address on the previous step for best results.)"
-            }
-            icon={<MapIcon className="h-4 w-4 text-primary" />}
-            recommended
-            onClick={() => setMode("map")}
-          />
-          <MenuTile
             title="Search and Add Addresses"
             body="Search for and add one address at a time."
+            recommended
             onClick={() => setMode("search")}
           />
           <MenuTile
@@ -96,17 +83,6 @@ export function NoDocsStep({
           <Button variant="ghost" size="sm" onClick={onBack}>Back</Button>
         </div>
       </div>
-    );
-  }
-
-  if (mode === "map") {
-    return (
-      <MapPickStep
-        basicInfo={basicInfo}
-        onCancel={() => setMode("menu")}
-        onSubmit={onSubmit}
-        submitting={submitting}
-      />
     );
   }
 
