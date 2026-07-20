@@ -353,7 +353,6 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
                 setStep("review");
               }}
               onLater={() => close(true)}
-              onBack={() => close(true)}
             />
           )}
 
