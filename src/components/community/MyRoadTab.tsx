@@ -256,7 +256,11 @@ function HomeStep({
         the end.
       </p>
       <ul className="grid gap-2 sm:grid-cols-2">
-        {parcels.map((p) => {
+        {[...parcels]
+          .sort((a, b) =>
+            (a.label ?? "").localeCompare(b.label ?? "", undefined, { numeric: true, sensitivity: "base" }),
+          )
+          .map((p) => {
           const active = p.id === value;
           return (
             <li key={p.id}>
