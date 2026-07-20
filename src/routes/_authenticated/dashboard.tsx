@@ -6,6 +6,9 @@ import {
   FileText,
   Home as HomeIcon,
   Route as RouteIcon,
+  MapPin,
+  Sparkles,
+  Search,
   Users,
   Vote,
 } from "lucide-react";
@@ -16,6 +19,9 @@ import { Button } from "@/components/ui/button";
 import { WelcomeWizard } from "@/components/onboarding/WelcomeWizard";
 import { getDashboardStats } from "@/lib/onboarding/api";
 import { cn } from "@/lib/utils";
+import { loadResumeState, resumeStepLabel } from "@/lib/onboarding/resumeState";
+import { useEffect, useState } from "react";
+import type { ResumeState } from "@/lib/onboarding/resumeState";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -47,10 +53,49 @@ function Dashboard() {
   const docCount = stats?.documents ?? 0;
   const openDecisions = stats?.openDecisions ?? 0;
 
+  const [resume, setResume] = useState<ResumeState | null>(null);
+  useEffect(() => {
+    setResume(loadResumeState(user?.id));
+  }, [user?.id]);
+  const showResume = !hasCommunity && !!resume && !welcome;
+
   return (
     <AppShell>
       <WelcomeWizard forceOpen={welcome} />
       <div className="mx-auto max-w-4xl space-y-6">
+        {/* Resume banner — user paused mid-setup */}
+        {showResume && resume && (
+          <div className="rounded-3xl border border-fun-2/30 bg-gradient-to-br from-fun-2/15 via-primary/5 to-fun-3/15 p-5 fun-shadow-sm">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                <Sparkles className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-primary">
+                  Pick up where you left off
+                </p>
+                <h2 className="mt-0.5 font-display text-xl font-bold">
+                  You were {resumeStepLabel(resume.step)}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  We saved your progress. Jump back in and we'll take you right to the same
+                  step.
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Button asChild size="sm">
+                <Link to="/dashboard" search={{ welcome: true }}>
+                  Continue setup <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <span className="text-[11px] text-muted-foreground">
+                Only takes a few more minutes.
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Hero greeting */}
         <div className="rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-fun-2/5 to-fun-3/10 p-6 fun-shadow-sm">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Home</p>
@@ -64,7 +109,7 @@ function Dashboard() {
                 <span className="font-semibold text-foreground">{stats?.latestCommunity}</span>.
               </>
             ) : (
-              "Let's get your shared road set up. It only takes a few minutes."
+              "RoadShare helps you and your neighbors figure out a fair way to share road costs. Let's set up your road."
             )}
           </p>
           <div className="mt-4">
@@ -78,7 +123,7 @@ function Dashboard() {
             ) : (
               <Button asChild size="lg">
                 <Link to="/dashboard" search={{ welcome: true }}>
-                  Let's start with your road
+                  {resume ? "Resume setup" : "Let's start with your road"}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -157,18 +202,48 @@ function Dashboard() {
 
         {/* Empty-state helper */}
         {!hasCommunity && (
-          <div className="rounded-2xl border border-dashed border-border bg-card/60 p-6 text-center">
-            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <CheckCircle2 className="h-5 w-5" />
+          <>
+            {/* Value-prop walkthrough so users know what RoadShare will do */}
+            <section aria-labelledby="what-we-do" className="space-y-3">
+              <h2 id="what-we-do" className="font-display text-lg font-semibold">
+                Here's what we'll do together
+              </h2>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <StepCard
+                  icon={MapPin}
+                  tint="bg-primary/12 text-primary"
+                  title="Find your homes"
+                  body="Type your address and we'll try to find every home on your road automatically."
+                />
+                <StepCard
+                  icon={RouteIcon}
+                  tint="bg-fun-2/15 text-fun-2-foreground"
+                  title="Draw the road"
+                  body="Confirm the road everyone shares — the piece maintenance costs cover."
+                />
+                <StepCard
+                  icon={Vote}
+                  tint="bg-fun-3/15 text-fun-3-foreground"
+                  title="Share fair costs"
+                  body="Send neighbors a link to vote on a fair share for the next repair."
+                />
+              </div>
+            </section>
+
+            <div className="rounded-2xl border border-dashed border-border bg-card/60 p-6 text-center">
+              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+              <p className="mt-3 font-semibold">Want to see a finished example first?</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Cedar Hollow is a sandbox neighborhood you can explore without setting
+                anything up.
+              </p>
+              <Button asChild variant="outline" className="mt-3">
+                <Link to="/tools/cedar-hollow">See the Cedar Hollow sample</Link>
+              </Button>
             </div>
-            <p className="mt-3 font-semibold">Not sure yet? Take a peek at a finished example.</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Cedar Hollow is a sandbox neighborhood you can explore without setting anything up.
-            </p>
-            <Button asChild variant="outline" className="mt-3">
-              <Link to="/tools/cedar-hollow">See the Cedar Hollow sample</Link>
-            </Button>
-          </div>
+          </>
         )}
 
         {hasCommunity && (
@@ -191,6 +266,33 @@ type TileTo =
   | { path: "/community/$id"; params: { id: string }; search: { tab: "roads" | "homes" } }
   | { path: "/documents" }
   | { path: "/decisions" };
+
+function StepCard({
+  icon: Icon,
+  tint,
+  title,
+  body,
+}: {
+  icon: typeof HomeIcon;
+  tint: string;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 fun-shadow-sm">
+      <span
+        className={cn(
+          "flex h-9 w-9 items-center justify-center rounded-lg",
+          tint,
+        )}
+      >
+        <Icon className="h-4 w-4" />
+      </span>
+      <p className="mt-3 font-semibold">{title}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{body}</p>
+    </div>
+  );
+}
 
 function Tile({
   icon: Icon,
