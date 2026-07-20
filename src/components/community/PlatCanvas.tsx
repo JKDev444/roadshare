@@ -226,6 +226,7 @@ function layout(parcels: Parcel[], segments: RoadSegment[]): {
   polys: ProjectedPolygon[];
   roads: ProjectedRoad[];
   empty: boolean;
+  tooManyOrphans?: boolean;
 } {
   // Collect (lng, lat) points from features
   const parcelFeatures = parcels
@@ -258,6 +259,12 @@ function layout(parcels: Parcel[], segments: RoadSegment[]): {
 
   if (coords.length === 0 && orphans.length === 0) {
     return { polys: [], roads: [], empty: true };
+  }
+
+  // Bail out on huge orphan-only communities — cramming hundreds of tiny
+  // rects into a fixed viewBox is illegible. Callers show a friendly summary.
+  if (coords.length === 0 && orphans.length > 60) {
+    return { polys: [], roads: [], empty: false, tooManyOrphans: true };
   }
 
   // Compute bounds; if no geometry, invent a synthetic box for the orphans grid.
