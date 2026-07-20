@@ -72,15 +72,12 @@ function CommunityIndex() {
       <div className="mx-auto max-w-6xl space-y-8">
         <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">Community Record</h1>
+            <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">My road</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               A shared ledger of parcels, owners, and road geometry — every fact carries a source and confidence.
             </p>
           </div>
           <div className="flex shrink-0 gap-2">
-            <Button variant="outline" onClick={() => seed.mutate()} disabled={seed.isPending}>
-              <Sparkles className="h-4 w-4" /> {seed.isPending ? "Adding…" : "Add sample"}
-            </Button>
             <CreateCommunityDialog />
           </div>
         </header>
@@ -145,15 +142,15 @@ function CommunityIndex() {
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <MapPinned className="h-7 w-7" />
             </span>
-            <h2 className="mt-5 font-display text-xl font-bold">Start your first community record</h2>
+            <h2 className="mt-5 font-display text-xl font-bold">Start with the Cedar Hollow sample</h2>
             <p className="mt-2 max-w-md text-sm text-muted-foreground">
-              Create a blank record and map it yourself, or load the Cedar Hollow sample to see a fully populated ledger.
+              See a fully mapped neighborhood with homes, road, and shares — then create your own when you're ready.
             </p>
-            <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <Button onClick={() => seed.mutate()} disabled={seed.isPending}>
-                <Sparkles className="h-4 w-4" /> Load Cedar Hollow sample
+            <div className="mt-6 flex flex-col items-center gap-2">
+              <Button size="lg" onClick={() => seed.mutate()} disabled={seed.isPending}>
+                <Sparkles className="h-4 w-4" /> {seed.isPending ? "Adding…" : "Load Cedar Hollow sample"}
               </Button>
-              <CreateCommunityDialog variant="outline" />
+              <CreateCommunityDialog variant="ghost" />
             </div>
           </div>
         )}
