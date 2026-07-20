@@ -27,7 +27,6 @@ import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -168,31 +167,25 @@ function CommunityDetail() {
           </div>
         </div>
 
-        <Tabs value={tab} onValueChange={(v) => navigate({ search: { tab: v as Tab } })} className="flex min-h-0 flex-1 flex-col">
-          <TabsList className="flex-wrap">
-            <TabsTrigger value="roads"><RouteIcon className="mr-1.5 h-4 w-4" /> My Road</TabsTrigger>
-            <TabsTrigger value="homes"><Users className="mr-1.5 h-4 w-4" /> Homes</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="roads" className="mt-4 flex min-h-0 flex-1 flex-col">
-            <MyRoadTab
-              parcels={p}
-              segments={s}
-              detailedMap={
-                <MapTab
-                  communityId={id}
-                  community={community.data ?? null}
-                  parcels={p}
-                  segments={s}
-                  events={events.data ?? []}
-                />
-              }
-            />
-          </TabsContent>
-          <TabsContent value="homes" className="mt-4">
+        <div className="flex min-h-0 flex-1 flex-col space-y-8">
+          <MyRoadTab
+            parcels={p}
+            segments={s}
+            detailedMap={
+              <MapTab
+                communityId={id}
+                community={community.data ?? null}
+                parcels={p}
+                segments={s}
+                events={events.data ?? []}
+              />
+            }
+          />
+          <div className="border-t border-border pt-6">
+            <h2 className="mb-3 font-display text-lg font-bold tracking-tight">Manage homes</h2>
             <PropertiesTab communityId={id} parcels={p} loading={parcels.isLoading} />
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </div>
     </AppShell>
   );
