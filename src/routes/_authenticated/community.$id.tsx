@@ -16,6 +16,7 @@ import {
   Pencil,
   Route as RouteIcon,
   Ruler,
+  Search,
   Sparkles,
   Trash2,
   TriangleAlert,
