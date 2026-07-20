@@ -103,6 +103,18 @@ export function MyRoadTab({
 
   return (
     <div className="flex flex-col gap-4">
+      {sharedIn && (
+        <div className="rounded-2xl border border-primary/40 bg-primary/5 px-4 py-3 text-sm fun-shadow-sm">
+          <p className="font-semibold">A neighbor shared a plan with you</p>
+          <p className="text-xs text-muted-foreground">
+            <strong className="text-foreground">{projectName}</strong> at{" "}
+            <strong className="text-foreground">
+              {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(Number(totalStr) || 0)}
+            </strong>
+            . Pick your home below to see your fair share.
+          </p>
+        </div>
+      )}
       {/* Always-visible road picture */}
       <PlatCanvas
         parcels={parcels}
