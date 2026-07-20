@@ -20,7 +20,13 @@ import { pathLengthFt, type Parcel, type RoadSegment } from "@/lib/community/api
 import { computeCostShare, formatUSD, type CostMethod } from "@/lib/community/costShare";
 import { PlatCanvas } from "@/components/community/PlatCanvas";
 
-type Props = { parcels: Parcel[]; segments: RoadSegment[] };
+type Props = {
+  parcels: Parcel[];
+  segments: RoadSegment[];
+  initialProject?: string;
+  initialTotal?: number;
+  initialMethod?: CostMethod;
+};
 
 type StepId = "home" | "road" | "project" | "split" | "result";
 
@@ -42,12 +48,21 @@ const STEPS: {
  * Guided step-card planner for a community. Mirrors the Cedar Hollow demo:
  * plat picture always visible, one card at a time, plat updates live.
  */
-export function MyRoadTab({ parcels, segments }: Props) {
-  const [step, setStep] = useState<StepId>("home");
+export function MyRoadTab({
+  parcels,
+  segments,
+  initialProject,
+  initialTotal,
+  initialMethod,
+}: Props) {
+  const sharedIn = !!(initialProject || initialTotal || initialMethod);
+  const [step, setStep] = useState<StepId>(sharedIn ? "home" : "home");
   const [yourHomeId, setYourHomeId] = useState<string | null>(null);
-  const [projectName, setProjectName] = useState("Repave the shared road");
-  const [totalStr, setTotalStr] = useState("25000");
-  const [method, setMethod] = useState<CostMethod>("equal");
+  const [projectName, setProjectName] = useState(initialProject ?? "Repave the shared road");
+  const [totalStr, setTotalStr] = useState(
+    initialTotal ? String(initialTotal) : "25000",
+  );
+  const [method, setMethod] = useState<CostMethod>(initialMethod ?? "equal");
 
   const total = Math.max(0, Number(totalStr.replace(/[^\d.]/g, "")) || 0);
   const roadFeet = useMemo(
@@ -88,6 +103,18 @@ export function MyRoadTab({ parcels, segments }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
+      {sharedIn && (
+        <div className="rounded-2xl border border-primary/40 bg-primary/5 px-4 py-3 text-sm fun-shadow-sm">
+          <p className="font-semibold">A neighbor shared a plan with you</p>
+          <p className="text-xs text-muted-foreground">
+            <strong className="text-foreground">{projectName}</strong> at{" "}
+            <strong className="text-foreground">
+              {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(Number(totalStr) || 0)}
+            </strong>
+            . Pick your home below to see your fair share.
+          </p>
+        </div>
+      )}
       {/* Always-visible road picture */}
       <PlatCanvas
         parcels={parcels}
@@ -438,8 +465,14 @@ function ResultStep({
   };
 
   async function copyLink() {
-    const url =
-      typeof window !== "undefined" ? window.location.href.split("?")[0] : "";
+    if (typeof window === "undefined") return;
+    const base = window.location.href.split("?")[0];
+    const params = new URLSearchParams({
+      project: projectName,
+      total: String(total),
+      method,
+    });
+    const url = `${base}?${params.toString()}`;
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Link copied — paste it in a text or email to your neighbors");
