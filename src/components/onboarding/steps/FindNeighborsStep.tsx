@@ -39,8 +39,16 @@ const RADIUS_STEPS = [400, 1500, 5280, 15000] as const;
 
 function metersFromFeet(ft: number) {
   // parcelsPointLookup treats `radius` as meters in the underlying implementation
-  // (server clamps 50..2000). We surface feet in the UI and convert here.
+  // (server clamps 50..5000). We surface feet in the UI and convert here.
   return Math.round(ft * 0.3048);
+}
+
+function formatDistance(ft: number): string {
+  if (ft >= 5280) {
+    const miles = ft / 5280;
+    return `${miles % 1 === 0 ? miles.toFixed(0) : miles.toFixed(1)} mile${miles === 1 ? "" : "s"}`;
+  }
+  return `${ft.toLocaleString()} ft`;
 }
 
 /**
