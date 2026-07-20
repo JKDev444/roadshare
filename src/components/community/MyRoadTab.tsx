@@ -20,7 +20,13 @@ import { pathLengthFt, type Parcel, type RoadSegment } from "@/lib/community/api
 import { computeCostShare, formatUSD, type CostMethod } from "@/lib/community/costShare";
 import { PlatCanvas } from "@/components/community/PlatCanvas";
 
-type Props = { parcels: Parcel[]; segments: RoadSegment[] };
+type Props = {
+  parcels: Parcel[];
+  segments: RoadSegment[];
+  initialProject?: string;
+  initialTotal?: number;
+  initialMethod?: CostMethod;
+};
 
 type StepId = "home" | "road" | "project" | "split" | "result";
 
@@ -42,12 +48,21 @@ const STEPS: {
  * Guided step-card planner for a community. Mirrors the Cedar Hollow demo:
  * plat picture always visible, one card at a time, plat updates live.
  */
-export function MyRoadTab({ parcels, segments }: Props) {
-  const [step, setStep] = useState<StepId>("home");
+export function MyRoadTab({
+  parcels,
+  segments,
+  initialProject,
+  initialTotal,
+  initialMethod,
+}: Props) {
+  const sharedIn = !!(initialProject || initialTotal || initialMethod);
+  const [step, setStep] = useState<StepId>(sharedIn ? "home" : "home");
   const [yourHomeId, setYourHomeId] = useState<string | null>(null);
-  const [projectName, setProjectName] = useState("Repave the shared road");
-  const [totalStr, setTotalStr] = useState("25000");
-  const [method, setMethod] = useState<CostMethod>("equal");
+  const [projectName, setProjectName] = useState(initialProject ?? "Repave the shared road");
+  const [totalStr, setTotalStr] = useState(
+    initialTotal ? String(initialTotal) : "25000",
+  );
+  const [method, setMethod] = useState<CostMethod>(initialMethod ?? "equal");
 
   const total = Math.max(0, Number(totalStr.replace(/[^\d.]/g, "")) || 0);
   const roadFeet = useMemo(
