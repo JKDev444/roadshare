@@ -335,13 +335,34 @@ export const createJob = createServerFn({ method: "POST" })
       .update({ document_paths: paths })
       .eq("id", jobId);
 
-    // Kick off processing without awaiting; we return jobId immediately so the
-    // client can move to the processing screen. Cloudflare Workers may cut
-    // background promises after the response, but the client polls status and
-    // will call `resumeJob` if the job appears stalled.
-    void runProcessing(jobId);
-
+    // Do NOT fire-and-forget processing here — serverless workers kill orphaned
+    // promises after the response returns. Instead the client explicitly calls
+    // `processJob` immediately after createJob so the extraction runs inside a
+    // request that is actively awaited by the browser.
     return { jobId };
+  });
+
+/** Runs the full extraction pipeline. The client calls this right after createJob
+ *  and again from `resumeJob` if the connection was interrupted. Safe to call
+ *  more than once — early stages are idempotent and terminal states short-circuit. */
+export const processJob = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ jobId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    // Confirm the caller owns this job.
+    const { data: job } = await supabase
+      .from("onboarding_jobs")
+      .select("id, status")
+      .eq("id", data.jobId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!job) return { ok: false };
+    if (job.status === "succeeded" || job.status === "failed" || job.status === "cancelled") {
+      return { ok: true };
+    }
+    await runProcessing(data.jobId);
+    return { ok: true };
   });
 
 export const getJob = createServerFn({ method: "GET" })
@@ -403,7 +424,7 @@ export const resumeJob = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!job) return { ok: false };
     if (job.status !== "processing" && job.status !== "uploading") return { ok: true };
-    void runProcessing(data.jobId);
+    await runProcessing(data.jobId);
     return { ok: true };
   });
 
