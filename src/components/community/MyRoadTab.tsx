@@ -1,184 +1,384 @@
-import { useMemo, useState } from "react";
-import { CheckCircle2, Home as HomeIcon, MapPin, Route as RouteIcon, Ruler } from "lucide-react";
+import { useMemo, useState, type ComponentType } from "react";
+import {
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  Copy,
+  Home as HomeIcon,
+  Route as RouteIcon,
+  Sparkles,
+  Wallet,
+  Wrench,
+} from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { haversineFt, pathLengthFt, type Parcel, type RoadSegment } from "@/lib/community/api";
+import { pathLengthFt, type Parcel, type RoadSegment } from "@/lib/community/api";
 import { computeCostShare, formatUSD, type CostMethod } from "@/lib/community/costShare";
 import { PlatCanvas } from "@/components/community/PlatCanvas";
 
-type Props = {
-  parcels: Parcel[];
-  segments: RoadSegment[];
-};
+type Props = { parcels: Parcel[]; segments: RoadSegment[] };
+
+type StepId = "home" | "road" | "project" | "split" | "result";
+
+const STEPS: {
+  id: StepId;
+  n: number;
+  title: string;
+  short: string;
+  icon: ComponentType<{ className?: string }>;
+}[] = [
+  { id: "home", n: 1, title: "Which home is yours?", short: "Your home", icon: HomeIcon },
+  { id: "road", n: 2, title: "Which road needs work?", short: "The road", icon: RouteIcon },
+  { id: "project", n: 3, title: "What's the project?", short: "Project", icon: Wrench },
+  { id: "split", n: 4, title: "How should we split the cost?", short: "Split", icon: Wallet },
+  { id: "result", n: 5, title: "Your fair share", short: "Result", icon: Sparkles },
+];
 
 /**
- * "My Road" workspace — three plain-language sub-sections:
- *   1. Overview            — visual summary of the shared road + toggle to the map.
- *   2. Homes & Access      — per-home list (address, status, distance).
- *   3. Cost sharing        — three Fair Share methods with editable total.
- *
- * Everything renders through the plat SVG — no third-party map dependency.
+ * Guided step-card planner for a community. Mirrors the Cedar Hollow demo:
+ * plat picture always visible, one card at a time, plat updates live.
  */
 export function MyRoadTab({ parcels, segments }: Props) {
-  const roadFeet = segments.reduce((sum, s) => sum + pathLengthFt(s.geometry), 0);
+  const [step, setStep] = useState<StepId>("home");
+  const [yourHomeId, setYourHomeId] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState("Repave the shared road");
+  const [totalStr, setTotalStr] = useState("25000");
+  const [method, setMethod] = useState<CostMethod>("equal");
+
+  const total = Math.max(0, Number(totalStr.replace(/[^\d.]/g, "")) || 0);
+  const roadFeet = useMemo(
+    () => segments.reduce((sum, s) => sum + pathLengthFt(s.geometry), 0),
+    [segments],
+  );
+  const result = useMemo(
+    () => computeCostShare(parcels, segments, total, method),
+    [parcels, segments, total, method],
+  );
+  const yourRow = useMemo(
+    () => result.rows.find((r) => r.parcelId === yourHomeId) ?? null,
+    [result.rows, yourHomeId],
+  );
+
+  const stepDone: Record<StepId, boolean> = {
+    home: !!yourHomeId,
+    road: segments.length > 0,
+    project: projectName.trim().length > 0 && total > 0,
+    split: true,
+    result: !!yourHomeId,
+  };
+
+  if (parcels.length === 0) {
+    return (
+      <div className="rounded-3xl border border-dashed border-primary/30 bg-gradient-to-br from-primary/5 via-card to-fun-3/10 p-8 text-center fun-shadow-sm">
+        <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <HomeIcon className="h-6 w-6" />
+        </span>
+        <h2 className="mt-4 font-display text-xl font-bold">No homes on this road yet</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Add the homes that share your road below. The step-by-step planner shows up as soon as
+          there's at least one home.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <SummaryTile
-          icon={RouteIcon}
-          tint="bg-teal-500/12 text-teal-600 dark:text-teal-400"
-          headline={
-            segments.length === 0
-              ? "No shared road drawn yet"
-              : `${segments.length} shared road${segments.length === 1 ? "" : "s"}`
-          }
-          body={
-            segments.length === 0
-              ? "Draw the road you share so distances and costs can be measured."
-              : `About ${roadFeet.toLocaleString()} feet total.`
-          }
-        />
-        <SummaryTile
-          icon={HomeIcon}
-          tint="bg-indigo-500/12 text-indigo-600 dark:text-indigo-400"
-          headline={
-            parcels.length === 0
-              ? "No homes connected yet"
-              : `${parcels.length} connected home${parcels.length === 1 ? "" : "s"}`
-          }
-          body={
-            parcels.length === 0
-              ? "Add the homes that share this road."
-              : "Everyone below shares the road."
-          }
-        />
-      </div>
-
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      {/* Always-visible road picture */}
       <PlatCanvas
         parcels={parcels}
         segments={segments}
-        title="Your community"
+        title="Your road"
         className="fun-shadow-sm"
       />
 
-      <HomesAccessPane parcels={parcels} segments={segments} />
-      <CostSharingPane parcels={parcels} segments={segments} />
+      {/* Step rail */}
+      <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-card/90 p-2 text-xs shadow-sm sm:grid-cols-5">
+        {STEPS.map((s) => {
+          const active = step === s.id;
+          const done = stepDone[s.id];
+          const Icon = s.icon;
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setStep(s.id)}
+              className={cn(
+                "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-xl border p-2 text-left transition-colors",
+                active
+                  ? "border-primary bg-primary/10"
+                  : "border-border bg-background/60 hover:bg-accent",
+              )}
+            >
+              <span
+                className={cn(
+                  "grid h-7 w-7 shrink-0 place-items-center rounded-lg",
+                  done && !active
+                    ? "bg-selected text-selected-foreground"
+                    : active
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground",
+                )}
+              >
+                {done && !active ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate font-semibold">{s.short}</span>
+                <span className="block truncate text-muted-foreground">Step {s.n}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Step card */}
+      <div className="rounded-2xl border border-border bg-card p-5 fun-shadow-sm">
+        <StepCard step={step}>
+          {step === "home" && (
+            <HomeStep
+              parcels={parcels}
+              value={yourHomeId}
+              onPick={(id) => {
+                setYourHomeId(id);
+                setStep("road");
+              }}
+            />
+          )}
+          {step === "road" && (
+            <RoadStep
+              roadFeet={roadFeet}
+              segmentCount={segments.length}
+              onNext={() => setStep("project")}
+            />
+          )}
+          {step === "project" && (
+            <ProjectStep
+              projectName={projectName}
+              setProjectName={setProjectName}
+              totalStr={totalStr}
+              setTotalStr={setTotalStr}
+              onNext={() => setStep("split")}
+            />
+          )}
+          {step === "split" && (
+            <SplitStep
+              method={method}
+              setMethod={setMethod}
+              fallback={result.fallback}
+              onNext={() => setStep("result")}
+            />
+          )}
+          {step === "result" && (
+            <ResultStep
+              projectName={projectName}
+              total={total}
+              method={method}
+              rows={result.rows}
+              yourRow={yourRow}
+            />
+          )}
+        </StepCard>
+      </div>
     </div>
   );
 }
 
-// ----- Homes & Access -----
-function HomesAccessPane({ parcels, segments }: { parcels: Parcel[]; segments: RoadSegment[] }) {
-  const entrance = useMemo(() => firstEntrance(segments), [segments]);
-  if (parcels.length === 0) {
-    return null;
-  }
+function StepCard({ step, children }: { step: StepId; children: React.ReactNode }) {
+  const meta = STEPS.find((s) => s.id === step)!;
+  const Icon = meta.icon;
   return (
-    <div>
-      <h3 className="mb-2 font-display text-base font-semibold">Homes on this road</h3>
+    <div className="space-y-4">
+      <div className="flex items-start gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground">
+          <Icon className="h-5 w-5" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-wider text-primary">
+            Step {meta.n} of {STEPS.length}
+          </p>
+          <h2 className="font-display text-xl font-bold tracking-tight">{meta.title}</h2>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function HomeStep({
+  parcels,
+  value,
+  onPick,
+}: {
+  parcels: Parcel[];
+  value: string | null;
+  onPick: (id: string) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Pick which home is yours. We'll highlight it on the road picture and show your fair share at
+        the end.
+      </p>
       <ul className="grid gap-2 sm:grid-cols-2">
-      {parcels.map((p) => {
-        const dist = distanceFt(p, entrance);
-        return (
-          <li key={p.id} className="rounded-2xl border border-border bg-card p-3 fun-shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-semibold">{p.label}</p>
-                {p.address && <p className="mt-0.5 text-xs text-muted-foreground">{p.address}</p>}
-                {p.owner_name && (
-                  <p className="mt-0.5 text-xs text-muted-foreground">{p.owner_name}</p>
+        {parcels.map((p) => {
+          const active = p.id === value;
+          return (
+            <li key={p.id}>
+              <button
+                type="button"
+                onClick={() => onPick(p.id)}
+                className={cn(
+                  "flex w-full items-center justify-between gap-2 rounded-xl border p-3 text-left transition-colors",
+                  active
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-background hover:border-primary/50 hover:bg-primary/5",
                 )}
-              </div>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" />
-                {p.lat != null && p.lng != null ? "On map" : "Location not set"}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Ruler className="h-3.5 w-3.5" />
-                {dist > 0
-                  ? `${Math.round(dist).toLocaleString()} ft from entrance`
-                  : "Distance unknown"}
-              </span>
-              {p.frontage_ft ? (
-                <span className="inline-flex items-center gap-1">
-                  <RouteIcon className="h-3.5 w-3.5" />
-                  {Number(p.frontage_ft).toLocaleString()} ft touching the road
+              >
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold">{p.label}</span>
+                  {p.address && (
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {p.address}
+                    </span>
+                  )}
                 </span>
-              ) : null}
-            </div>
-          </li>
-        );
-      })}
+                {active ? (
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
+                ) : (
+                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                )}
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
 }
 
-// ----- Cost sharing -----
-function CostSharingPane({ parcels, segments }: { parcels: Parcel[]; segments: RoadSegment[] }) {
-  const [method, setMethod] = useState<CostMethod>("equal");
-  const [totalStr, setTotalStr] = useState("10000");
-  const total = Math.max(0, Number(totalStr.replace(/[^\d.]/g, "")) || 0);
-  const result = useMemo(
-    () => computeCostShare(parcels, segments, total, method),
-    [parcels, segments, total, method],
+function RoadStep({
+  roadFeet,
+  segmentCount,
+  onNext,
+}: {
+  roadFeet: number;
+  segmentCount: number;
+  onNext: () => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        The road picture above shows the stretch of road you'll split. If it doesn't match, add or
+        edit the road below the planner.
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-xl border border-border bg-muted/40 p-3">
+          <div className="text-xs text-muted-foreground">Stretches of road</div>
+          <div className="mt-1 font-display text-2xl font-bold">{segmentCount}</div>
+        </div>
+        <div className="rounded-xl border border-border bg-muted/40 p-3">
+          <div className="text-xs text-muted-foreground">About how long</div>
+          <div className="mt-1 font-display text-2xl font-bold">
+            {roadFeet > 0 ? `${Math.round(roadFeet).toLocaleString()} ft` : "—"}
+          </div>
+        </div>
+      </div>
+      <Button className="w-full" onClick={onNext}>
+        Looks right <ArrowRight className="h-4 w-4" />
+      </Button>
+    </div>
   );
+}
 
-  if (parcels.length === 0) {
-    return null;
-  }
+function ProjectStep({
+  projectName,
+  setProjectName,
+  totalStr,
+  setTotalStr,
+  onNext,
+}: {
+  projectName: string;
+  setProjectName: (v: string) => void;
+  totalStr: string;
+  setTotalStr: (v: string) => void;
+  onNext: () => void;
+}) {
+  const total = Math.max(0, Number(totalStr.replace(/[^\d.]/g, "")) || 0);
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Give the project a plain-language name and a rough total cost. You can change either later.
+      </p>
+      <div className="space-y-1.5">
+        <Label htmlFor="project-name">What are you fixing?</Label>
+        <Input
+          id="project-name"
+          value={projectName}
+          onChange={(e) => setProjectName(e.target.value)}
+          placeholder="e.g. Repave the road, patch the potholes, add a speed bump"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="project-total">About how much will it cost?</Label>
+        <div className="flex items-center gap-2">
+          <span className="text-lg font-semibold">$</span>
+          <Input
+            id="project-total"
+            inputMode="numeric"
+            value={totalStr}
+            onChange={(e) => setTotalStr(e.target.value)}
+            className="font-display text-lg font-bold"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          A ballpark works — you can update it after you get a quote.
+        </p>
+      </div>
+      <Button
+        className="w-full"
+        onClick={onNext}
+        disabled={!projectName.trim() || total <= 0}
+      >
+        Choose how to split <ArrowRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
 
+function SplitStep({
+  method,
+  setMethod,
+  fallback,
+  onNext,
+}: {
+  method: CostMethod;
+  setMethod: (m: CostMethod) => void;
+  fallback: "equal" | null;
+  onNext: () => void;
+}) {
   const methods: { id: CostMethod; label: string; blurb: string }[] = [
     { id: "equal", label: "Split evenly", blurb: "Every home pays the same." },
     {
       id: "frontage",
-      label: "By road frontage",
+      label: "By feet of road in front",
       blurb: "Homes with more road along them pay more.",
     },
     {
       id: "distance",
-      label: "By distance from entrance",
+      label: "By distance from the entrance",
       blurb: "Homes farther down the road pay more.",
     },
   ];
-
   return (
-    <div className="space-y-4">
-      <h3 className="font-display text-base font-semibold">Split the cost</h3>
-      <div className="rounded-2xl border border-border bg-card p-4 fun-shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Estimated project cost
-            </p>
-            <div className="mt-1 flex items-center gap-2">
-              <Label htmlFor="cost-total" className="sr-only">
-                Total cost
-              </Label>
-              <span className="text-lg font-semibold">$</span>
-              <Input
-                id="cost-total"
-                inputMode="numeric"
-                value={totalStr}
-                onChange={(e) => setTotalStr(e.target.value)}
-                className="max-w-[10rem] font-display text-lg font-bold"
-              />
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground sm:text-right">
-            Try each method to see how the split changes. The math stays the same as the Fair Share
-            tools.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-2 sm:grid-cols-3">
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Three fair ways to split the cost. You can try each one and see how the numbers change.
+      </p>
+      <div className="grid gap-2">
         {methods.map((m) => {
           const active = method === m.id;
           return (
@@ -187,30 +387,84 @@ function CostSharingPane({ parcels, segments }: { parcels: Parcel[]; segments: R
               type="button"
               onClick={() => setMethod(m.id)}
               className={cn(
-                "rounded-2xl border p-3 text-left transition-colors",
+                "flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition-colors",
                 active
                   ? "border-primary bg-primary/10"
-                  : "border-border bg-card hover:border-primary/40",
+                  : "border-border bg-background hover:border-primary/40",
               )}
             >
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold">{m.label}</p>
-                {active && <CheckCircle2 className="h-4 w-4 text-primary" />}
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">{m.blurb}</p>
+              <span className="min-w-0">
+                <span className="block font-semibold">{m.label}</span>
+                <span className="block text-xs text-muted-foreground">{m.blurb}</span>
+              </span>
+              {active && <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />}
             </button>
           );
         })}
       </div>
-
-      {result.fallback === "equal" && method !== "equal" && (
+      {fallback === "equal" && method !== "equal" && (
         <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs">
-          We don't have enough data for that method yet, so we split it evenly. Add{" "}
+          We don't have enough data for that split yet, so we're using even shares. Add{" "}
           {method === "frontage"
-            ? "road frontage on each home"
+            ? "feet of road in front of each home"
             : "the shared road and home locations"}{" "}
           to unlock it.
         </p>
+      )}
+      <Button className="w-full" onClick={onNext}>
+        See the fair share <ArrowRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
+function ResultStep({
+  projectName,
+  total,
+  method,
+  rows,
+  yourRow,
+}: {
+  projectName: string;
+  total: number;
+  method: CostMethod;
+  rows: ReturnType<typeof computeCostShare>["rows"];
+  yourRow: ReturnType<typeof computeCostShare>["rows"][number] | null;
+}) {
+  const methodLabel: Record<CostMethod, string> = {
+    equal: "even shares",
+    frontage: "by feet of road in front",
+    distance: "by distance from the entrance",
+  };
+
+  async function copyLink() {
+    const url =
+      typeof window !== "undefined" ? window.location.href.split("?")[0] : "";
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied — paste it in a text or email to your neighbors");
+    } catch {
+      toast.error("Couldn't copy — long-press the address bar instead");
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Here's the split for <strong className="text-foreground">{projectName}</strong> at{" "}
+        <strong className="text-foreground">{formatUSD(total)}</strong>, {methodLabel[method]}.
+      </p>
+
+      {yourRow && (
+        <div className="rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 via-card to-fun-3/10 p-5 fun-shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-wider text-primary">Your fair share</p>
+          <p className="mt-1 font-display text-4xl font-bold tracking-tight">
+            {formatUSD(yourRow.amount)}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {(yourRow.share * 100).toFixed(1)}% of {formatUSD(total)} · {yourRow.label}
+          </p>
+        </div>
       )}
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card fun-shadow-sm">
@@ -219,20 +473,40 @@ function CostSharingPane({ parcels, segments }: { parcels: Parcel[]; segments: R
             <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
               <th className="px-4 py-3 font-semibold">Home</th>
               <th className="px-4 py-3 font-semibold">Share</th>
-              <th className="px-4 py-3 font-semibold text-right">Amount</th>
+              <th className="px-4 py-3 text-right font-semibold">Amount</th>
             </tr>
           </thead>
           <tbody>
-            {result.rows.map((r) => (
-              <tr key={r.parcelId} className="border-b border-border/60 last:border-0">
-                <td className="px-4 py-3">
-                  <div className="font-semibold">{r.label}</div>
-                  {r.address && <div className="text-xs text-muted-foreground">{r.address}</div>}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">{(r.share * 100).toFixed(1)}%</td>
-                <td className="px-4 py-3 text-right font-semibold">{formatUSD(r.amount)}</td>
-              </tr>
-            ))}
+            {rows.map((r) => {
+              const isYou = yourRow?.parcelId === r.parcelId;
+              return (
+                <tr
+                  key={r.parcelId}
+                  className={cn(
+                    "border-b border-border/60 last:border-0",
+                    isYou && "bg-primary/5",
+                  )}
+                >
+                  <td className="px-4 py-3">
+                    <div className="font-semibold">
+                      {r.label}
+                      {isYou && (
+                        <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
+                          You
+                        </span>
+                      )}
+                    </div>
+                    {r.address && (
+                      <div className="text-xs text-muted-foreground">{r.address}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {(r.share * 100).toFixed(1)}%
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold">{formatUSD(r.amount)}</td>
+                </tr>
+              );
+            })}
           </tbody>
           <tfoot>
             <tr className="bg-muted/40 text-sm font-semibold">
@@ -243,51 +517,12 @@ function CostSharingPane({ parcels, segments }: { parcels: Parcel[]; segments: R
           </tfoot>
         </table>
       </div>
-    </div>
-  );
-}
 
-// ----- Helpers -----
-function SummaryTile({
-  icon: Icon,
-  tint,
-  headline,
-  body,
-}: {
-  icon: typeof RouteIcon;
-  tint: string;
-  headline: string;
-  body: string;
-}) {
-  return (
-    <div className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 fun-shadow-sm">
-      <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", tint)}>
-        <Icon className="h-4 w-4" />
-      </span>
-      <div className="min-w-0">
-        <p className="font-semibold">{headline}</p>
-        <p className="mt-1 text-sm text-muted-foreground">{body}</p>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Button className="flex-1" onClick={copyLink}>
+          <Copy className="h-4 w-4" /> Copy link to send to my neighbors
+        </Button>
       </div>
     </div>
   );
-}
-
-function firstEntrance(segments: RoadSegment[]): [number, number] | null {
-  for (const s of segments) {
-    const g = s.geometry as unknown as { type?: string; coordinates?: unknown };
-    if (g && g.type === "LineString" && Array.isArray(g.coordinates)) {
-      const first = (g.coordinates as unknown[])[0];
-      if (Array.isArray(first) && first.length >= 2) {
-        const lng = Number(first[0]);
-        const lat = Number(first[1]);
-        if (Number.isFinite(lng) && Number.isFinite(lat)) return [lng, lat];
-      }
-    }
-  }
-  return null;
-}
-
-function distanceFt(p: Parcel, entrance: [number, number] | null): number {
-  if (!entrance || p.lat == null || p.lng == null) return 0;
-  return haversineFt(entrance, [Number(p.lng), Number(p.lat)]);
 }
