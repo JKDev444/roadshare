@@ -295,6 +295,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => (v ? setOpenOverride(true) : close(false))}>
+      <WizardBodyLock open={open} />
       <DialogContent
         className={cn(
           "max-w-2xl overflow-hidden",
