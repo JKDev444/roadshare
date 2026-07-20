@@ -34,7 +34,7 @@ import {
 import { extractClauses } from "@/lib/clauses/extract.functions";
 
 export const Route = createFileRoute("/_authenticated/clauses")({
-  head: () => ({ meta: [{ title: "Amendment & Clause Graph — RoadShare" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Rules from your documents — RoadShare" }, { name: "robots", content: "noindex" }] }),
   component: ClausesPage,
   errorComponent: () => (
     <AppShell><div className="mx-auto max-w-md py-20 text-center text-muted-foreground">The clause graph could not be loaded.</div></AppShell>
@@ -111,8 +111,8 @@ function ClausesPage() {
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">Amendment &amp; Clause Graph</h1>
-            <p className="text-sm text-muted-foreground">Every governing provision on a timeline — with supersession lineage, conflict flags, and missing-document detection.</p>
+            <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">Rules from your documents</h1>
+            <p className="text-sm text-muted-foreground">The rules we found in your uploaded documents, in plain order — with conflicts and gaps flagged so nothing surprises you later.</p>
           </div>
           <div className="flex items-end gap-2">
             {(communities.data?.length ?? 0) > 0 && (

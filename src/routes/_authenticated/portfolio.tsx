@@ -46,7 +46,7 @@ function PortfolioPage() {
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">Portfolio</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Every community you manage, at a glance — with a full auditable export for each record.
+            Every community you're part of, at a glance. Download a full backup of any record any time.
           </p>
         </div>
 
@@ -138,7 +138,7 @@ function PortfolioPage() {
         )}
 
         <p className="text-xs text-muted-foreground">
-          Archives export the complete owner-scoped record as JSON (roadshare.audit.v1), preserving append-only history for backup, migration, or professional review.
+          Exports include the full history of this community as a single file — safe to keep for backup or hand to a professional.
         </p>
       </div>
     </AppShell>
