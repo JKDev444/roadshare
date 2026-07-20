@@ -596,7 +596,44 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
           )}
         </div>
       </DialogContent>
+      {confirmClose && (
+        <ConfirmSaveExit
+          onCancel={() => setConfirmClose(false)}
+          onExit={() => {
+            setConfirmClose(false);
+            close(true);
+          }}
+        />
+      )}
     </Dialog>
+  );
+}
+
+function ConfirmSaveExit({
+  onCancel,
+  onExit,
+}: {
+  onCancel: () => void;
+  onExit: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-sm rounded-2xl border border-border bg-background p-5 shadow-2xl">
+        <h3 className="font-display text-lg font-bold">Save and finish later?</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          We'll remember where you left off so you can pick right back up from your
+          dashboard.
+        </p>
+        <div className="mt-4 flex items-center justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            Keep going
+          </Button>
+          <Button size="sm" onClick={onExit}>
+            Save & exit
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 
