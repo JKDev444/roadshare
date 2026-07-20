@@ -1,23 +1,3 @@
-# RoadShare — User Workflow Guide
-
-A plain-language walkthrough for homeowners, HOA boards, and neighbors sharing a private road.
-
----
-
-## 1. What RoadShare is
-
-RoadShare helps a group of neighbors who share a private road agree on **who pays what, and why**. You add your home, add your neighbors, upload any existing rules or invoices, and RoadShare turns that into a fair yearly cost share plus a clear place to vote on decisions.
-
-No spreadsheets. No arguing about whose driveway is longer. Everyone sees the same map and the same math.
-
----
-
-## 2. Who uses RoadShare
-
-| Role | What they can do |
-| --- | --- |
-| **Homeowner** | Sign in, see their share, vote on decisions, upload documents they've received. |
-| **Road committee lead / HOA board** | Create the community, invite neighbors, propose decisions, upload the master CC&Rs / HOA rules. |
 | **Invited neighbor** | Join an existing community by link, confirm their home, vote. |
 | **Curious visitor** | Try the **Cedar Hollow** sandbox on the marketing site — no sign-up needed. |
 
