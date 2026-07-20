@@ -77,7 +77,15 @@ function PortfolioPage() {
         ) : (
           <div className="space-y-4">
             {portfolio.data!.map((m) => {
-              const verifiedPct = m.parcels > 0 ? Math.round((m.verifiedParcels / m.parcels) * 100) : 0;
+              const checkedPct = m.parcels > 0 ? Math.round((m.verifiedParcels / m.parcels) * 100) : 0;
+              const checkedLabel =
+                m.parcels === 0
+                  ? null
+                  : m.verifiedParcels === 0
+                    ? `${m.parcels} ${m.parcels === 1 ? "home" : "homes"} added`
+                    : checkedPct === 100
+                      ? "All homes double-checked"
+                      : `${m.verifiedParcels} of ${m.parcels} homes double-checked`;
               const busy = exportArchive.isPending && exportArchive.variables === m.community.id;
               return (
                 <div key={m.community.id} className="rounded-2xl border border-border bg-card p-5">
@@ -93,9 +101,11 @@ function PortfolioPage() {
                       {m.community.region && <p className="text-sm text-muted-foreground">{m.community.region}</p>}
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                        <ShieldCheck className="h-3.5 w-3.5" /> {verifiedPct}% verified
-                      </span>
+                      {checkedLabel && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                          <ShieldCheck className="h-3.5 w-3.5" /> {checkedLabel}
+                        </span>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
