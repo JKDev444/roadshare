@@ -47,7 +47,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CommunityMapEditor } from "@/components/community/CommunityMapEditor";
 import { MyRoadTab } from "@/components/community/MyRoadTab";
 import { Confetti } from "@/components/onboarding/Confetti";
 import {
@@ -168,19 +167,7 @@ function CommunityDetail() {
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col space-y-8">
-          <MyRoadTab
-            parcels={p}
-            segments={s}
-            detailedMap={
-              <MapTab
-                communityId={id}
-                community={community.data ?? null}
-                parcels={p}
-                segments={s}
-                events={events.data ?? []}
-              />
-            }
-          />
+          <MyRoadTab parcels={p} segments={s} />
           <div className="border-t border-border pt-6">
             <h2 className="mb-3 font-display text-lg font-bold tracking-tight">Manage homes</h2>
             <PropertiesTab communityId={id} parcels={p} loading={parcels.isLoading} />
