@@ -48,6 +48,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { MyRoadTab } from "@/components/community/MyRoadTab";
+import type { CostMethod } from "@/lib/community/costShare";
 import { Confetti } from "@/components/onboarding/Confetti";
 import {
   createParcel,
