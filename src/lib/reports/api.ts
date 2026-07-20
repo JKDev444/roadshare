@@ -17,13 +17,13 @@ export type ReportType =
   | "projects";
 
 export const REPORT_TYPES: { value: ReportType; label: string; blurb: string }[] = [
-  { value: "dossier", label: "Full community dossier", blurb: "Everything on record — the complete package for a professional or lender." },
-  { value: "record", label: "Community record summary", blurb: "Parcels, roads, and change history at a glance." },
-  { value: "provisions", label: "Governing provisions", blurb: "The clause graph: what governs the road, by effective date." },
-  { value: "documents", label: "Document vault index", blurb: "Every filed document with type, status, and source & history." },
-  { value: "pulse", label: "Community Pulse report", blurb: "Privacy-preserving survey results and participation." },
-  { value: "decisions", label: "Decision record", blurb: "Decisions, outcomes, and published explanations." },
-  { value: "projects", label: "Cost-share projects", blurb: "Projects with funding targets and per-parcel allocations." },
+  { value: "dossier", label: "Full community backup", blurb: "Everything on record — one file to share with a professional or lender." },
+  { value: "record", label: "Community summary", blurb: "Homes, roads, and the change history at a glance." },
+  { value: "provisions", label: "Rules from your documents", blurb: "What the paperwork says, in order, by effective date." },
+  { value: "documents", label: "Document list", blurb: "Every uploaded document with its type, status, and source." },
+  { value: "pulse", label: "Survey results", blurb: "Privacy-preserving survey results and participation." },
+  { value: "decisions", label: "Decision history", blurb: "Decisions, outcomes, and the explanation published to neighbors." },
+  { value: "projects", label: "Project cost splits", blurb: "Projects with funding targets and each home's share." },
 ];
 
 function esc(s: unknown): string {
