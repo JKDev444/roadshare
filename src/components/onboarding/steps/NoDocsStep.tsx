@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Loader2, MapPin, Plus, Search, Trash2 } from "lucide-react";
+import {
+  ArrowRight,
+  ClipboardList,
+  Loader2,
+  MapPin,
+  PenLine,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,45 +53,66 @@ export function NoDocsStep({
 
   if (mode === "menu") {
     return (
-      <div className="space-y-4">
-        <div>
-          <h2 className="font-display text-xl font-semibold">Continue Without Documents</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Pick whichever is easiest — you can add more later.
-          </p>
+      <div className="space-y-5">
+        <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-fun-2/10 to-fun-3/15 px-4 py-4">
+          <div className="pointer-events-none absolute right-4 top-2 opacity-40">
+            <Sparkles className="h-4 w-4 text-fun-3-foreground animate-pulse" />
+          </div>
+          <div className="relative">
+            <p className="inline-flex items-center gap-1.5 rounded-full bg-background/70 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+              How do you want to add homes?
+            </p>
+            <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">
+              Let's add your neighbors
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Pick whatever's easiest — you can add more anytime.
+            </p>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <MenuTile
-            title="Search and Add Addresses"
-            body="Search for and add one address at a time."
-            recommended
+        <div className="grid gap-3 sm:grid-cols-2">
+          <ChoiceCard
+            icon={<Search className="h-6 w-6" />}
+            title="Look up addresses"
+            sub="Search and add one home at a time."
+            hint="Best for a few homes"
+            accent="from-primary/15 to-primary/5 text-primary"
             onClick={() => setMode("search")}
           />
-          <MenuTile
-            title="Paste an Address List"
-            body="Paste multiple addresses, one per line. We'll turn each into a property."
+          <ChoiceCard
+            icon={<ClipboardList className="h-6 w-6" />}
+            title="Paste a list"
+            sub="One address per line — we'll add each one."
+            hint="Fastest for many homes"
+            accent="from-fun-2/20 to-fun-2/5 text-fun-2-foreground"
             onClick={() => setMode("paste")}
           />
-          <MenuTile
-            title="Add Lots Manually"
-            body="Type an address, lot number, label, or road for each property you know about."
+          <ChoiceCard
+            icon={<PenLine className="h-6 w-6" />}
+            title="Add homes by hand"
+            sub="Type what you know — address, lot, or label."
+            hint="Works for any road"
+            accent="from-fun-3/20 to-fun-3/5 text-fun-3-foreground"
             onClick={() => setMode("manual")}
           />
-          <MenuTile
-            title="Create an Empty Workspace"
-            body="Start with just your community name and add everything later."
+          <ChoiceCard
+            icon={<Upload className="h-6 w-6" />}
+            title="Start with just a name"
+            sub="Set up the community now, add homes later."
+            hint="No pressure"
+            accent="from-muted/60 to-muted/20 text-foreground"
             onClick={() => setMode("empty")}
-          />
-          <MenuTile
-            title="Upload Documents Instead"
-            body="Changed your mind? Go back and upload a PDF."
-            onClick={onUploadInstead}
           />
         </div>
 
-        <div className="flex items-center justify-start pt-1">
-          <Button variant="ghost" size="sm" onClick={onBack}>Back</Button>
+        <div className="flex items-center justify-between gap-2 pt-1 text-xs">
+          <Button variant="ghost" size="sm" onClick={onBack}>
+            Back
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onUploadInstead}>
+            Upload a PDF instead
+          </Button>
         </div>
       </div>
     );
@@ -100,42 +132,40 @@ export function NoDocsStep({
   );
 }
 
-function MenuTile({
-  title,
-  body,
-  onClick,
+function ChoiceCard({
   icon,
-  recommended,
+  title,
+  sub,
+  hint,
+  accent,
+  onClick,
 }: {
+  icon: React.ReactNode;
   title: string;
-  body: string;
+  sub: string;
+  hint: string;
+  accent: string;
   onClick: () => void;
-  icon?: React.ReactNode;
-  recommended?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={
-        "flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors " +
-        (recommended
-          ? "border-primary/60 bg-primary/5 hover:border-primary hover:bg-primary/10"
-          : "border-border bg-background hover:border-primary/50 hover:bg-primary/5")
-      }
+      className="group relative flex h-full flex-col items-start gap-2 rounded-2xl border border-border bg-background p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
     >
-      {icon && <span className="mt-0.5 shrink-0">{icon}</span>}
-      <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-2 text-sm font-semibold">
-          {title}
-          {recommended && (
-            <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
-              Recommended
-            </span>
-          )}
-        </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{body}</p>
-      </div>
+      <span
+        className={`inline-flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${accent}`}
+      >
+        {icon}
+      </span>
+      <span className="mt-1 font-display text-base font-bold leading-tight text-foreground">
+        {title}
+      </span>
+      <span className="text-xs text-muted-foreground">{sub}</span>
+      <span className="mt-auto inline-flex items-center gap-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-primary/80">
+        {hint}
+        <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+      </span>
     </button>
   );
 }
@@ -194,7 +224,7 @@ function SearchAddresses({
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="font-display text-lg font-semibold">Search and Add Addresses</h2>
+        <h2 className="font-display text-lg font-semibold">Look up addresses</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
           Powered by OpenStreetMap. Rural roads sometimes take a moment.
         </p>
@@ -284,8 +314,8 @@ function PasteList({
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="font-display text-lg font-semibold">Paste an Address List</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">One address per line. We'll create one property for each line.</p>
+        <h2 className="font-display text-lg font-semibold">Paste your address list</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">One address per line — we'll add one home for each.</p>
       </div>
       <Textarea
         rows={8}
@@ -337,8 +367,8 @@ function ManualLots({
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="font-display text-lg font-semibold">Add Lots Manually</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">All fields optional — fill in what you know.</p>
+        <h2 className="font-display text-lg font-semibold">Add homes by hand</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">All fields are optional — fill in whatever you know.</p>
       </div>
 
       <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
@@ -380,8 +410,8 @@ function ManualLots({
         ))}
       </div>
 
-      <button type="button" onClick={add} className="flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-        <Plus className="h-3.5 w-3.5" /> Add another lot
+        <button type="button" onClick={add} className="flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+        <Plus className="h-3.5 w-3.5" /> Add another home
       </button>
 
       <div className="flex items-center justify-between pt-1">
@@ -411,17 +441,17 @@ function EmptyWorkspace({
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="font-display text-lg font-semibold">Create an Empty Workspace</h2>
+        <h2 className="font-display text-lg font-semibold">Start with just a name</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          We'll create your community with just the name and location. You can add properties,
-          roads, and documents whenever you're ready.
+          We'll set up your community with the name and location. Add homes, roads, and
+          documents whenever you're ready.
         </p>
       </div>
       <div className="flex items-center justify-between pt-1">
         <Button variant="ghost" size="sm" onClick={onCancel}>Back</Button>
         <Button size="sm" onClick={() => onSubmit({ kind: "empty" })} disabled={submitting}>
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-          Create Empty Workspace <ArrowRight className="h-4 w-4" />
+          Create my community <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
     </div>

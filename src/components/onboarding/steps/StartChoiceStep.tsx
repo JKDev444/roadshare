@@ -11,12 +11,10 @@ export function StartChoiceStep({
   onPick,
   onSample,
   onLater,
-  onBack,
 }: {
   onPick: (choice: StartChoice) => void;
   onSample?: () => void;
   onLater?: () => void;
-  onBack?: () => void;
 }) {
   return (
     <div className="space-y-5">
@@ -64,10 +62,7 @@ export function StartChoiceStep({
         />
       </div>
 
-      <div className="flex items-center justify-between gap-2 pt-1 text-xs">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          Back
-        </Button>
+      <div className="flex items-center justify-end gap-2 pt-1 text-xs">
         <div className="flex items-center gap-1">
           {onSample && (
             <Button variant="ghost" size="sm" onClick={onSample}>
