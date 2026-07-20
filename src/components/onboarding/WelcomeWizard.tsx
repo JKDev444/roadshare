@@ -333,7 +333,13 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => (v ? setOpenOverride(true) : close(false))}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (v) setOpenOverride(true);
+        else requestClose();
+      }}
+    >
       <WizardBodyLock open={open} />
       <DialogContent
         className={cn(
