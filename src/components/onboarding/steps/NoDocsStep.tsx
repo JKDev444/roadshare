@@ -60,7 +60,7 @@ export function NoDocsStep({
           </div>
           <div className="relative">
             <p className="inline-flex items-center gap-1.5 rounded-full bg-background/70 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
-              How do you want to add homes?
+              Step 2 of 3 · How do you want to add homes?
             </p>
             <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">
               Let's add your neighbors
