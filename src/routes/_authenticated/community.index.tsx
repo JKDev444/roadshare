@@ -150,7 +150,7 @@ function CommunityIndex() {
               <Button size="lg" onClick={() => seed.mutate()} disabled={seed.isPending}>
                 <Sparkles className="h-4 w-4" /> {seed.isPending ? "Adding…" : "Load Cedar Hollow sample"}
               </Button>
-              <CreateCommunityDialog variant="ghost" />
+              <CreateCommunityDialog variant="outline" />
             </div>
           </div>
         )}
