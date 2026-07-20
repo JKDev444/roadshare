@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, MapPin, Loader2, Sparkles, Home, Route as RouteIcon, FileText, PenLine } from "lucide-react";
+import { ArrowLeft, ArrowRight, MapPin, Loader2, Sparkles, Home, Route as RouteIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +15,7 @@ export type BasicInfo = {
   lng?: number;
 };
 
-export type SetupPath = "map" | "docs" | "manual";
+export type SetupPath = "address";
 
 type Suggestion = {
   label: string;
@@ -127,6 +127,13 @@ export function BasicInfoStep({
 
   return (
     <div className="space-y-5">
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-primary"
+      >
+        <ArrowLeft className="h-3 w-3" /> Change how I start
+      </button>
       <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-fun-2/10 to-fun-3/15 px-4 py-4">
         <div className="pointer-events-none absolute -right-4 -top-4 opacity-20">
           <Home className="h-24 w-24 text-primary" />
@@ -136,13 +143,13 @@ export function BasicInfoStep({
         </div>
         <div className="relative">
           <p className="inline-flex items-center gap-1.5 rounded-full bg-background/70 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
-            <RouteIcon className="h-3 w-3" /> Step 1 of 2
+            <RouteIcon className="h-3 w-3" /> Step 2 of 3
           </p>
           <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">
             Where's your road?
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Type your street address — we'll find every home nearby so you can pick your neighbors on a map.
+            Type your street address — we'll find every home nearby.
           </p>
         </div>
       </div>
@@ -218,58 +225,16 @@ export function BasicInfoStep({
         onClick={() =>
           onContinue(
             { communityName, city, state, startingAddress: address, lat: coords?.lat, lng: coords?.lng },
-            "map",
+            "address",
           )
         }
         disabled={address.trim().length < 5}
       >
-        Pick my neighbors on a map <ArrowRight className="h-4 w-4" />
+        Continue <ArrowRight className="h-4 w-4" />
       </Button>
 
-      <div className="rounded-xl border border-dashed border-border bg-muted/30 p-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Or another way
-        </p>
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={() =>
-              onContinue(
-                { communityName, city, state, startingAddress: address, lat: coords?.lat, lng: coords?.lng },
-                "docs",
-              )
-            }
-            className="flex items-start gap-2 rounded-lg border border-border bg-background p-2.5 text-left text-xs transition-colors hover:border-primary/50 hover:bg-primary/5"
-          >
-            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-            <span>
-              <span className="block font-semibold text-foreground">I have documents</span>
-              <span className="text-muted-foreground">HOA rules, plat, road agreement…</span>
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              onContinue(
-                { communityName, city, state, startingAddress: address, lat: coords?.lat, lng: coords?.lng },
-                "manual",
-              )
-            }
-            className="flex items-start gap-2 rounded-lg border border-border bg-background p-2.5 text-left text-xs transition-colors hover:border-primary/50 hover:bg-primary/5"
-          >
-            <PenLine className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-            <span>
-              <span className="block font-semibold text-foreground">Enter by hand</span>
-              <span className="text-muted-foreground">Paste addresses or add lots one by one</span>
-            </span>
-          </button>
-        </div>
-      </div>
-
       <div className="flex items-center justify-between gap-2 pt-1 text-xs">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          Back
-        </Button>
+        <div />
         <div className="flex items-center gap-1">
           {onSample && (
             <Button variant="ghost" size="sm" onClick={onSample}>
