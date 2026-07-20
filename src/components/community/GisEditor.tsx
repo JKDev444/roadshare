@@ -312,13 +312,13 @@ export function GisEditor({
               route. Press <span className="font-semibold text-foreground">Finish road</span> when you're done (or Undo point to
               step back).
             </GuideStep>
-            <GuideStep icon={Move} title="Drag vertices & parcels" step={2}>
+            <GuideStep icon={Move} title="Drag points & homes" step={2}>
               In <span className="font-semibold text-foreground">Select &amp; move</span>, click a road to reveal its points, then
-              drag any point to reshape it. Drag a parcel box to reposition it — lengths update automatically.
+              drag any point to reshape it. Drag a home box to reposition it — lengths update automatically.
             </GuideStep>
-            <GuideStep icon={Pencil} title="Edit segment attributes" step={3}>
-              With a segment selected, use the side panel to set its name, surface, maintenance responsibility, source, and
-              data-quality — every change is saved to the provenance log.
+            <GuideStep icon={Pencil} title="Edit road details" step={3}>
+              With a stretch of road selected, use the side panel to set its name, surface, and who
+              maintains it — every change is saved to the history.
             </GuideStep>
           </ol>
           <Button className="w-full" onClick={closeGuide}>Got it</Button>

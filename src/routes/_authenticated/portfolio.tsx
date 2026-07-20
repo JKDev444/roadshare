@@ -34,8 +34,8 @@ function PortfolioPage() {
 
   const TOTALS = [
     { label: "Communities", value: totals?.communities ?? 0, icon: Building2 },
-    { label: "Parcels", value: totals?.parcels ?? 0, icon: MapPin },
-    { label: "Road segments", value: totals?.roads ?? 0, icon: RouteIcon },
+    { label: "Homes", value: totals?.parcels ?? 0, icon: MapPin },
+    { label: "Roads", value: totals?.roads ?? 0, icon: RouteIcon },
     { label: "Documents", value: totals?.documents ?? 0, icon: FileText },
     { label: "Open decisions", value: totals?.openDecisions ?? 0, icon: MessageSquare },
   ];
@@ -108,7 +108,7 @@ function PortfolioPage() {
                   </div>
                   <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-6">
                     {[
-                      { l: "Parcels", v: m.parcels },
+                      { l: "Homes", v: m.parcels },
                       { l: "Roads", v: m.roads },
                       { l: "Documents", v: m.documents },
                       { l: "Clauses", v: m.clauses },

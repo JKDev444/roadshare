@@ -121,7 +121,7 @@ function CommunityDetail() {
 
   return (
     <AppShell>
-      <div className="relative mx-auto flex h-[calc(100vh-4rem)] max-w-7xl flex-col space-y-4 px-4 py-4">
+      <div className="relative mx-auto flex max-w-7xl flex-col space-y-4 px-4 py-4">
         <Confetti show={celebrate} />
         {showWelcome && (
           <WelcomeBanner
@@ -166,7 +166,7 @@ function CommunityDetail() {
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col space-y-8">
+        <div className="flex flex-col space-y-8">
           <MyRoadTab parcels={p} segments={s} />
           <div className="border-t border-border pt-6">
             <h2 className="mb-3 font-display text-lg font-bold tracking-tight">Manage homes</h2>

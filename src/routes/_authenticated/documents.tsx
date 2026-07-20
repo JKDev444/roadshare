@@ -298,7 +298,7 @@ function DetailPanel({ doc, onClose }: { doc: Document; onClose: () => void }) {
       {doc.ai_suggested_type && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
           <div className="flex items-center gap-2 text-sm font-semibold text-primary"><Sparkles className="h-4 w-4" /> AI suggestion (not verified)</div>
-          <p className="mt-2 text-sm"><span className="font-medium">Type:</span> {docTypeLabel(doc.ai_suggested_type)} <span className="text-muted-foreground">· {Math.round(Number(doc.ai_confidence ?? 0) * 100)}% confidence</span></p>
+          <p className="mt-2 text-sm"><span className="font-medium">Type:</span> {docTypeLabel(doc.ai_suggested_type)}</p>
           {doc.ai_summary && <p className="mt-1 text-sm text-muted-foreground">{doc.ai_summary}</p>}
         </div>
       )}
