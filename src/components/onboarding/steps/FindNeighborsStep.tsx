@@ -32,7 +32,10 @@ type LoadState =
   | { kind: "empty"; radius: number }
   | { kind: "error"; message: string };
 
-const RADIUS_STEPS = [400, 800, 1500] as const;
+// Feet. We start tight (in-town neighborhoods) and expand aggressively so
+// rural roads — where homes can sit 1/4 to 1 mile apart — still land hits.
+// 5,280 ft = 1 mile. Server clamps the underlying meters at 5,000m (~16,400 ft).
+const RADIUS_STEPS = [400, 1500, 5280, 15000] as const;
 
 function metersFromFeet(ft: number) {
   // parcelsPointLookup treats `radius` as meters in the underlying implementation

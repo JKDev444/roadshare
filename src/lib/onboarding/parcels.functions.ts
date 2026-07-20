@@ -259,7 +259,7 @@ export const parcelsPointLookup = createServerFn({ method: "POST" })
     (data: { lat: number; lng: number; radius?: number; limit?: number }) => data,
   )
   .handler(async ({ data }): Promise<ParcelLookupResult> => {
-    const radius = Math.max(50, Math.min(2000, data.radius ?? 400));
+    const radius = Math.max(50, Math.min(5000, data.radius ?? 400));
     const limit = Math.max(1, Math.min(500, data.limit ?? 300));
 
     if (inDallasCounty(data.lat, data.lng)) {
