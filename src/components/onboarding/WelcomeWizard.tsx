@@ -24,6 +24,14 @@ import { FailureStep } from "./steps/FailureStep";
 import { ReviewWorkspace } from "./steps/ReviewWorkspace";
 import { CommunityReadyStep } from "./steps/CommunityReadyStep";
 import { StartChoiceStep } from "./steps/StartChoiceStep";
+import { FindNeighborsStep } from "./steps/FindNeighborsStep";
+import { useSession } from "@/lib/auth/useSession";
+import {
+  clearResumeState,
+  loadResumeState,
+  saveResumeState,
+  type ResumeStep,
+} from "@/lib/onboarding/resumeState";
 
 type Step =
   | "welcome"
@@ -32,6 +40,7 @@ type Step =
   | "docsQ"
   | "upload"
   | "nodocs"
+  | "findNeighbors"
   | "processing"
   | "success"
   | "failure"
