@@ -300,3 +300,8 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Hide app sidebar while onboarding wizard is open so it doesn't peek behind the modal overlay */
+body[data-wizard-open="true"] aside[data-app-sidebar] {
+  display: none;
+}
