@@ -281,7 +281,13 @@ export async function deleteAllCommunities(): Promise<number> {
 // ---------------- Parcels ----------------
 
 export async function listParcels(communityId: string): Promise<Parcel[]> {
-  return unwrap(supabase.from("parcels").select("*").eq("community_id", communityId).order("label"));
+  const rows = await unwrap<Parcel[]>(
+    supabase.from("parcels").select("*").eq("community_id", communityId).order("label"),
+  );
+  // Natural sort so "Lot 2" comes before "Lot 10".
+  return [...rows].sort((a, b) =>
+    (a.label ?? "").localeCompare(b.label ?? "", undefined, { numeric: true, sensitivity: "base" }),
+  );
 }
 
 export type ParcelInput = Partial<
