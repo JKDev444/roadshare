@@ -424,7 +424,7 @@ export const resumeJob = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!job) return { ok: false };
     if (job.status !== "processing" && job.status !== "uploading") return { ok: true };
-    void runProcessing(data.jobId);
+    await runProcessing(data.jobId);
     return { ok: true };
   });
 
