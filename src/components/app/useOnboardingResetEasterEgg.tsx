@@ -5,6 +5,8 @@ import { toast } from "sonner";
 
 import { updateOnboardingState } from "@/lib/onboarding/api";
 import { deleteAllCommunities } from "@/lib/community/api";
+import { dismissAllJobs } from "@/lib/onboarding/jobs.functions";
+import { useServerFn } from "@tanstack/react-start";
 
 /**
  * Easter egg: type "roadshare" anywhere (outside a text field) to reset
@@ -16,6 +18,7 @@ export function useOnboardingResetEasterEgg() {
   const qc = useQueryClient();
   const bufferRef = useRef("");
   const runningRef = useRef(false);
+  const dismissAllJobsFn = useServerFn(dismissAllJobs);
 
   useEffect(() => {
     const SECRET = "roadshare";
@@ -37,6 +40,7 @@ export function useOnboardingResetEasterEgg() {
       const t = toast.loading("Wiping this account and restarting onboarding…");
       try {
         const removed = await deleteAllCommunities();
+        await dismissAllJobsFn().catch(() => undefined);
         await updateOnboardingState({
           wizard_completed: false,
           wizard_skipped: false,
@@ -72,5 +76,5 @@ export function useOnboardingResetEasterEgg() {
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [navigate, qc]);
+  }, [navigate, qc, dismissAllJobsFn]);
 }
