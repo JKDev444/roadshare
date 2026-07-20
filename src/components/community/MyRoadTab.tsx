@@ -579,8 +579,18 @@ function ResultStep({
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <Button className="flex-1" onClick={copyLink}>
-          <Copy className="h-4 w-4" /> Copy link to send to my neighbors
+        {onAskForVotes && (
+          <Button className="flex-1" onClick={askForVotes} disabled={asking}>
+            <Sparkles className="h-4 w-4" />{" "}
+            {asking ? "Opening the vote…" : "Ask my neighbors to vote"}
+          </Button>
+        )}
+        <Button
+          variant={onAskForVotes ? "outline" : "default"}
+          className="flex-1"
+          onClick={copyLink}
+        >
+          <Copy className="h-4 w-4" /> Just copy the plan link
         </Button>
       </div>
     </div>
