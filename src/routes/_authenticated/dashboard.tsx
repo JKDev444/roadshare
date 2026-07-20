@@ -32,7 +32,8 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function Dashboard() {
   const { user } = useSession();
-  const name = displayName(user).split(" ")[0];
+  const rawName = displayName(user).split(" ")[0];
+  const name = rawName ? rawName.charAt(0).toUpperCase() + rawName.slice(1) : "";
   const { welcome } = Route.useSearch();
 
   const { data: stats } = useQuery({
