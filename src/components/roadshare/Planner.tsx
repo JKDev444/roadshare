@@ -248,8 +248,8 @@ export function Planner() {
                     <SlidersHorizontal className="h-4 w-4" />
                   </span>
                   <span className="min-w-0">
-                    <span className="block font-display text-sm font-semibold">Adjust assumptions</span>
-                    <span className="block truncate text-xs text-muted-foreground">Surface, road width, and years</span>
+                    <span className="block font-display text-sm font-semibold">Change the details</span>
+                    <span className="block truncate text-xs text-muted-foreground">What the road is made of, how wide, and how many years</span>
                   </span>
                 </span>
                 <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", assumptionsOpen && "rotate-180")} />
@@ -259,8 +259,8 @@ export function Planner() {
                 <div className="mt-4 space-y-4 border-t border-border pt-4">
                   <SurfaceControls surfaces={surfaces} setSurfaces={setSurfaces} pctTotal={pctTotal} pctValid={pctValid} />
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-                    <SliderControl label="Road width" value={roadWidth} suffix="ft" min={8} max={40} onChange={setRoadWidth} />
-                    <SliderControl label="Spread cost over" value={fundingPeriod} suffix="yr" min={1} max={40} onChange={setFundingPeriod} />
+                    <SliderControl label="How wide is the road?" value={roadWidth} suffix="ft" min={8} max={40} onChange={setRoadWidth} />
+                    <SliderControl label="Plan over how many years?" value={fundingPeriod} suffix="yr" min={1} max={40} onChange={setFundingPeriod} />
                   </div>
                 </div>
               )}
