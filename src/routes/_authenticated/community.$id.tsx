@@ -252,7 +252,7 @@ function CommunityDetail() {
               decision={decisionRow.data}
               votes={votes.data ?? []}
               parcels={p}
-              onVote={async (household, choice, comment) => {
+              onVote={async (household: string, choice: string, comment?: string) => {
                 await castVote(decisionRow.data!, household, choice, comment);
                 qc.invalidateQueries({ queryKey: ["votes", decision] });
               }}
