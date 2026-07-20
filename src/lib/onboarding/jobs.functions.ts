@@ -437,3 +437,13 @@ export const dismissJob = createServerFn({ method: "POST" })
     await supabase.from("onboarding_jobs").delete().eq("id", data.jobId).eq("user_id", userId);
     return { ok: true };
   });
+
+/** Delete every onboarding job for the signed-in user. Used by the "roadshare"
+ *  easter egg to fully reset the account so the wizard starts from scratch. */
+export const dismissAllJobs = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    await supabase.from("onboarding_jobs").delete().eq("user_id", userId);
+    return { ok: true };
+  });
