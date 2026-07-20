@@ -150,7 +150,7 @@ function sectionProvisions(d: ReportData): string {
       return `<tr><td>${fmtDate(c.effective_date)}</td><td>${esc(c.title)}</td><td>${esc(categoryLabel(c.category))}</td><td>${statusTag(st.label, st.tone)}</td><td>${statusTag(esc(c.verification ?? "unverified"), c.verification === "verified" ? "green" : "amber")}</td></tr>`;
     })
     .join("");
-  return `<h2>Governing provisions</h2>
+  return `<h2>Rules from your documents</h2>
 <p class="muted">${d.clauses.length} clause${d.clauses.length === 1 ? "" : "s"} on record, ordered by effective date.</p>
 <table><thead><tr><th>Effective</th><th>Title</th><th>Category</th><th>Status</th><th>Verification</th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="muted">No clauses recorded.</td></tr>'}</tbody></table>`;
 }
@@ -162,7 +162,7 @@ function sectionDocuments(d: ReportData): string {
       return `<tr><td>${esc(doc.title ?? "Document")}</td><td>${esc(docTypeLabel(doc.doc_type))}</td><td>${statusTag(st.label, st.tone)}</td><td>${fmtDate(doc.effective_date)}</td><td>${esc(doc.source ?? "—")}</td></tr>`;
     })
     .join("");
-  return `<h2>Document vault</h2>
+  return `<h2>Documents on file</h2>
 <p class="muted">${d.documents.length} document${d.documents.length === 1 ? "" : "s"} on file.</p>
 <table><thead><tr><th>Title</th><th>Type</th><th>Status</th><th>Effective</th><th>Source</th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="muted">No documents on file.</td></tr>'}</tbody></table>`;
 }
@@ -174,7 +174,7 @@ function sectionPulse(d: ReportData): string {
         `<tr><td>${esc(s.survey.title)}</td><td>${statusTag(SURVEY_STATUS_LABEL[s.survey.status])}</td><td class="r">${parseQuestions(s.survey.questions).length}</td><td class="r">${s.households}</td></tr>`,
     )
     .join("");
-  return `<h2>Community Pulse</h2>
+  return `<h2>Survey results</h2>
 <p class="muted">Aggregate participation only. Individual responses and open-text answers are never disclosed to protect households.</p>
 <table><thead><tr><th>Survey</th><th>Status</th><th class="r">Questions</th><th class="r">Households</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="muted">No surveys recorded.</td></tr>'}</tbody></table>`;
 }
@@ -190,13 +190,13 @@ function sectionDecisions(d: ReportData): string {
   const explanations = published
     .map((dec) => `<h3>${esc(dec.title)} <span class="muted">— explanation v${dec.rationale_version}</span></h3><p>${esc(dec.rationale)}</p>`)
     .join("");
-  return `<h2>Decision record</h2>
+  return `<h2>Decision history</h2>
 <table><thead><tr><th>Decision</th><th>Status</th><th>Outcome</th><th>Notice date</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="muted">No decisions recorded.</td></tr>'}</tbody></table>
 ${explanations ? `<h3 style="margin-top:24px">Published explanations</h3>${explanations}` : ""}`;
 }
 
 function sectionProjects(d: ReportData): string {
-  return `<h2>Cost-share projects</h2>
+  return `<h2>Project cost splits</h2>
 ${
     d.projects.length === 0
       ? '<p class="muted">No projects recorded.</p>'
