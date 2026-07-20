@@ -335,8 +335,12 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
           {step === "start" && (
             <StartChoiceStep
               onPick={(choice) => {
-                if (choice === "docs") setStep("upload");
-                else if (choice === "address") setStep("basic");
+                if (choice === "docs") {
+                  if (!basicInfo) {
+                    setBasicInfo({ communityName: "", city: "", state: "", startingAddress: "" });
+                  }
+                  setStep("upload");
+                } else if (choice === "address") setStep("basic");
                 else {
                   // "manual" — we still need a stub basicInfo for handleNoDocs.
                   setBasicInfo({ communityName: "", city: "", state: "", startingAddress: "" });
