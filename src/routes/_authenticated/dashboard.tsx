@@ -78,7 +78,7 @@ function Dashboard() {
             ) : (
               <Button asChild size="lg">
                 <Link to="/dashboard" search={{ welcome: true }}>
-                  Create your community
+                  Let's start with your road
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -168,6 +168,18 @@ function Dashboard() {
             <Button asChild variant="outline" className="mt-3">
               <Link to="/tools/cedar-hollow">See the Cedar Hollow sample</Link>
             </Button>
+          </div>
+        )}
+
+        {hasCommunity && (
+          <div className="rounded-2xl border border-dashed border-border bg-card/40 p-4 text-center text-sm text-muted-foreground">
+            Curious what a finished road looks like?{" "}
+            <Link
+              to="/tools/cedar-hollow"
+              className="font-medium text-primary underline-offset-2 hover:underline"
+            >
+              Peek at the Cedar Hollow sample →
+            </Link>
           </div>
         )}
       </div>
