@@ -26,6 +26,9 @@ type Props = {
   initialProject?: string;
   initialTotal?: number;
   initialMethod?: CostMethod;
+  /** Called when the user asks their neighbors to vote. Should create a decision
+   *  and typically writes the id back into the URL. Returns the share URL. */
+  onAskForVotes?: (input: { projectName: string; total: number; method: CostMethod }) => Promise<string>;
 };
 
 type StepId = "home" | "road" | "project" | "split" | "result";
