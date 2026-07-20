@@ -20,7 +20,7 @@ export const REPORT_TYPES: { value: ReportType; label: string; blurb: string }[]
   { value: "dossier", label: "Full community dossier", blurb: "Everything on record — the complete package for a professional or lender." },
   { value: "record", label: "Community record summary", blurb: "Parcels, roads, and change history at a glance." },
   { value: "provisions", label: "Governing provisions", blurb: "The clause graph: what governs the road, by effective date." },
-  { value: "documents", label: "Document vault index", blurb: "Every filed document with type, status, and provenance." },
+  { value: "documents", label: "Document vault index", blurb: "Every filed document with type, status, and source & history." },
   { value: "pulse", label: "Community Pulse report", blurb: "Privacy-preserving survey results and participation." },
   { value: "decisions", label: "Decision record", blurb: "Decisions, outcomes, and published explanations." },
   { value: "projects", label: "Cost-share projects", blurb: "Projects with funding targets and per-parcel allocations." },
