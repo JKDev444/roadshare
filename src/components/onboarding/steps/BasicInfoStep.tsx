@@ -149,7 +149,7 @@ export function BasicInfoStep({
             Where's your road?
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Type your street address — we'll find every home nearby.
+            Type your street address — we'll look for your neighbors on the map. If we can't find them, we'll help you add them.
           </p>
         </div>
       </div>
