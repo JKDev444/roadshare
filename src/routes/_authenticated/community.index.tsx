@@ -111,7 +111,7 @@ function CommunityIndex() {
                 <div className="mt-4 flex items-center justify-between">
                   <Button size="sm" asChild>
                     <Link to="/community/$id" params={{ id: c.id }}>
-                      Open record <ArrowRight className="h-3.5 w-3.5" />
+                      Open my road <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   </Button>
                   <AlertDialog>
@@ -181,12 +181,12 @@ function CreateCommunityDialog({ variant = "default" }: { variant?: "default" | 
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant={variant}>
-          <Plus className="h-4 w-4" /> New community
+          <Plus className="h-4 w-4" /> New road group
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>New community record</DialogTitle>
+          <DialogTitle>Start a new road group</DialogTitle>
           <DialogDescription>Name the road group. You can add homes and the road next.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">

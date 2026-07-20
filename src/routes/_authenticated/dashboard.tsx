@@ -129,7 +129,7 @@ function Dashboard() {
                     ? "No documents yet"
                     : `${docCount} document${docCount === 1 ? "" : "s"}`
                 }
-                body="Keep CC&Rs, HOA rules, road agreements, and invoices in one place."
+                body="Keep HOA rules, road agreements, and invoices in one place."
                 to={{ path: "/documents" as const }}
                 cta="Open Documents"
               />
