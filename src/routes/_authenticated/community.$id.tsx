@@ -16,6 +16,7 @@ import {
   Pencil,
   Route as RouteIcon,
   Ruler,
+  Search,
   Sparkles,
   Trash2,
   TriangleAlert,
@@ -334,6 +335,7 @@ function ActivityList({ events }: { events: RecordEvent[] }) {
 // ---------------- Properties ----------------
 function PropertiesTab({ communityId, parcels, loading }: { communityId: string; parcels: Parcel[]; loading: boolean }) {
   const qc = useQueryClient();
+  const [query, setQuery] = useState("");
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["parcels", communityId] });
     qc.invalidateQueries({ queryKey: ["events", communityId] });
@@ -344,14 +346,37 @@ function PropertiesTab({ communityId, parcels, loading }: { communityId: string;
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const q = query.trim().toLowerCase();
+  const visible = q === ""
+    ? parcels
+    : parcels.filter((p) => {
+        const hay = `${p.label ?? ""} ${p.owner_name ?? ""} ${p.address ?? ""}`.toLowerCase();
+        return hay.includes(q);
+      });
+  const showSearch = parcels.length > 12;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {parcels.length} {parcels.length === 1 ? "home" : "homes"} tracked
+          {showSearch && q
+            ? `${visible.length.toLocaleString()} of ${parcels.length.toLocaleString()} homes match`
+            : `${parcels.length.toLocaleString()} ${parcels.length === 1 ? "home" : "homes"} tracked`}
         </p>
         <ParcelDialog communityId={communityId} onSaved={invalidate} />
       </div>
+      {showSearch && (
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            aria-label="Find a home"
+            placeholder="Find a home by lot, owner, or address"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      )}
       {!loading && parcels.length === 0 ? (
         <div className="flex flex-col items-center rounded-3xl border border-dashed border-primary/30 bg-gradient-to-br from-fun-1/10 via-card to-fun-3/10 px-6 py-14 text-center fun-shadow-sm">
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-fun-2 text-primary-foreground shadow-md">
@@ -377,7 +402,13 @@ function PropertiesTab({ communityId, parcels, loading }: { communityId: string;
           <tbody>
             {loading ? (
               <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
-            ) : parcels.map((p) => (
+            ) : visible.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                  No homes match “{query}”.
+                </td>
+              </tr>
+            ) : visible.map((p) => (
               <tr key={p.id} className="border-b border-border/60 last:border-0 hover:bg-accent/30">
                 <td className="px-4 py-3 font-semibold">{p.label}</td>
                 <td className="px-4 py-3">

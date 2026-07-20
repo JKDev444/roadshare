@@ -101,7 +101,13 @@ function Dashboard() {
                     ? "No homes yet"
                     : `${parcelCount} home${parcelCount === 1 ? "" : "s"}`
                 }
-                body="Review who lives on the road and confirm the details."
+                body={
+                  parcelCount === 0
+                    ? "Add the homes that share your road so everyone gets a fair share."
+                    : parcelCount >= 50
+                      ? `Everyone on your road, ready to review. Use the search box to jump to yours.`
+                      : "Review who lives on the road and confirm the details."
+                }
                 to={{
                   path: "/community/$id" as const,
                   params: { id: communityId },
