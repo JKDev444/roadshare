@@ -91,8 +91,8 @@ function DocumentsPage() {
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">Document Vault</h1>
-            <p className="text-sm text-muted-foreground">Upload deeds, agreements, and amendments. AI suggests a type &amp; summary; you verify before it becomes fact.</p>
+            <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">Your HOA papers</h1>
+            <p className="text-sm text-muted-foreground">Add your CC&amp;Rs, road agreements, or deeds — we'll pull out the cost-share formula, maintenance responsibilities, and HOA rules so you don't have to dig through the PDF.</p>
           </div>
           {(communities.data?.length ?? 0) > 0 && (
             <div className="w-56">
