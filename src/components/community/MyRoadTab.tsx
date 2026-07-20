@@ -57,6 +57,7 @@ export function MyRoadTab({
   initialProject,
   initialTotal,
   initialMethod,
+  onAskForVotes,
 }: Props) {
   const sharedIn = !!(initialProject || initialTotal || initialMethod);
   const [step, setStep] = useState<StepId>(sharedIn ? "home" : "home");
