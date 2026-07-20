@@ -46,7 +46,10 @@ export function PlatCanvas({
   className,
   title,
 }: Props) {
-  const { polys, roads, empty } = useMemo(() => layout(parcels, segments), [parcels, segments]);
+  const { polys, roads, empty, tooManyOrphans } = useMemo(
+    () => layout(parcels, segments),
+    [parcels, segments],
+  );
 
   const selectedSet = new Set(selectedIds ?? []);
 
@@ -56,6 +59,25 @@ export function PlatCanvas({
         <p className="font-display text-base font-semibold">Nothing on the map yet</p>
         <p className="mt-1 max-w-xs text-sm text-muted-foreground">
           Add homes to see your community laid out here.
+        </p>
+      </div>
+    );
+  }
+
+  if (tooManyOrphans) {
+    return (
+      <div
+        className={cn(
+          "relative flex h-full min-h-[220px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-gradient-to-br from-primary/5 via-fun-2/5 to-fun-3/5 p-6 text-center",
+          className,
+        )}
+      >
+        <p className="font-display text-lg font-bold tracking-tight">
+          {parcels.length.toLocaleString()} homes on this road
+        </p>
+        <p className="max-w-md text-sm text-muted-foreground">
+          The road picture appears once your homes have locations. In the meantime, use the search
+          below to jump to yours.
         </p>
       </div>
     );
@@ -204,6 +226,7 @@ function layout(parcels: Parcel[], segments: RoadSegment[]): {
   polys: ProjectedPolygon[];
   roads: ProjectedRoad[];
   empty: boolean;
+  tooManyOrphans?: boolean;
 } {
   // Collect (lng, lat) points from features
   const parcelFeatures = parcels
@@ -236,6 +259,13 @@ function layout(parcels: Parcel[], segments: RoadSegment[]): {
 
   if (coords.length === 0 && orphans.length === 0) {
     return { polys: [], roads: [], empty: true };
+  }
+
+  // Bail out on very large communities — cramming hundreds of tiny rects into a
+  // fixed viewBox produces illegible label soup. Above ~120 parcels the road
+  // picture becomes noise; the search box is a better way to find your home.
+  if (parcels.length > 120 && segments.length === 0) {
+    return { polys: [], roads: [], empty: false, tooManyOrphans: true };
   }
 
   // Compute bounds; if no geometry, invent a synthetic box for the orphans grid.
