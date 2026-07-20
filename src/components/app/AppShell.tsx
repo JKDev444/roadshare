@@ -148,9 +148,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Menu className="h-5 w-5" />
           </button>
           <div className="flex-1" />
-          <Button size="sm" asChild>
-            <Link to="/community">New project</Link>
-          </Button>
         </header>
         <main className="flex-1 p-4 lg:p-8">{children}</main>
       </div>

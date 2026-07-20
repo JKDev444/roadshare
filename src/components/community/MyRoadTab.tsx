@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { CheckCircle2, Home as HomeIcon, MapPin, Route as RouteIcon, Ruler } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronUp, Home as HomeIcon, MapPin, Pencil, Route as RouteIcon, Ruler } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { haversineFt, pathLengthFt, type Parcel, type RoadSegment } from "@/lib/community/api";
 import { computeCostShare, formatUSD, type CostMethod } from "@/lib/community/costShare";
+import { PlatCanvas } from "@/components/community/PlatCanvas";
 
 type Props = {
   parcels: Parcel[];
@@ -25,6 +26,7 @@ type Props = {
  */
 export function MyRoadTab({ parcels, segments, detailedMap }: Props) {
   const roadFeet = segments.reduce((sum, s) => sum + pathLengthFt(s.geometry), 0);
+  const [showDetailed, setShowDetailed] = useState(false);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col space-y-4">
@@ -59,8 +61,30 @@ export function MyRoadTab({ parcels, segments, detailedMap }: Props) {
         />
       </div>
 
-      <div className="h-[65vh] min-h-[440px] overflow-hidden rounded-2xl border border-border bg-card fun-shadow-sm">
-        {detailedMap}
+      <PlatCanvas
+        parcels={parcels}
+        segments={segments}
+        title="Your community"
+        className="fun-shadow-sm"
+      />
+
+      <div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setShowDetailed((v) => !v)}
+          className="gap-1.5"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+          {showDetailed ? "Hide precise map" : "Edit precisely on satellite map"}
+          {showDetailed ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </Button>
+        {showDetailed && (
+          <div className="mt-3 h-[60vh] min-h-[420px] overflow-hidden rounded-2xl border border-border bg-card fun-shadow-sm">
+            {detailedMap}
+          </div>
+        )}
       </div>
 
       <HomesAccessPane parcels={parcels} segments={segments} />
