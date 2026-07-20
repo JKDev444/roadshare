@@ -87,6 +87,8 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
   const { state, progress, update } = useOnboarding();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { user } = useSession();
+  const userId = user?.id;
 
   const createJobFn = useServerFn(createJob);
   const listActiveJobFn = useServerFn(listActiveJob);
@@ -102,6 +104,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
   const open = openOverride ?? shouldOpen;
 
   const [step, setStep] = useState<Step>("start");
+  const [confirmClose, setConfirmClose] = useState(false);
   const [basicInfo, setBasicInfo] = useState<BasicInfo | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobFilenames, setJobFilenames] = useState<string[]>([]);
@@ -151,9 +154,37 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
     };
   }, [open, jobId, listActiveJobFn]);
 
+  // Restore in-browser resume state when the wizard opens without an in-flight job.
+  useEffect(() => {
+    if (!open || jobId) return;
+    if (step !== "start") return;
+    const saved = loadResumeState(userId);
+    if (!saved) return;
+    if (saved.basicInfo) setBasicInfo(saved.basicInfo);
+    // Only restore to steps that don't need external state we haven't loaded.
+    const restoreable: ResumeStep[] = ["basic", "findNeighbors", "nodocs", "upload"];
+    if (restoreable.includes(saved.step)) {
+      setStep(saved.step as Step);
+    }
+  }, [open, jobId, step, userId]);
+
+  // Persist a lightweight snapshot whenever the user's step or basicInfo changes.
+  useEffect(() => {
+    if (!open || !userId) return;
+    const persistable: Step[] = ["basic", "findNeighbors", "nodocs", "upload"];
+    if (persistable.includes(step)) {
+      saveResumeState(userId, {
+        step: step as ResumeStep,
+        basicInfo,
+        savedAt: Date.now(),
+      });
+    }
+  }, [step, basicInfo, open, userId]);
+
   function close(markSkip = false) {
     setOpenOverride(false);
     if (markSkip && !completed) update({ wizard_skipped: true });
+    if (completed) clearResumeState(userId);
     setTimeout(() => {
       setStep("start");
       setBasicInfo(null);
@@ -163,7 +194,26 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
       setDraft(null);
       setFocusUnresolved(false);
       setCreated(null);
+      setConfirmClose(false);
     }, 200);
+  }
+
+  /** Intercept an attempted close: from mid-flow, ask for confirmation first. */
+  function requestClose() {
+    const midFlow: Step[] = [
+      "basic",
+      "findNeighbors",
+      "nodocs",
+      "upload",
+      "processing",
+      "success",
+      "review",
+    ];
+    if (midFlow.includes(step)) {
+      setConfirmClose(true);
+      return;
+    }
+    close(true);
   }
 
   const applyDraft = useCallback(
