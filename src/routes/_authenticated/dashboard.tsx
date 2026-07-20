@@ -8,7 +8,6 @@ import {
   Route as RouteIcon,
   MapPin,
   Sparkles,
-  Search,
   Users,
   Vote,
 } from "lucide-react";
