@@ -64,7 +64,7 @@ export const PRODUCTS: Product[] = [
       "Links properties, organizations, roads, access points, documents, and decisions — each fact tracked with source, confidence, and effective date.",
     features: [
       { title: "Property & road layers", body: "Parcels, access points, assigned entrances, and shared assets." },
-      { title: "Provenance on every fact", body: "Source, confidence, verification status, and change history." },
+      { title: "Source & history on every fact", body: "Where each fact came from, how sure we are, whether a human confirmed it, and every change over time." },
       { title: "HOA & non-HOA", body: "Supports private-road groups and formal associations alike." },
     ],
     status: "live",
