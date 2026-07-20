@@ -295,6 +295,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => (v ? setOpenOverride(true) : close(false))}>
+      <WizardBodyLock open={open} />
       <DialogContent
         className={cn(
           "max-w-2xl overflow-hidden",
@@ -564,4 +565,13 @@ function WelcomeScreen({
       </div>
     </div>
   );
+}
+
+function WizardBodyLock({ open }: { open: boolean }) {
+  useEffect(() => {
+    if (!open) return;
+    document.body.setAttribute("data-wizard-open", "true");
+    return () => document.body.removeAttribute("data-wizard-open");
+  }, [open]);
+  return null;
 }
