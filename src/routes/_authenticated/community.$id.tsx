@@ -189,14 +189,9 @@ function CommunityDetail() {
       replace: true,
     });
     if (typeof window === "undefined") return "";
-    const base = window.location.href.split("?")[0];
-    const params = new URLSearchParams({
-      project: projectName,
-      total: String(total),
-      method,
-      decision: dec.id,
-    });
-    return `${base}?${params.toString()}`;
+    // Share a public, no-sign-in-required vote link so neighbors can vote
+    // anonymously without creating an account.
+    return `${window.location.origin}/vote/${dec.id}`;
   }
 
   return (
