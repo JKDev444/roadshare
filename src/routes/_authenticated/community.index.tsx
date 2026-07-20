@@ -74,7 +74,7 @@ function CommunityIndex() {
           <div className="min-w-0">
             <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">My road</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              A shared ledger of parcels, owners, and road geometry — every fact carries a source and confidence.
+              Your shared road, the homes on it, and the projects you're planning together.
             </p>
           </div>
           <div className="flex shrink-0 gap-2">
@@ -83,8 +83,8 @@ function CommunityIndex() {
         </header>
 
         <CoachMark id="community-index" title="This is the heart of RoadShare">
-          Create a community, then open its record to add households (parcels) and map the
-          roads. Every cost calculation and report is built from what you record here.
+          Create your road group, then open it to add the homes and the road you share.
+          Every fair-share estimate comes from what you record here.
         </CoachMark>
 
         {isLoading ? (
@@ -124,7 +124,7 @@ function CommunityIndex() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete {c.name}?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This permanently removes the community and all its parcels, road geometry, and history.
+                          This permanently removes the road group and all its homes, roads, and history.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -187,7 +187,7 @@ function CreateCommunityDialog({ variant = "default" }: { variant?: "default" | 
       <DialogContent>
         <DialogHeader>
           <DialogTitle>New community record</DialogTitle>
-          <DialogDescription>Name the road group. You can add parcels and geometry next.</DialogDescription>
+          <DialogDescription>Name the road group. You can add homes and the road next.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-1.5">
