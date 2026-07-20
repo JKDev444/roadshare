@@ -23,9 +23,11 @@ import { SuccessSummaryStep } from "./steps/SuccessSummaryStep";
 import { FailureStep } from "./steps/FailureStep";
 import { ReviewWorkspace } from "./steps/ReviewWorkspace";
 import { CommunityReadyStep } from "./steps/CommunityReadyStep";
+import { StartChoiceStep } from "./steps/StartChoiceStep";
 
 type Step =
   | "welcome"
+  | "start"
   | "basic"
   | "docsQ"
   | "upload"
@@ -90,7 +92,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
   const [openOverride, setOpenOverride] = useState<boolean | null>(null);
   const open = openOverride ?? shouldOpen;
 
-  const [step, setStep] = useState<Step>("basic");
+  const [step, setStep] = useState<Step>("start");
   const [basicInfo, setBasicInfo] = useState<BasicInfo | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobFilenames, setJobFilenames] = useState<string[]>([]);
@@ -144,7 +146,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
     setOpenOverride(false);
     if (markSkip && !completed) update({ wizard_skipped: true });
     setTimeout(() => {
-      setStep("basic");
+      setStep("start");
       setBasicInfo(null);
       setJobId(null);
       setJobFilenames([]);
@@ -315,6 +317,8 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
               <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">
                 {step === "welcome"
                   ? "Welcome — this takes about 2 minutes"
+                  : step === "start"
+                    ? "Pick how you want to start"
                   : step === "basic"
                     ? "Takes about 2 minutes"
                     : step === "review"
@@ -328,19 +332,39 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
         </div>
 
         <div className="max-h-[80vh] overflow-y-auto pr-1">
+          {step === "start" && (
+            <StartChoiceStep
+              onPick={(choice) => {
+                if (choice === "docs") setStep("upload");
+                else if (choice === "address") setStep("basic");
+                else {
+                  // "manual" — we still need a stub basicInfo for handleNoDocs.
+                  setBasicInfo({ communityName: "", city: "", state: "", startingAddress: "" });
+                  setStep("nodocs");
+                }
+              }}
+              onSample={() => {
+                setDraft(SAMPLE_DRAFT);
+                setJobFilenames([]);
+                setStep("review");
+              }}
+              onLater={() => close(true)}
+              onBack={() => close(true)}
+            />
+          )}
+
           {step === "basic" && (
             <BasicInfoStep
               initial={basicInfo ?? undefined}
-              onContinue={(info, path) => {
+              onContinue={(info) => {
                 setBasicInfo(info);
-                if (path === "docs") setStep("upload");
-                else setStep("nodocs");
+                setStep("nodocs");
               }}
               onNoAddress={(info) => {
                 setBasicInfo(info);
-                setStep("docsQ");
+                setStep("nodocs");
               }}
-              onBack={() => close(true)}
+              onBack={() => setStep("start")}
               onSample={() => {
                 setDraft(SAMPLE_DRAFT);
                 setJobFilenames([]);
@@ -375,7 +399,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
               basicInfo={basicInfo}
               onSubmit={handleNoDocs}
               onUploadInstead={() => setStep("upload")}
-              onBack={() => setStep("basic")}
+              onBack={() => setStep("start")}
               submitting={applying}
             />
           )}
