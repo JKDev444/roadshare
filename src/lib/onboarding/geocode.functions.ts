@@ -29,19 +29,7 @@ export const suggestAddresses = createServerFn({ method: "POST" })
     sessionToken: String(data.sessionToken ?? "").trim(),
   }))
   .handler(async ({ data }): Promise<SuggestHit[]> => {
-    if (data.query.length < 3 || !data.sessionToken) return [];
+    if (data.query.length < 3) return [];
     const { suggestAddressesUnified } = await import("./geocode.server");
     return suggestAddressesUnified(data.query, data.sessionToken);
-  });
-
-/** Mapbox Search Box: retrieve final coordinates for a picked suggestion. */
-export const retrieveAddress = createServerFn({ method: "POST" })
-  .inputValidator((data: { mapboxId: string; sessionToken: string }) => ({
-    mapboxId: String(data.mapboxId ?? "").trim(),
-    sessionToken: String(data.sessionToken ?? "").trim(),
-  }))
-  .handler(async ({ data }): Promise<GeocodeResult | null> => {
-    if (!data.mapboxId || !data.sessionToken) return null;
-    const { mapboxRetrieveAddress } = await import("./geocode.server");
-    return mapboxRetrieveAddress(data.mapboxId, data.sessionToken);
   });
