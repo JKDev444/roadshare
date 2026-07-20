@@ -39,7 +39,7 @@ export function StartChoiceStep({
         <ChoiceCard
           icon={<MapPin className="h-6 w-6" />}
           title="Type your address"
-          sub="We find every home near you."
+          sub="We'll try to find every home on your road automatically."
           hint="Fastest for most roads"
           accent="from-fun-2/20 to-fun-2/5 text-fun-2-foreground"
           onClick={() => onPick("address")}

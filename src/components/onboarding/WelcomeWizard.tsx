@@ -24,6 +24,14 @@ import { FailureStep } from "./steps/FailureStep";
 import { ReviewWorkspace } from "./steps/ReviewWorkspace";
 import { CommunityReadyStep } from "./steps/CommunityReadyStep";
 import { StartChoiceStep } from "./steps/StartChoiceStep";
+import { FindNeighborsStep } from "./steps/FindNeighborsStep";
+import { useSession } from "@/lib/auth/useSession";
+import {
+  clearResumeState,
+  loadResumeState,
+  saveResumeState,
+  type ResumeStep,
+} from "@/lib/onboarding/resumeState";
 
 type Step =
   | "welcome"
@@ -32,6 +40,7 @@ type Step =
   | "docsQ"
   | "upload"
   | "nodocs"
+  | "findNeighbors"
   | "processing"
   | "success"
   | "failure"
@@ -78,6 +87,8 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
   const { state, progress, update } = useOnboarding();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { user } = useSession();
+  const userId = user?.id;
 
   const createJobFn = useServerFn(createJob);
   const listActiveJobFn = useServerFn(listActiveJob);
@@ -93,6 +104,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
   const open = openOverride ?? shouldOpen;
 
   const [step, setStep] = useState<Step>("start");
+  const [confirmClose, setConfirmClose] = useState(false);
   const [basicInfo, setBasicInfo] = useState<BasicInfo | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobFilenames, setJobFilenames] = useState<string[]>([]);
@@ -142,9 +154,37 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
     };
   }, [open, jobId, listActiveJobFn]);
 
+  // Restore in-browser resume state when the wizard opens without an in-flight job.
+  useEffect(() => {
+    if (!open || jobId) return;
+    if (step !== "start") return;
+    const saved = loadResumeState(userId);
+    if (!saved) return;
+    if (saved.basicInfo) setBasicInfo(saved.basicInfo);
+    // Only restore to steps that don't need external state we haven't loaded.
+    const restoreable: ResumeStep[] = ["basic", "findNeighbors", "nodocs", "upload"];
+    if (restoreable.includes(saved.step)) {
+      setStep(saved.step as Step);
+    }
+  }, [open, jobId, step, userId]);
+
+  // Persist a lightweight snapshot whenever the user's step or basicInfo changes.
+  useEffect(() => {
+    if (!open || !userId) return;
+    const persistable: Step[] = ["basic", "findNeighbors", "nodocs", "upload"];
+    if (persistable.includes(step)) {
+      saveResumeState(userId, {
+        step: step as ResumeStep,
+        basicInfo,
+        savedAt: Date.now(),
+      });
+    }
+  }, [step, basicInfo, open, userId]);
+
   function close(markSkip = false) {
     setOpenOverride(false);
     if (markSkip && !completed) update({ wizard_skipped: true });
+    if (completed) clearResumeState(userId);
     setTimeout(() => {
       setStep("start");
       setBasicInfo(null);
@@ -154,7 +194,26 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
       setDraft(null);
       setFocusUnresolved(false);
       setCreated(null);
+      setConfirmClose(false);
     }, 200);
+  }
+
+  /** Intercept an attempted close: from mid-flow, ask for confirmation first. */
+  function requestClose() {
+    const midFlow: Step[] = [
+      "basic",
+      "findNeighbors",
+      "nodocs",
+      "upload",
+      "processing",
+      "success",
+      "review",
+    ];
+    if (midFlow.includes(step)) {
+      setConfirmClose(true);
+      return;
+    }
+    close(true);
   }
 
   const applyDraft = useCallback(
@@ -170,6 +229,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
         await qc.invalidateQueries({ queryKey: ["onboarding", "progress"] });
         await qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
         update({ wizard_completed: true, wizard_skipped: false });
+        clearResumeState(userId);
         toast.success(`${community.name} is ready`);
         setCreated({
           id: community.id,
@@ -273,7 +333,13 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => (v ? setOpenOverride(true) : close(false))}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (v) setOpenOverride(true);
+        else requestClose();
+      }}
+    >
       <WizardBodyLock open={open} />
       <DialogContent
         className={cn(
@@ -364,7 +430,12 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
               initial={basicInfo ?? undefined}
               onContinue={(info) => {
                 setBasicInfo(info);
-                setStep("nodocs");
+                // If we got real coordinates, auto-find neighbors first.
+                if (typeof info.lat === "number" && typeof info.lng === "number") {
+                  setStep("findNeighbors");
+                } else {
+                  setStep("nodocs");
+                }
               }}
               onNoAddress={(info) => {
                 setBasicInfo(info);
@@ -377,6 +448,17 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
                 setStep("review");
               }}
               onLater={() => close(true)}
+            />
+          )}
+
+          {step === "findNeighbors" && basicInfo && (
+            <FindNeighborsStep
+              basicInfo={basicInfo}
+              onConfirm={(result) => {
+                void handleNoDocs(result);
+              }}
+              onManualInstead={() => setStep("nodocs")}
+              onBack={() => setStep("basic")}
             />
           )}
 
@@ -514,7 +596,44 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
           )}
         </div>
       </DialogContent>
+      {confirmClose && (
+        <ConfirmSaveExit
+          onCancel={() => setConfirmClose(false)}
+          onExit={() => {
+            setConfirmClose(false);
+            close(true);
+          }}
+        />
+      )}
     </Dialog>
+  );
+}
+
+function ConfirmSaveExit({
+  onCancel,
+  onExit,
+}: {
+  onCancel: () => void;
+  onExit: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-sm rounded-2xl border border-border bg-background p-5 shadow-2xl">
+        <h3 className="font-display text-lg font-bold">Save and finish later?</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          We'll remember where you left off so you can pick right back up from your
+          dashboard.
+        </p>
+        <div className="mt-4 flex items-center justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            Keep going
+          </Button>
+          <Button size="sm" onClick={onExit}>
+            Save & exit
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 
