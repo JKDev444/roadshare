@@ -430,7 +430,12 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
               initial={basicInfo ?? undefined}
               onContinue={(info) => {
                 setBasicInfo(info);
-                setStep("nodocs");
+                // If we got real coordinates, auto-find neighbors first.
+                if (typeof info.lat === "number" && typeof info.lng === "number") {
+                  setStep("findNeighbors");
+                } else {
+                  setStep("nodocs");
+                }
               }}
               onNoAddress={(info) => {
                 setBasicInfo(info);
@@ -443,6 +448,17 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
                 setStep("review");
               }}
               onLater={() => close(true)}
+            />
+          )}
+
+          {step === "findNeighbors" && basicInfo && (
+            <FindNeighborsStep
+              basicInfo={basicInfo}
+              onConfirm={(result) => {
+                void handleNoDocs(result);
+              }}
+              onManualInstead={() => setStep("nodocs")}
+              onBack={() => setStep("basic")}
             />
           )}
 
