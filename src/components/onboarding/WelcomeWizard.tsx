@@ -280,6 +280,9 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
           "max-w-2xl overflow-hidden",
           step === "review" && "max-w-4xl",
         )}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
       >
         <VisuallyHidden>
           <DialogTitle>Set up your road group</DialogTitle>

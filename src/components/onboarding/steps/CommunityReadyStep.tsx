@@ -104,19 +104,31 @@ export function CommunityReadyStep({
       </div>
 
       <div className="space-y-3">
-        <Button size="lg" className="w-full" onClick={onGoHome}>
-          Go to Community Home
-          <ArrowRight className="h-4 w-4" />
-        </Button>
-        <div className="grid gap-2 sm:grid-cols-3">
-          <Button variant="outline" size="sm" onClick={onReviewRoad}>
-            <RouteIcon className="h-4 w-4" /> Review My Road
+        <div className="rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/10 via-fun-2/5 to-fun-3/10 p-4">
+          <p className="font-display text-base font-bold leading-tight">
+            Optional next step — add your HOA rules
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Upload your CC&Rs or road agreement and we'll pull out the cost-share
+            formula, maintenance responsibilities, and HOA rules so you don't
+            have to dig through the PDF later. You can skip and add them anytime.
+          </p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <Button size="sm" className="flex-1" onClick={onUploadDocuments}>
+              <FileText className="h-4 w-4" /> Upload HOA rules
+            </Button>
+            <Button variant="outline" size="sm" className="flex-1" onClick={onGoHome}>
+              Skip for now
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button variant="ghost" size="sm" onClick={onReviewRoad}>
+            <RouteIcon className="h-4 w-4" /> Review my road
           </Button>
-          <Button variant="outline" size="sm" onClick={onUploadDocuments}>
-            <FileText className="h-4 w-4" /> Upload Documents
-          </Button>
-          <Button variant="outline" size="sm" onClick={onAddNeighbors}>
-            <Users className="h-4 w-4" /> Add Neighbors
+          <Button variant="ghost" size="sm" onClick={onAddNeighbors}>
+            <Users className="h-4 w-4" /> Add neighbors
           </Button>
         </div>
       </div>

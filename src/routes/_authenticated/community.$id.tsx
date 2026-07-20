@@ -300,7 +300,7 @@ function WelcomeBanner({
             <p className="mt-0.5 text-xs text-muted-foreground">
               We added <strong>{parcelCount}</strong> {parcelCount === 1 ? "home" : "homes"}
               {roadCount > 0 ? ` and ${roadCount} ${roadCount === 1 ? "road" : "roads"}` : ""}. Head
-              back to Home to see the next steps.
+              back to Home to see the next steps. Have HOA papers? <Link to="/documents" className="font-semibold text-primary underline-offset-2 hover:underline">Add them anytime</Link> — we'll pull out the cost-share formula and maintenance rules.
             </p>
           </div>
         </div>
