@@ -229,6 +229,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
         await qc.invalidateQueries({ queryKey: ["onboarding", "progress"] });
         await qc.invalidateQueries({ queryKey: ["dashboard", "stats"] });
         update({ wizard_completed: true, wizard_skipped: false });
+        clearResumeState(userId);
         toast.success(`${community.name} is ready`);
         setCreated({
           id: community.id,
