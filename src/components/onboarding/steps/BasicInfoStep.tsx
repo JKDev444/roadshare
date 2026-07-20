@@ -4,7 +4,7 @@ import { ArrowRight, MapPin, Loader2, Sparkles, Home, Route as RouteIcon, FileTe
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { suggestAddresses, retrieveAddress } from "@/lib/onboarding/geocode.functions";
+import { suggestAddresses } from "@/lib/onboarding/geocode.functions";
 
 export type BasicInfo = {
   communityName: string;
@@ -18,13 +18,11 @@ export type BasicInfo = {
 export type SetupPath = "map" | "docs" | "manual";
 
 type Suggestion = {
-  mapboxId?: string;
   label: string;
   city?: string | null;
   state?: string | null;
-  /** Present when the suggestion source (e.g. Census) already returned coords. */
-  lat?: number;
-  lng?: number;
+  lat: number;
+  lng: number;
 };
 
 /** Step 1. Basic community information. Plain language, minimal fields. */
@@ -44,7 +42,6 @@ export function BasicInfoStep({
   onLater?: () => void;
 }) {
   const suggestFn = useServerFn(suggestAddresses);
-  const retrieveFn = useServerFn(retrieveAddress);
   const [communityName, setCommunityName] = useState(initial?.communityName ?? "");
   const [address, setAddress] = useState(initial?.startingAddress ?? "");
   const [city, setCity] = useState(initial?.city ?? "");
@@ -80,7 +77,6 @@ export function BasicInfoStep({
         });
         if (!ctl.signal.aborted) {
           const mapped: Suggestion[] = res.map((r) => ({
-            mapboxId: r.mapboxId,
             label: r.label,
             city: r.city,
             state: r.state,
@@ -121,23 +117,8 @@ export function BasicInfoStep({
     setState(h.state ?? "");
     setPicked(true);
     setOpen(false);
-    // If the suggestion already carries coords (Census), use them directly.
-    if (h.lat != null && h.lng != null) {
+    if (Number.isFinite(h.lat) && Number.isFinite(h.lng)) {
       setCoords({ lat: h.lat, lng: h.lng });
-    } else if (h.mapboxId) {
-      // Retrieve coordinates so the map opens on the exact spot.
-      try {
-        const retrieved = await retrieveFn({
-          data: { mapboxId: h.mapboxId, sessionToken: sessionTokenRef.current },
-        });
-        if (retrieved) {
-          setCoords({ lat: retrieved.lat, lng: retrieved.lng });
-          if (retrieved.city) setCity(retrieved.city);
-          if (retrieved.state) setState(retrieved.state);
-        }
-      } catch {
-        // Coords are optional — map step can still geocode as a fallback.
-      }
     }
     // New session token after a completed pick.
     sessionTokenRef.current =
@@ -189,7 +170,7 @@ export function BasicInfoStep({
             {open && hits.length > 0 && (
               <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-border bg-popover text-sm shadow-lg">
                 {hits.map((h, i) => (
-                  <li key={h.mapboxId ?? `${h.label}-${i}`}>
+                  <li key={`${h.label}-${i}`}>
                     <button
                       type="button"
                       onClick={() => selectHit(h)}

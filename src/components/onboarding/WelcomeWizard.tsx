@@ -18,7 +18,6 @@ import { BasicInfoStep, type BasicInfo } from "./steps/BasicInfoStep";
 import { DocsQuestionStep } from "./steps/DocsQuestionStep";
 import { UploadStep } from "./steps/UploadStep";
 import { NoDocsStep, type NoDocsResult } from "./steps/NoDocsStep";
-import { MapPickStep } from "./steps/MapPickStep";
 import { ProcessingStep } from "./steps/ProcessingStep";
 import { SuccessSummaryStep } from "./steps/SuccessSummaryStep";
 import { FailureStep } from "./steps/FailureStep";
@@ -31,7 +30,6 @@ type Step =
   | "docsQ"
   | "upload"
   | "nodocs"
-  | "mappick"
   | "processing"
   | "success"
   | "failure"
@@ -238,30 +236,9 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
         address: it.address || null,
         provenance: "entered" as const,
       }));
-    } else if (r.kind === "map") {
-      lots = r.items.map((it) => ({
-        label: it.label,
-        address: it.address ?? null,
-        owner_name: it.owner_name ?? null,
-        area_sqft: it.area_sqft ?? null,
-        lat: it.lat ?? null,
-        lng: it.lng ?? null,
-        geojson: it.geojson ?? null,
-        provenance: "entered" as const,
-      }));
-      roads = r.roads.map((rd) => ({
-        name: rd.name,
-        responsibility: rd.responsibility,
-        surface: null,
-        geometry: rd.geometry,
-        has_geometry: true,
-        provenance: "entered" as const,
-      }));
     }
     // Include the starting address as first lot when going the "no docs" path.
-    // Skip for the map path — the user already selected parcels visually, which
-    // usually already includes their own address.
-    if (basicInfo.startingAddress && r.kind !== "map") {
+    if (basicInfo.startingAddress) {
       lots = [
         { label: "Lot 1", address: basicInfo.startingAddress, provenance: "entered" as const },
         ...lots.map((l, i) => ({ ...l, label: `Lot ${i + 2}` })),
@@ -300,8 +277,6 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
         className={cn(
           "max-w-2xl overflow-hidden",
           step === "review" && "max-w-4xl",
-          step === "mappick" &&
-            "max-w-6xl sm:max-w-6xl max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-screen max-sm:max-w-none max-sm:rounded-none max-sm:p-3",
         )}
       >
         <VisuallyHidden>
@@ -344,8 +319,6 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
                     ? "Takes about 2 minutes"
                     : step === "review"
                     ? "Review your workspace"
-                    : step === "mappick"
-                      ? "Pick your neighbors"
                       : step === "docsQ"
                         ? "Choose your path"
                         : "Setup"}
@@ -360,8 +333,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
               initial={basicInfo ?? undefined}
               onContinue={(info, path) => {
                 setBasicInfo(info);
-                if (path === "map") setStep("mappick");
-                else if (path === "docs") setStep("upload");
+                if (path === "docs") setStep("upload");
                 else setStep("nodocs");
               }}
               onNoAddress={(info) => {
@@ -382,7 +354,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
             <DocsQuestionStep
               onAnswer={(a) =>
                 setStep(
-                  a === "yes" ? "upload" : a === "map" ? "mappick" : "nodocs",
+                  a === "yes" ? "upload" : "nodocs",
                 )
               }
               onBack={() => setStep("basic")}
@@ -404,15 +376,6 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
               onSubmit={handleNoDocs}
               onUploadInstead={() => setStep("upload")}
               onBack={() => setStep("basic")}
-              submitting={applying}
-            />
-          )}
-
-          {step === "mappick" && basicInfo && (
-            <MapPickStep
-              basicInfo={basicInfo}
-              onCancel={() => setStep("basic")}
-              onSubmit={handleNoDocs}
               submitting={applying}
             />
           )}

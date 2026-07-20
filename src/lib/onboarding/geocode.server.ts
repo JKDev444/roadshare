@@ -5,162 +5,12 @@ export type GeocodeResult = {
   city?: string | null;
   state?: string | null;
   postcode?: string | null;
-  source: "mapbox" | "openstreetmap" | "census";
+  source: "openstreetmap" | "census";
 };
 
-// ---- Mapbox Search Box API (primary) ---------------------------------------
-// Airbnb/Zillow-tier per-keystroke autocomplete via the Lovable connector gateway.
-// Free tier: 100k sessions/mo. A session token bundles /suggest + /retrieve as one bill.
-
-// Mapbox can be reached two ways depending on where the app runs:
-//   1) Inside Lovable: Lovable connector gateway using LOVABLE_API_KEY +
-//      MAPBOX_API_KEY (an sk. token stored on the workspace connection).
-//   2) Outside Lovable (Vercel/etc.): direct api.mapbox.com using
-//      MAPBOX_ACCESS_TOKEN (an sk. token in the host's env vars).
-// Callers should not care which one is used.
-const MAPBOX_GATEWAY = "https://connector-gateway.lovable.dev/mapbox";
-const MAPBOX_DIRECT = "https://api.mapbox.com";
-
-type MapboxBackend =
-  | { mode: "gateway"; base: string; headers: Record<string, string>; extraParams?: Record<string, string> }
-  | { mode: "direct"; base: string; headers: Record<string, string>; extraParams: Record<string, string> };
-
-function mapboxBackend(): MapboxBackend | null {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const connKey = process.env.MAPBOX_API_KEY;
-  if (lovableKey && connKey) {
-    return {
-      mode: "gateway",
-      base: MAPBOX_GATEWAY,
-      headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        "X-Connection-Api-Key": connKey,
-      },
-    };
-  }
-  // Fallback: direct Mapbox using a self-hosted sk. token.
-  const directToken = process.env.MAPBOX_ACCESS_TOKEN || process.env.MAPBOX_SECRET_TOKEN;
-  if (directToken) {
-    return {
-      mode: "direct",
-      base: MAPBOX_DIRECT,
-      headers: {},
-      extraParams: { access_token: directToken },
-    };
-  }
-  return null;
-}
-
-function applyMapboxParams(url: URL, backend: MapboxBackend) {
-  const extras = backend.mode === "direct" ? backend.extraParams : undefined;
-  if (!extras) return;
-  for (const [k, v] of Object.entries(extras)) url.searchParams.set(k, v);
-}
-
-type MapboxSuggestion = {
-  name: string;
-  mapbox_id: string;
-  feature_type: string;
-  full_address?: string;
-  place_formatted?: string;
-  context?: {
-    place?: { name?: string };
-    region?: { name?: string; region_code?: string };
-    postcode?: { name?: string };
-  };
-};
-
-type MapboxRetrieveFeature = {
-  properties: {
-    full_address?: string;
-    name?: string;
-    context?: MapboxSuggestion["context"];
-    coordinates?: { longitude: number; latitude: number };
-  };
-  geometry?: { coordinates: [number, number] };
-};
-
-async function mapboxSuggest(
-  query: string,
-  sessionToken: string,
-): Promise<MapboxSuggestion[] | null> {
-  const backend = mapboxBackend();
-  if (!backend) return null;
-  const url = new URL(`${backend.base}/search/searchbox/v1/suggest`);
-  url.searchParams.set("q", query);
-  url.searchParams.set("session_token", sessionToken);
-  url.searchParams.set("country", "us");
-  url.searchParams.set("types", "address");
-  url.searchParams.set("limit", "6");
-  applyMapboxParams(url, backend);
-  const res = await fetch(url.toString(), { headers: backend.headers });
-  if (!res.ok) {
-    // Common causes: Mapbox connection has no secret (sk.) token, or the
-    // host env lacks MAPBOX_ACCESS_TOKEN. Signal null so callers fall back
-    // to the US Census onelineaddress geocoder.
-    console.warn("[geocode] mapbox suggest failed", res.status);
-    return null;
-  }
-  const json = (await res.json()) as { suggestions?: MapboxSuggestion[] };
-  return json.suggestions ?? [];
-}
-
-async function mapboxRetrieve(mapboxId: string, sessionToken: string): Promise<GeocodeResult | null> {
-  const backend = mapboxBackend();
-  if (!backend) return null;
-  const url = new URL(`${backend.base}/search/searchbox/v1/retrieve/${encodeURIComponent(mapboxId)}`);
-  url.searchParams.set("session_token", sessionToken);
-  applyMapboxParams(url, backend);
-  const res = await fetch(url.toString(), { headers: backend.headers });
-  if (!res.ok) return null;
-  const json = (await res.json()) as { features?: MapboxRetrieveFeature[] };
-  const feat = json.features?.[0];
-  if (!feat) return null;
-  const coords = feat.properties.coordinates ?? (feat.geometry ? { longitude: feat.geometry.coordinates[0], latitude: feat.geometry.coordinates[1] } : null);
-  if (!coords) return null;
-  const ctx = feat.properties.context;
-  return {
-    lat: coords.latitude,
-    lng: coords.longitude,
-    label: feat.properties.full_address ?? feat.properties.name ?? "",
-    city: ctx?.place?.name ?? null,
-    state: ctx?.region?.region_code ?? ctx?.region?.name ?? null,
-    postcode: ctx?.postcode?.name ?? null,
-    source: "mapbox",
-  };
-}
-
-function suggestionToResult(s: MapboxSuggestion): GeocodeResult & { mapboxId: string } {
-  const ctx = s.context;
-  return {
-    lat: 0, // placeholder — client calls retrieve on selection
-    lng: 0,
-    label: s.full_address ?? `${s.name}${s.place_formatted ? ", " + s.place_formatted : ""}`,
-    city: ctx?.place?.name ?? null,
-    state: ctx?.region?.region_code ?? ctx?.region?.name ?? null,
-    postcode: ctx?.postcode?.name ?? null,
-    source: "mapbox",
-    mapboxId: s.mapbox_id,
-  };
-}
-
-export async function mapboxSuggestAddresses(
-  query: string,
-  sessionToken: string,
-): Promise<Array<GeocodeResult & { mapboxId: string }>> {
-  const suggestions = await mapboxSuggest(query, sessionToken);
-  if (!suggestions) return [];
-  return suggestions.map(suggestionToResult);
-}
-
-export async function mapboxRetrieveAddress(
-  mapboxId: string,
-  sessionToken: string,
-): Promise<GeocodeResult | null> {
-  return mapboxRetrieve(mapboxId, sessionToken);
-}
-
-// ---- Fallbacks -------------------------------------------------------------
+// Address search runs against the US Census onelineaddress geocoder first
+// (best US coverage including rural addresses), falling back to OpenStreetMap
+// Nominatim when Census returns nothing. No Mapbox anywhere.
 
 type NominatimHit = {
   display_name: string;
@@ -171,6 +21,7 @@ type NominatimHit = {
     town?: string;
     village?: string;
     state?: string;
+    postcode?: string;
   };
 };
 
@@ -215,8 +66,42 @@ async function geocodeWithOpenStreetMap(query: string, state?: string): Promise<
     label: first.display_name,
     city: pickCity(first.address),
     state: first.address?.state ?? null,
+    postcode: first.address?.postcode ?? null,
     source: "openstreetmap",
   };
+}
+
+async function searchWithNominatim(query: string): Promise<GeocodeResult[]> {
+  const url = new URL("https://nominatim.openstreetmap.org/search");
+  url.searchParams.set("q", query);
+  url.searchParams.set("format", "json");
+  url.searchParams.set("addressdetails", "1");
+  url.searchParams.set("limit", "6");
+  url.searchParams.set("countrycodes", "us");
+  const res = await fetch(url.toString(), {
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "RoadShare/1.0 (address geocoding)",
+    },
+  });
+  if (!res.ok) return [];
+  const hits = (await res.json()) as NominatimHit[];
+  const out: GeocodeResult[] = [];
+  for (const h of hits) {
+    const lat = Number(h.lat);
+    const lng = Number(h.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    out.push({
+      lat,
+      lng,
+      label: h.display_name,
+      city: pickCity(h.address),
+      state: h.address?.state ?? null,
+      postcode: h.address?.postcode ?? null,
+      source: "openstreetmap",
+    });
+  }
+  return out;
 }
 
 async function searchWithCensus(query: string): Promise<GeocodeResult[]> {
@@ -247,84 +132,57 @@ async function searchWithCensus(query: string): Promise<GeocodeResult[]> {
 }
 
 export async function geocodeAddressQuery(query: string, state?: string): Promise<GeocodeResult | null> {
-  // Mapbox one-shot (single-call geocode via suggest+retrieve with a fresh token).
-  if (mapboxBackend()) {
-    const sessionToken = crypto.randomUUID();
-    const suggestions = await mapboxSuggest(state ? `${query}, ${state}` : query, sessionToken);
-    const first = suggestions?.[0];
-    if (first) {
-      const retrieved = await mapboxRetrieve(first.mapbox_id, sessionToken);
-      if (retrieved) return retrieved;
-    }
-  }
-  const osm = await geocodeWithOpenStreetMap(query, state);
-  if (osm) return osm;
   const census = await searchWithCensus(query);
-  return census[0] ?? null;
+  if (census[0]) return census[0];
+  const osm = await geocodeWithOpenStreetMap(query, state);
+  return osm;
 }
 
 export async function searchAddressCandidates(query: string): Promise<GeocodeResult[]> {
-  if (mapboxBackend()) {
-    const sessionToken = crypto.randomUUID();
-    const suggestions = await mapboxSuggest(query, sessionToken);
-    if (suggestions && suggestions.length > 0) {
-      // For legacy callers, retrieve top 3 to get coords.
-      const results: GeocodeResult[] = [];
-      for (const s of suggestions.slice(0, 3)) {
-        const r = await mapboxRetrieve(s.mapbox_id, sessionToken);
-        if (r) results.push(r);
-      }
-      if (results.length) return results;
-    }
-  }
-  return searchWithCensus(query);
+  const census = await searchWithCensus(query);
+  if (census.length > 0) return census;
+  return searchWithNominatim(query);
 }
 
-// ---- Unified suggest with fallbacks ----------------------------------------
-// Airbnb-like: try Mapbox Search Box, but if it fails (no sk. token, rate
-// limit, network), fall back to the US Census onelineaddress endpoint so rural
-// addresses like "787 Five Peaks Dr, Kalama, WA 98625" still resolve.
+// ---- Unified suggest -------------------------------------------------------
+// US Census first (best rural coverage), Nominatim fallback. Coordinates come
+// back on every hit so callers never need a second "retrieve" round-trip.
 export type SuggestHit = {
   label: string;
   city?: string | null;
   state?: string | null;
   postcode?: string | null;
-  /** Present when the suggestion source already returned coordinates. */
-  lat?: number;
-  lng?: number;
-  /** Present when the caller must call retrieveAddress to get coords. */
-  mapboxId?: string;
-  source: "mapbox" | "census";
+  /** Coordinates. Always present — every source returns them inline. */
+  lat: number;
+  lng: number;
+  source: "census" | "openstreetmap";
 };
 
 export async function suggestAddressesUnified(
   query: string,
-  sessionToken: string,
+  _sessionToken: string,
 ): Promise<SuggestHit[]> {
-  const mapbox = await mapboxSuggest(query, sessionToken);
-  if (mapbox && mapbox.length > 0) {
-    return mapbox.map((s) => {
-      const ctx = s.context;
-      return {
-        label: s.full_address ?? `${s.name}${s.place_formatted ? ", " + s.place_formatted : ""}`,
-        city: ctx?.place?.name ?? null,
-        state: ctx?.region?.region_code ?? ctx?.region?.name ?? null,
-        postcode: ctx?.postcode?.name ?? null,
-        mapboxId: s.mapbox_id,
-        source: "mapbox" as const,
-      };
-    });
-  }
-  // Census fallback — coords come back directly, so callers can skip retrieve.
   const census = await searchWithCensus(query);
-  return census.map((c) => ({
-    label: toTitleCase(c.label),
+  if (census.length > 0) {
+    return census.map((c) => ({
+      label: toTitleCase(c.label),
+      city: c.city,
+      state: c.state,
+      postcode: c.postcode,
+      lat: c.lat,
+      lng: c.lng,
+      source: "census" as const,
+    }));
+  }
+  const osm = await searchWithNominatim(query);
+  return osm.map((c) => ({
+    label: c.label,
     city: c.city,
     state: c.state,
     postcode: c.postcode,
     lat: c.lat,
     lng: c.lng,
-    source: "census" as const,
+    source: "openstreetmap" as const,
   }));
 }
 
