@@ -210,6 +210,7 @@ export function MyRoadTab({
               method={method}
               rows={result.rows}
               yourRow={yourRow}
+              onAskForVotes={onAskForVotes}
             />
           )}
         </StepCard>
