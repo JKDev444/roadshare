@@ -59,7 +59,7 @@ function ReportsPage() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">Reports</h1>
-            <p className="text-sm text-muted-foreground">Generate polished, print-ready reports from your community's record — for meetings, lenders, or professional review.</p>
+            <p className="text-sm text-muted-foreground">Print-ready summaries you can share at a meeting, hand to a neighbor, or send to a lender or attorney.</p>
           </div>
           {(communities.data?.length ?? 0) > 0 && (
             <div className="w-52">
@@ -122,7 +122,7 @@ function ReportsPage() {
           </div>
         )}
 
-        <p className="text-xs text-muted-foreground">Reports open as print-ready HTML — use your browser's Print → Save as PDF for a shareable document. Figures reflect the record at generation time and are for discussion, not legal advice.</p>
+        <p className="text-xs text-muted-foreground">Reports open in your browser — use Print → Save as PDF to share. Numbers reflect what's in your record right now, and are for discussion, not legal advice.</p>
       </div>
     </AppShell>
   );

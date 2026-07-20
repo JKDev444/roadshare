@@ -1,34 +1,10 @@
-import { useMemo, useRef, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { toast } from "sonner";
-import { AlertTriangle, Loader2, MessageSquareQuote, Send, ShieldAlert, Sparkles, Trash2 } from "lucide-react";
-
-import { AppShell } from "@/components/app/AppShell";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-import { listCommunities } from "@/lib/community/api";
-import {
-  buildEvidence,
-  confidenceLabel,
-  deleteAnswer,
-  listAnswers,
-  parseCitations,
-  saveAnswer,
-  type QaAnswer,
-} from "@/lib/qa/api";
-import { askCommunity } from "@/lib/qa/ask.functions";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/ask")({
-  head: () => ({ meta: [{ title: "Ask My Community — RoadShare" }, { name: "robots", content: "noindex" }] }),
-  component: AskPage,
-  errorComponent: () => (
-    <AppShell><div className="mx-auto max-w-md py-20 text-center text-muted-foreground">Ask My Community could not be loaded.</div></AppShell>
-  ),
+  beforeLoad: () => {
+    throw redirect({ to: "/dashboard" });
+  },
+  component: () => null,
 });
 
 const SUGGESTIONS = [
