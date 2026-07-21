@@ -462,7 +462,7 @@ function PropertiesTab({ communityId, parcels, loading }: { communityId: string;
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-4 py-3 font-semibold">Lot</th>
+              <th className="px-4 py-3 font-semibold">Home</th>
               <th className="px-4 py-3 font-semibold">Owner</th>
               <th className="px-4 py-3 font-semibold">Road frontage</th>
               <th className="px-4 py-3" />

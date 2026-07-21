@@ -157,13 +157,13 @@ function SummarySection({
       <div>
         <h3 className="font-display text-lg font-semibold">Here's what we found</h3>
         <p className="text-xs text-muted-foreground">
-          Nothing has been finalized. You confirm each item before it's used in cost calculations.
+          Nothing is locked in yet. You can confirm or change each item before it is used in cost calculations.
         </p>
       </div>
       <ul className="space-y-1.5 text-sm">
         <SummaryRow label="Community" value={draft.community.name || "Not found"} />
         <SummaryRow label="Region" value={draft.community.region || "Not found"} />
-        <SummaryRow label="Lot references" value={String(draft.lots.length)} />
+        <SummaryRow label="Homes" value={String(draft.lots.length)} />
         <SummaryRow
           label="With street addresses"
           value={String(draft.lots.filter((l) => l.address).length)}
@@ -177,7 +177,7 @@ function SummarySection({
           label="Cost-sharing formula"
           value={draft.assessment_formula ? "Possible match" : "Not found"}
         />
-        <SummaryRow label="Property map (geometry)" value="Not found" />
+        <SummaryRow label="Property map" value="Not added yet" />
       </ul>
       {(draft.meta?.missing_exhibits ?? []).length > 0 && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-xs">
