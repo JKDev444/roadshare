@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeft,
@@ -9,9 +9,12 @@ import {
   MapPin,
   RefreshCcw,
   Sparkles,
+  Timer,
+  AlertCircle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { parcelsPointLookup } from "@/lib/onboarding/parcels.functions";
 import type { BasicInfo } from "./BasicInfoStep";
 import type { NoDocsResult } from "./NoDocsStep";
@@ -27,7 +30,7 @@ type FoundParcel = {
 
 type LoadState =
   | { kind: "idle" }
-  | { kind: "loading"; radius: number; attempt: number }
+  | { kind: "loading"; radius: number; attempt: number; slow?: boolean }
   | { kind: "ok"; radius: number; parcels: FoundParcel[]; source: "dcad" | "osm" }
   | { kind: "empty"; radius: number; exhausted: boolean }
   | { kind: "error"; message: string };
@@ -36,6 +39,10 @@ type LoadState =
 // rural roads — where homes can sit 1/4 to 1 mile apart — still land hits.
 // 5,280 ft = 1 mile. Server clamps the underlying meters at 5,000m (~16,400 ft).
 const RADIUS_STEPS = [400, 1500, 5280, 15000] as const;
+
+// If a single lookup hangs longer than this, the client treats it as a soft
+// timeout and auto-widens to the next radius so the UI never feels frozen.
+const LOOKUP_TIMEOUT_MS = 18_000;
 
 function metersFromFeet(ft: number) {
   // parcelsPointLookup treats `radius` as meters in the underlying implementation
@@ -73,6 +80,8 @@ export function FindNeighborsStep({
   const [state, setState] = useState<LoadState>({ kind: "idle" });
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const radiusIndex = useRef(0);
+  const slowTimerRef = useRef<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const hasCoords =
     typeof basicInfo.lat === "number" && typeof basicInfo.lng === "number";
@@ -81,15 +90,43 @@ export function FindNeighborsStep({
     async (radiusFt: number, attempt = 1) => {
       if (!hasCoords) return;
       setState({ kind: "loading", radius: radiusFt, attempt });
+      slowTimerRef.current = window.setTimeout(() => {
+        setState((prev) =>
+          prev.kind === "loading" && prev.radius === radiusFt
+            ? { kind: "loading", radius: radiusFt, attempt, slow: true }
+            : prev,
+        );
+      }, 5_000);
+
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       try {
-        const res = await lookupFn({
-          data: {
-            lat: basicInfo.lat as number,
-            lng: basicInfo.lng as number,
-            radius: metersFromFeet(radiusFt),
-            limit: 120,
-          },
-        });
+        const res = await Promise.race([
+          lookupFn({
+            data: {
+              lat: basicInfo.lat as number,
+              lng: basicInfo.lng as number,
+              radius: metersFromFeet(radiusFt),
+              limit: 120,
+            },
+          }),
+          new Promise<never>((_, reject) => {
+            const t = window.setTimeout(() => {
+              controller.abort();
+              reject(new Error("This lookup took too long. Trying a wider search…"));
+            }, LOOKUP_TIMEOUT_MS);
+            controller.signal.addEventListener("abort", () => window.clearTimeout(t));
+          }),
+        ]);
+
+        if (slowTimerRef.current) {
+          window.clearTimeout(slowTimerRef.current);
+          slowTimerRef.current = null;
+        }
+        if (controller.signal.aborted) return;
+
         const parcels: FoundParcel[] = res.parcels.map((p) => ({
           id: p.id,
           headline: p.headline,
@@ -113,7 +150,13 @@ export function FindNeighborsStep({
           setSelected(new Set(parcels.map((p) => p.id)));
         }
       } catch (err) {
-        // On transient failure, try the next radius before giving up —
+        if (slowTimerRef.current) {
+          window.clearTimeout(slowTimerRef.current);
+          slowTimerRef.current = null;
+        }
+        if (controller.signal.aborted) return;
+
+        // On transient failure or timeout, try the next radius before giving up —
         // rural lookups against Overpass sometimes need a retry.
         const nextIdx = radiusIndex.current + 1;
         if (nextIdx < RADIUS_STEPS.length) {
@@ -137,6 +180,14 @@ export function FindNeighborsStep({
       void runLookup(RADIUS_STEPS[0]);
     }
   }, [state.kind, hasCoords, runLookup]);
+
+  // Clean up any pending timers on unmount.
+  useEffect(() => {
+    return () => {
+      if (slowTimerRef.current) window.clearTimeout(slowTimerRef.current);
+      abortRef.current?.abort();
+    };
+  }, []);
 
   const canWiden =
     (state.kind === "ok" || state.kind === "empty") &&
@@ -169,6 +220,8 @@ export function FindNeighborsStep({
   }
 
   const selectedCount = selected.size;
+  const currentAttemptIndex =
+    state.kind === "loading" ? RADIUS_STEPS.indexOf(state.radius as typeof RADIUS_STEPS[number]) : radiusIndex.current;
 
   const header = (
     <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-fun-2/10 to-fun-3/15 px-4 py-4">
