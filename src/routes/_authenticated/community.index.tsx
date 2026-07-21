@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowRight, MapPinned, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ArrowRight, MapPinned, MoreVertical, Plus, Sparkles, Trash2 } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
