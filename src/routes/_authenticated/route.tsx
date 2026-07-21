@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -41,12 +42,17 @@ export const Route = createFileRoute("/_authenticated")({
 
 function AuthedLayout() {
   // Background verification — if the persisted token is bad, kick to /auth.
-  if (typeof window !== "undefined") {
-    void supabase.auth.getUser().then(({ data, error }) => {
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getUser().then(({ data, error }) => {
+      if (cancelled) return;
       if (error || !data.user) {
         window.location.href = `/auth?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       }
     });
-  }
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   return <Outlet />;
 }
