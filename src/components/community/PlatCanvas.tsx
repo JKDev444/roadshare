@@ -264,9 +264,32 @@ function layout(parcels: Parcel[], segments: RoadSegment[]): {
   }
 
   // Parcels without any geometry — arrange them in a grid at the bottom later.
-  const orphans = parcels.filter(
+  let orphans = parcels.filter(
     (p) => !parcelFeatures.some((pf) => pf.p.id === p.id),
   );
+
+  // Detect degenerate bounds (all parcels/roads at effectively the same
+  // point, e.g. seeded rows with identical lat/lng). Fall back to the grid
+  // so we don't render every home stacked on one 1-pixel square.
+  let degenerate = false;
+  if (coords.length > 0) {
+    let a = coords[0][0], b = coords[0][0], c = coords[0][1], d = coords[0][1];
+    for (const [lng, lat] of coords) {
+      if (lng < a) a = lng;
+      if (lng > b) b = lng;
+      if (lat < c) c = lat;
+      if (lat > d) d = lat;
+    }
+    degenerate = b - a < 1e-5 && d - c < 1e-5;
+  }
+  if (degenerate) {
+    // Treat every parcel as an orphan; drop the road/coords so the grid uses
+    // the full canvas instead of a single-point projection.
+    orphans = [...parcels];
+    parcelFeatures.length = 0;
+    roadFeatures.length = 0;
+    coords.length = 0;
+  }
 
   if (coords.length === 0 && orphans.length === 0) {
     return { polys: [], roads: [], empty: true };
@@ -362,14 +385,20 @@ function layout(parcels: Parcel[], segments: RoadSegment[]): {
       Math.min(orphans.length, Math.round(Math.sqrt((orphans.length * areaW) / areaH))),
     );
     const rows = Math.ceil(orphans.length / cols);
-    const cellW = areaW / cols;
-    const cellH = Math.min(46, areaH / rows);
-    const gap = Math.min(8, Math.max(2, cellH * 0.15));
+    // Prefer square-ish cells so a handful of homes look like tiles, not
+    // thin strips. Cap the cell size so hundreds of homes still fit.
+    const rawCellW = areaW / cols;
+    const rawCellH = areaH / rows;
+    const cellSize = Math.min(rawCellW, rawCellH, 72);
+    const cellW = cellSize;
+    const cellH = cellSize;
+    const gap = Math.min(10, Math.max(2, cellSize * 0.15));
+    const gridLeft = PADDING + (areaW - cols * cellW) / 2;
     const gridTop = PADDING + (areaH - rows * cellH) / 2;
     orphans.forEach((p, i) => {
       const col = i % cols;
       const row = Math.floor(i / cols);
-      const x = PADDING + col * cellW + gap / 2;
+      const x = gridLeft + col * cellW + gap / 2;
       const y = gridTop + row * cellH + gap / 2;
       const w = cellW - gap;
       const h = cellH - gap;
