@@ -336,18 +336,26 @@ function layout(parcels: Parcel[], segments: RoadSegment[]): {
 
   // Lay out orphan parcels in a grid across the bottom of the canvas.
   if (orphans.length > 0) {
-    const cols = Math.min(orphans.length, Math.max(4, Math.ceil(Math.sqrt(orphans.length))));
+    // Fit an aspect-aware grid inside the available canvas so hundreds of
+    // homes stay legible (as small tiles) rather than getting hidden.
+    const areaW = VIEW_W - PADDING * 2;
+    const areaH = VIEW_H - PADDING * 2;
+    const cols = Math.max(
+      1,
+      Math.min(orphans.length, Math.round(Math.sqrt((orphans.length * areaW) / areaH))),
+    );
     const rows = Math.ceil(orphans.length / cols);
-    const cellW = (VIEW_W - PADDING * 2) / cols;
-    const cellH = 46;
-    const gridTop = VIEW_H - PADDING - rows * cellH;
+    const cellW = areaW / cols;
+    const cellH = Math.min(46, areaH / rows);
+    const gap = Math.min(8, Math.max(2, cellH * 0.15));
+    const gridTop = PADDING + (areaH - rows * cellH) / 2;
     orphans.forEach((p, i) => {
       const col = i % cols;
       const row = Math.floor(i / cols);
-      const x = PADDING + col * cellW + 4;
-      const y = gridTop + row * cellH + 4;
-      const w = cellW - 8;
-      const h = cellH - 8;
+      const x = PADDING + col * cellW + gap / 2;
+      const y = gridTop + row * cellH + gap / 2;
+      const w = cellW - gap;
+      const h = cellH - gap;
       const points = `${x},${y} ${x + w},${y} ${x + w},${y + h} ${x},${y + h}`;
       polys.push({ id: p.id, label: p.label ?? "Home", points, cx: x + w / 2, cy: y + h / 2 });
     });
