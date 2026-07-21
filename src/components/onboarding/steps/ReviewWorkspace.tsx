@@ -161,8 +161,8 @@ function SummarySection({
         </p>
       </div>
       <ul className="space-y-1.5 text-sm">
-        <SummaryRow label="Community" value={draft.community.name || "Not found"} />
-        <SummaryRow label="Region" value={draft.community.region || "Not found"} />
+        <SummaryRow label="Community" value={draft.community.name || "Not set"} />
+        <SummaryRow label="Region" value={draft.community.region || "Not set"} />
         <SummaryRow label="Homes" value={String(draft.lots.length)} />
         <SummaryRow
           label="With street addresses"
@@ -171,11 +171,11 @@ function SummarySection({
         <SummaryRow label="Roads" value={String(draft.roads.length)} />
         <SummaryRow
           label="Maintenance summary"
-          value={draft.maintenance_summary ? "Found" : "Not found"}
+          value={draft.maintenance_summary ? "Found" : "Not added yet"}
         />
         <SummaryRow
           label="Cost-sharing formula"
-          value={draft.assessment_formula ? "Possible match" : "Not found"}
+          value={draft.assessment_formula ? "Possible match" : "Not added yet"}
         />
         <SummaryRow label="Property map" value="Not added yet" />
       </ul>
