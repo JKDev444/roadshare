@@ -136,18 +136,38 @@ export function MyRoadTab({
           Start here → tap your home on the picture below.
         </div>
       )}
-      <PlatCanvas
-        parcels={parcels}
-        segments={segments}
-        title="Your road"
-        className="fun-shadow-sm"
-        selectedIds={yourHomeId ? [yourHomeId] : []}
-        youId={yourHomeId}
-        onSelectParcel={(id) => {
-          setYourHomeId(id);
-          if (step === "home") setStep("road");
-        }}
-      />
+      {editor ? (
+        <PlatEditor
+          parcels={parcels}
+          segments={segments}
+          title="Your road"
+          className="fun-shadow-sm"
+          selectedIds={yourHomeId ? [yourHomeId] : []}
+          youId={yourHomeId}
+          onSelectParcel={(id) => {
+            setYourHomeId(id);
+            if (step === "home") setStep("road");
+          }}
+          onMoveParcel={editor.onMoveParcel}
+          onRenameParcel={editor.onRenameParcel}
+          onDeleteParcel={editor.onDeleteParcel}
+          onCreateParcel={editor.onCreateParcel}
+          onUpdateRoad={editor.onUpdateRoad}
+        />
+      ) : (
+        <PlatCanvas
+          parcels={parcels}
+          segments={segments}
+          title="Your road"
+          className="fun-shadow-sm"
+          selectedIds={yourHomeId ? [yourHomeId] : []}
+          youId={yourHomeId}
+          onSelectParcel={(id) => {
+            setYourHomeId(id);
+            if (step === "home") setStep("road");
+          }}
+        />
+      )}
 
       {/* Step rail */}
       <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-card/90 p-2 text-xs shadow-sm sm:grid-cols-5">
