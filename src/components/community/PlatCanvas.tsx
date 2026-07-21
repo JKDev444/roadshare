@@ -123,7 +123,7 @@ export function PlatCanvas({
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
         className="block w-full select-none"
         role="img"
-        aria-label="Community plat map"
+        aria-label="Community map"
       >
         <defs>
           <linearGradient id="pc-land" x1="0" y1="0" x2="0" y2="1">

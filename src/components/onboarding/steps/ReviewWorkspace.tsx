@@ -380,7 +380,7 @@ function RoadsSection({ draft, onChange }: { draft: CcrDraft; onChange: (d: CcrD
               className="h-8 flex-1"
             />
             <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
-              {r.has_geometry ? "Confirmed" : "No geometry"}
+              {r.has_geometry ? "Confirmed" : "Road not drawn"}
             </span>
             <ProvenanceChip p={r.provenance} />
           </li>

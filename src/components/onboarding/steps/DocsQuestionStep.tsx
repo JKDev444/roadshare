@@ -23,7 +23,7 @@ export function DocsQuestionStep({
       icon: FileText,
       title: "Yes, I Have Documents",
       body:
-        "Upload what you have — HOA rules, a plat map, a road agreement, an easement, or an amendment. RoadShare figures out what each one is.",
+        "Upload what you have — HOA rules, a property map, a road agreement, an easement, or an amendment. RoadShare figures out what each one is.",
       recommended: true,
     },
     {
