@@ -274,18 +274,66 @@ export function FindNeighborsStep({
       {header}
 
       {state.kind === "loading" && (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-10 text-sm text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          <p>
+        <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-fun-2/5 to-fun-3/10 p-5">
+          <div className="flex items-center justify-center gap-3">
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">
+                Scanning {formatDistance(state.radius)} around your home
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Try {state.attempt} of {RADIUS_STEPS.length}
+              </p>
+            </div>
+          </div>
+
+          {/* Progress through radius steps */}
+          <div className="mt-5 grid grid-cols-4 gap-2">
+            {RADIUS_STEPS.map((r, i) => {
+              const active = i === currentAttemptIndex;
+              const done = i < currentAttemptIndex;
+              return (
+                <div key={r} className="text-center">
+                  <div
+                    className={cn(
+                      "h-2 rounded-full transition-colors",
+                      active ? "bg-primary animate-pulse" : done ? "bg-primary/60" : "bg-muted",
+                    )}
+                    aria-hidden
+                  />
+                  <p
+                    className={cn(
+                      "mt-1 text-[10px] font-medium",
+                      active ? "text-primary" : done ? "text-muted-foreground" : "text-muted-foreground/60",
+                    )}
+                  >
+                    {formatDistance(r)}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="mt-4 text-center text-sm text-muted-foreground">
             {state.attempt === 1
-              ? `Scanning about ${formatDistance(state.radius)} around your home…`
-              : `No luck yet — widening the search to ${formatDistance(state.radius)}…`}
+              ? "Looking for mapped homes near your address…"
+              : state.slow
+                ? `Still searching ${formatDistance(state.radius)} — this area is a little slow to respond.`
+                : `Widening to ${formatDistance(state.radius)} to catch rural neighbors…`}
           </p>
-          {state.attempt > 1 && (
-            <p className="text-[11px] text-muted-foreground/80">
-              Rural roads can take a couple of tries.
+
+          {/* Fallback CTA shown clearly during any lookup */}
+          <div className="mt-4 flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-muted/40 px-3 py-3 text-center">
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Timer className="h-3.5 w-3.5" />
+              Taking too long, or want to skip the wait?
             </p>
-          )}
+            <Button variant="ghost" size="sm" onClick={onManualInstead}>
+              Add homes by hand instead
+            </Button>
+          </div>
         </div>
       )}
 
