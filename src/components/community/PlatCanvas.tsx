@@ -191,18 +191,29 @@ export function PlatCanvas({
                 strokeWidth={sw}
                 filter="url(#pc-shadow)"
               />
-              <text
-                x={p.cx}
-                y={p.cy}
-                fill="hsl(220 25% 25%)"
-                fontSize={p.label.length > 8 ? 8.5 : 9.5}
-                fontWeight={isSel || isYou ? 700 : 500}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                pointerEvents="none"
-              >
-                {p.label}
-              </text>
+              {p.size >= 22 && (
+                <text
+                  x={p.cx}
+                  y={p.cy}
+                  fill="hsl(220 25% 25%)"
+                  fontSize={Math.min(10, Math.max(6, p.size * 0.32))}
+                  fontWeight={isSel || isYou ? 700 : 500}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  pointerEvents="none"
+                >
+                  {p.label}
+                </text>
+              )}
+              {(isYou || isSel) && p.size < 22 && (
+                <circle
+                  cx={p.cx}
+                  cy={p.cy}
+                  r={2.5}
+                  fill={isYou ? "var(--color-gold, hsl(42 90% 60%))" : "var(--primary, hsl(200 80% 55%))"}
+                  pointerEvents="none"
+                />
+              )}
             </g>
           );
         })}
