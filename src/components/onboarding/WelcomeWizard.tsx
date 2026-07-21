@@ -410,6 +410,10 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
                   }
                   setStep("upload");
                 } else if (choice === "address") setStep("basic");
+                else if (choice === "paste") {
+                  setBasicInfo({ communityName: "", city: "", state: "", startingAddress: "" });
+                  setStep("nodocs");
+                }
                 else {
                   // "manual" — we still need a stub basicInfo for handleNoDocs.
                   setBasicInfo({ communityName: "", city: "", state: "", startingAddress: "" });
