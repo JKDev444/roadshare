@@ -138,6 +138,30 @@ function formatOsmAddress(tags: Record<string, string> = {}): string | null {
   return city ? `${streetLine || street || ""}${streetLine ? ", " : ""}${city}` : streetLine;
 }
 
+// Building tag values that are clearly NOT homes. Everything else (including
+// the very common `building=yes` in the US) is treated as a plausible home.
+// Keeping this as a negative filter is important: US OSM contributors under-tag
+// residential buildings, so a positive allowlist would drop most real houses.
+const NON_RESIDENTIAL_BUILDING = new Set([
+  "garage", "garages", "carport", "shed", "hut", "roof", "container",
+  "industrial", "commercial", "retail", "warehouse", "office", "supermarket",
+  "kiosk", "service", "public", "civic", "government", "hospital", "school",
+  "university", "college", "kindergarten", "church", "chapel", "cathedral",
+  "mosque", "temple", "synagogue", "religious", "barn", "farm_auxiliary",
+  "greenhouse", "stable", "cowshed", "sty", "silo", "tank", "storage_tank",
+  "transformer_tower", "water_tower", "bunker", "ruins", "construction",
+  "hangar", "train_station", "parking",
+]);
+
+function looksResidential(tags: Record<string, string> = {}): boolean {
+  const b = tags.building?.toLowerCase();
+  if (!b) return false;
+  if (NON_RESIDENTIAL_BUILDING.has(b)) return false;
+  // Address tags almost guarantee it's a real home; keep even if `building=yes`.
+  if (tags["addr:housenumber"] || tags["addr:street"]) return true;
+  return true;
+}
+
 function buildingsToParcels(elements: OsmElement[]): DcadParcel[] {
   const nodes = new Map<number, [number, number]>();
   const waysById = new Map<number, OsmWay>();
@@ -164,16 +188,18 @@ function buildingsToParcels(elements: OsmElement[]): DcadParcel[] {
     outerRing: [number, number][],
   ) => {
     if (seen.has(id)) return;
+    if (!looksResidential(tags)) return;
     // Filter obvious noise but be generous — dense urban buildings can be
     // large (apartments, condos) and we still want them as "homes".
     const area = ringAreaSqMeters(outerRing);
-    if (area < 15) return; // sheds / map noise
+    if (area < 40) return; // sheds / map noise (~430 sq ft)
+    if (area > 20_000) return; // huge footprints are usually not single homes
     const c = centroidOfRing(outerRing);
     const address = formatOsmAddress(tags);
     const areaSqft = Math.round(area * 10.7639);
     parcels.push({
       id,
-      headline: address ?? `Home #${id.replace(/^osm-\w-/, "")}`,
+      headline: address ?? "House (no street address on file)",
       address,
       owner: null,
       city: tags["addr:city"]?.trim() || null,

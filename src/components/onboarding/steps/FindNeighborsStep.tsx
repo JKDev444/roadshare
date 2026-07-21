@@ -58,6 +58,36 @@ function formatDistance(ft: number): string {
   return `${ft.toLocaleString()} ft`;
 }
 
+// Cardinal bearing from (lat1,lng1) → (lat2,lng2). Rough but perfect for a
+// short human locator like "~320 ft NW of your address".
+function bearingLabel(lat1: number, lng1: number, lat2: number, lng2: number): string {
+  const dLat = lat2 - lat1;
+  const dLng = lng2 - lng1;
+  const deg = (Math.atan2(dLng, dLat) * 180) / Math.PI;
+  const norm = (deg + 360) % 360;
+  const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  return dirs[Math.round(norm / 45) % 8];
+}
+
+function distanceFeet(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const mPerDegLat = 111_320;
+  const mPerDegLng = 111_320 * Math.cos((lat1 * Math.PI) / 180);
+  const dx = (lng2 - lng1) * mPerDegLng;
+  const dy = (lat2 - lat1) * mPerDegLat;
+  return Math.round(Math.hypot(dx, dy) * 3.28084);
+}
+
+function locatorLabel(
+  origin: { lat: number; lng: number } | null,
+  p: { lat: number; lng: number },
+): string {
+  if (!origin) return "House on your road";
+  const ft = distanceFeet(origin.lat, origin.lng, p.lat, p.lng);
+  const dir = bearingLabel(origin.lat, origin.lng, p.lat, p.lng);
+  if (ft < 30) return "House at your address";
+  return `House ~${ft.toLocaleString()} ft ${dir} of your address`;
+}
+
 /**
  * Step: auto-find neighbors from a picked address.
  *
@@ -210,11 +240,15 @@ export function FindNeighborsStep({
 
   function confirm() {
     if (state.kind !== "ok") return;
+    const origin =
+      typeof basicInfo.lat === "number" && typeof basicInfo.lng === "number"
+        ? { lat: basicInfo.lat, lng: basicInfo.lng }
+        : null;
     const items = state.parcels
       .filter((p) => selected.has(p.id))
       .map((p, i) => ({
         label: `Home ${i + 1}`,
-        address: p.address ?? p.headline,
+        address: p.address ?? locatorLabel(origin, p),
       }));
     onConfirm({ kind: "addresses", items });
   }
@@ -342,16 +376,25 @@ export function FindNeighborsStep({
           <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs">
             <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-300">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              Found {state.parcels.length} home{state.parcels.length === 1 ? "" : "s"} within {formatDistance(state.radius)}
+              {state.parcels.length} possible home{state.parcels.length === 1 ? "" : "s"} within {formatDistance(state.radius)}
             </span>
             <span className="text-[11px] text-muted-foreground">
               Source: {state.source === "dcad" ? "county parcels" : "OpenStreetMap"}
             </span>
           </div>
+          <p className="-mt-2 px-1 text-[11px] text-muted-foreground">
+            These are buildings the map thinks are houses. Uncheck anything that isn't a home on your road.
+          </p>
 
           <ul className="max-h-72 space-y-1.5 overflow-y-auto rounded-xl border border-border bg-card p-2">
             {state.parcels.map((p, i) => {
               const checked = selected.has(p.id);
+              const origin =
+                typeof basicInfo.lat === "number" && typeof basicInfo.lng === "number"
+                  ? { lat: basicInfo.lat, lng: basicInfo.lng }
+                  : null;
+              const primary = p.address ?? locatorLabel(origin, p);
+              const hasRealAddress = Boolean(p.address);
               return (
                 <li key={p.id}>
                   <label
@@ -367,15 +410,13 @@ export function FindNeighborsStep({
                     />
                     <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">
-                        {p.address || p.headline || `Home ${i + 1}`}
+                      <p className="truncate font-medium">{primary}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {hasRealAddress ? "Address from OpenStreetMap" : "No address on file — you can rename it later"}
+                        {p.areaSqft ? ` · ~${Math.round(p.areaSqft).toLocaleString()} sq ft` : ""}
                       </p>
-                      {p.areaSqft ? (
-                        <p className="text-[11px] text-muted-foreground">
-                          ~{Math.round(p.areaSqft).toLocaleString()} sq ft parcel
-                        </p>
-                      ) : null}
                     </div>
+                    <span className="text-[10px] font-medium text-muted-foreground">#{i + 1}</span>
                   </label>
                 </li>
               );
