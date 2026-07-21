@@ -24,7 +24,7 @@ const VIEW_W = 800;
 const VIEW_H = 520;
 const PADDING = 40;
 
-type ProjectedPolygon = { id: string; label: string; points: string; cx: number; cy: number };
+type ProjectedPolygon = { id: string; label: string; points: string; cx: number; cy: number; size: number };
 type ProjectedRoad = { id: string; name: string; d: string };
 
 type Props = {
