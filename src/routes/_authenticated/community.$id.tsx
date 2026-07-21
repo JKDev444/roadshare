@@ -262,13 +262,51 @@ function CommunityDetail() {
             initialMethod={method}
             onAskForVotes={askForVotes}
           />
-          <div className="border-t border-border pt-6">
-            <h2 className="mb-3 font-display text-lg font-bold tracking-tight">Manage homes</h2>
-            <PropertiesTab communityId={id} parcels={p} loading={parcels.isLoading} />
-          </div>
+          <ManageHomesSection communityId={id} parcels={p} loading={parcels.isLoading} />
         </div>
       </div>
     </AppShell>
+  );
+}
+
+function ManageHomesSection({
+  communityId,
+  parcels,
+  loading,
+}: {
+  communityId: string;
+  parcels: Parcel[];
+  loading: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-t border-border pt-6">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left hover:bg-accent/40"
+      >
+        <span className="flex items-center gap-3">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted text-muted-foreground">
+            <HomeIcon className="h-4 w-4" />
+          </span>
+          <span className="min-w-0">
+            <span className="block font-display text-sm font-bold tracking-tight">
+              Edit the list of homes
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              {parcels.length.toLocaleString()} {parcels.length === 1 ? "home" : "homes"} — add, rename, or remove
+            </span>
+          </span>
+        </span>
+        <span className="text-xs font-semibold text-primary">{open ? "Hide" : "Open"}</span>
+      </button>
+      {open && (
+        <div className="mt-4">
+          <PropertiesTab communityId={communityId} parcels={parcels} loading={loading} />
+        </div>
+      )}
+    </div>
   );
 }
 

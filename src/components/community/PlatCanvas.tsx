@@ -24,7 +24,7 @@ const VIEW_W = 800;
 const VIEW_H = 520;
 const PADDING = 40;
 
-type ProjectedPolygon = { id: string; label: string; points: string; cx: number; cy: number };
+type ProjectedPolygon = { id: string; label: string; points: string; cx: number; cy: number; size: number };
 type ProjectedRoad = { id: string; name: string; d: string };
 
 type Props = {
@@ -191,18 +191,29 @@ export function PlatCanvas({
                 strokeWidth={sw}
                 filter="url(#pc-shadow)"
               />
-              <text
-                x={p.cx}
-                y={p.cy}
-                fill="hsl(220 25% 25%)"
-                fontSize={p.label.length > 8 ? 8.5 : 9.5}
-                fontWeight={isSel || isYou ? 700 : 500}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                pointerEvents="none"
-              >
-                {p.label}
-              </text>
+              {p.size >= 22 && (
+                <text
+                  x={p.cx}
+                  y={p.cy}
+                  fill="hsl(220 25% 25%)"
+                  fontSize={Math.min(10, Math.max(6, p.size * 0.32))}
+                  fontWeight={isSel || isYou ? 700 : 500}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  pointerEvents="none"
+                >
+                  {p.label}
+                </text>
+              )}
+              {(isYou || isSel) && p.size < 22 && (
+                <circle
+                  cx={p.cx}
+                  cy={p.cy}
+                  r={2.5}
+                  fill={isYou ? "var(--color-gold, hsl(42 90% 60%))" : "var(--primary, hsl(200 80% 55%))"}
+                  pointerEvents="none"
+                />
+              )}
             </g>
           );
         })}
@@ -261,12 +272,8 @@ function layout(parcels: Parcel[], segments: RoadSegment[]): {
     return { polys: [], roads: [], empty: true };
   }
 
-  // Bail out on very large communities — cramming hundreds of tiny rects into a
-  // fixed viewBox produces illegible label soup. Above ~120 parcels the road
-  // picture becomes noise; the search box is a better way to find your home.
-  if (parcels.length > 120 && segments.length === 0) {
-    return { polys: [], roads: [], empty: false, tooManyOrphans: true };
-  }
+  // For very large communities without geometry, fall through to the orphan
+  // grid below. We render homes as small dots so hundreds still fit clearly.
 
   // Compute bounds; if no geometry, invent a synthetic box for the orphans grid.
   let minLng: number;
@@ -328,32 +335,46 @@ function layout(parcels: Parcel[], segments: RoadSegment[]): {
     // Skip degenerate ring
     let sumX = 0;
     let sumY = 0;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const [x, y] of pts) {
       sumX += x;
       sumY += y;
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
     }
     const cx = pts.length ? sumX / pts.length : 0;
     const cy = pts.length ? sumY / pts.length : 0;
     const points = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-    return { id: p.id, label: p.label ?? "Home", points, cx, cy };
+    const size = pts.length ? Math.min(maxX - minX, maxY - minY) : 0;
+    return { id: p.id, label: p.label ?? "Home", points, cx, cy, size };
   });
 
   // Lay out orphan parcels in a grid across the bottom of the canvas.
   if (orphans.length > 0) {
-    const cols = Math.min(orphans.length, Math.max(4, Math.ceil(Math.sqrt(orphans.length))));
+    // Fit an aspect-aware grid inside the available canvas so hundreds of
+    // homes stay legible (as small tiles) rather than getting hidden.
+    const areaW = VIEW_W - PADDING * 2;
+    const areaH = VIEW_H - PADDING * 2;
+    const cols = Math.max(
+      1,
+      Math.min(orphans.length, Math.round(Math.sqrt((orphans.length * areaW) / areaH))),
+    );
     const rows = Math.ceil(orphans.length / cols);
-    const cellW = (VIEW_W - PADDING * 2) / cols;
-    const cellH = 46;
-    const gridTop = VIEW_H - PADDING - rows * cellH;
+    const cellW = areaW / cols;
+    const cellH = Math.min(46, areaH / rows);
+    const gap = Math.min(8, Math.max(2, cellH * 0.15));
+    const gridTop = PADDING + (areaH - rows * cellH) / 2;
     orphans.forEach((p, i) => {
       const col = i % cols;
       const row = Math.floor(i / cols);
-      const x = PADDING + col * cellW + 4;
-      const y = gridTop + row * cellH + 4;
-      const w = cellW - 8;
-      const h = cellH - 8;
+      const x = PADDING + col * cellW + gap / 2;
+      const y = gridTop + row * cellH + gap / 2;
+      const w = cellW - gap;
+      const h = cellH - gap;
       const points = `${x},${y} ${x + w},${y} ${x + w},${y + h} ${x},${y + h}`;
-      polys.push({ id: p.id, label: p.label ?? "Home", points, cx: x + w / 2, cy: y + h / 2 });
+      polys.push({ id: p.id, label: p.label ?? "Home", points, cx: x + w / 2, cy: y + h / 2, size: Math.min(w, h) });
     });
   }
 

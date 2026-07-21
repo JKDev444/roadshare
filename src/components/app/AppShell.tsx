@@ -86,7 +86,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside
         data-app-sidebar
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-card transition-transform lg:static lg:transform-none",
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-card transition-transform lg:static lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
@@ -142,12 +142,19 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur lg:px-8">
           <button
-            className="lg:hidden"
+            className="inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground lg:hidden"
             onClick={() => setOpen(true)}
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
+            <span>Menu</span>
           </button>
+          <Link to="/dashboard" className="flex items-center gap-2 lg:hidden">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+              <RouteIcon className="h-4 w-4" />
+            </span>
+            <span className="font-display text-base font-bold tracking-tight">RoadShare</span>
+          </Link>
           <div className="flex-1" />
         </header>
         <main className="flex-1 p-4 lg:p-8">{children}</main>
