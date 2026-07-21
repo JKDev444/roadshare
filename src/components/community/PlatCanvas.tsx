@@ -324,14 +324,20 @@ function layout(parcels: Parcel[], segments: RoadSegment[]): {
     // Skip degenerate ring
     let sumX = 0;
     let sumY = 0;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const [x, y] of pts) {
       sumX += x;
       sumY += y;
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
     }
     const cx = pts.length ? sumX / pts.length : 0;
     const cy = pts.length ? sumY / pts.length : 0;
     const points = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-    return { id: p.id, label: p.label ?? "Home", points, cx, cy };
+    const size = pts.length ? Math.min(maxX - minX, maxY - minY) : 0;
+    return { id: p.id, label: p.label ?? "Home", points, cx, cy, size };
   });
 
   // Lay out orphan parcels in a grid across the bottom of the canvas.
@@ -357,7 +363,7 @@ function layout(parcels: Parcel[], segments: RoadSegment[]): {
       const w = cellW - gap;
       const h = cellH - gap;
       const points = `${x},${y} ${x + w},${y} ${x + w},${y + h} ${x},${y + h}`;
-      polys.push({ id: p.id, label: p.label ?? "Home", points, cx: x + w / 2, cy: y + h / 2 });
+      polys.push({ id: p.id, label: p.label ?? "Home", points, cx: x + w / 2, cy: y + h / 2, size: Math.min(w, h) });
     });
   }
 
