@@ -10,6 +10,8 @@ import {
   Settings,
   X,
   Home,
+  Users,
+  FileText,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +30,8 @@ interface NavLink {
 const PRIMARY: NavLink[] = [
   { to: "/dashboard", label: "Home", icon: Home, tint: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400" },
   { to: "/map", label: "My Road", icon: MapIcon, tint: "bg-teal-500/15 text-teal-600 dark:text-teal-400" },
+  { to: "/community", label: "Neighbors", icon: Users, tint: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
+  { to: "/documents", label: "Documents & Decisions", icon: FileText, tint: "bg-rose-500/15 text-rose-600 dark:text-rose-400" },
   { to: "/settings", label: "Settings", icon: Settings, tint: "bg-slate-500/15 text-slate-600 dark:text-slate-400" },
 ];
 
