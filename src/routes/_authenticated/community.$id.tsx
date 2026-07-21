@@ -261,6 +261,37 @@ function CommunityDetail() {
             initialTotal={total}
             initialMethod={method}
             onAskForVotes={askForVotes}
+            editor={{
+              onMoveParcel: async (parcelId, pos) => {
+                await updateParcel(parcelId, id, { pos_x: pos.pos_x, pos_y: pos.pos_y }, { silent: true });
+                qc.invalidateQueries({ queryKey: ["parcels", id] });
+              },
+              onRenameParcel: async (parcelId, label) => {
+                await updateParcel(parcelId, id, { label });
+                qc.invalidateQueries({ queryKey: ["parcels", id] });
+              },
+              onDeleteParcel: async (parcelId) => {
+                const target = p.find((x) => x.id === parcelId);
+                await deleteParcel(parcelId, id, target?.label ?? "Home");
+                qc.invalidateQueries({ queryKey: ["parcels", id] });
+                qc.invalidateQueries({ queryKey: ["events", id] });
+                toast.success("Home removed");
+              },
+              onCreateParcel: async (label, pos) => {
+                await createParcel(id, { label, pos_x: pos.pos_x, pos_y: pos.pos_y });
+                qc.invalidateQueries({ queryKey: ["parcels", id] });
+                qc.invalidateQueries({ queryKey: ["events", id] });
+                toast.success("Home added");
+              },
+              onUpdateRoad: async (segmentId, geometry) => {
+                if (segmentId) {
+                  await updateSegment(segmentId, id, { geometry }, { silent: true });
+                } else {
+                  await createSegment(id, { name: "Main road", geometry, responsibility: "shared" });
+                }
+                qc.invalidateQueries({ queryKey: ["segments", id] });
+              },
+            }}
           />
           <ManageHomesSection communityId={id} parcels={p} loading={parcels.isLoading} />
         </div>

@@ -1,7 +1,7 @@
-import { MapPin, PenLine, Sparkles, ArrowRight } from "lucide-react";
+import { MapPin, PenLine, Sparkles, ArrowRight, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export type StartChoice = "docs" | "address" | "manual";
+export type StartChoice = "docs" | "address" | "manual" | "paste";
 
 /**
  * Step 1: three equal, playful ways to start setting up a road group.
@@ -35,7 +35,7 @@ export function StartChoiceStep({
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
         <ChoiceCard
           icon={<MapPin className="h-6 w-6" />}
           title="Type your address"
@@ -45,9 +45,17 @@ export function StartChoiceStep({
           onClick={() => onPick("address")}
         />
         <ChoiceCard
+          icon={<ClipboardList className="h-6 w-6" />}
+          title="Paste address list"
+          sub="Have a list of addresses on your road? Paste them in — one per line."
+          hint="Best for known lists"
+          accent="from-primary/20 to-primary/5 text-primary"
+          onClick={() => onPick("paste")}
+        />
+        <ChoiceCard
           icon={<PenLine className="h-6 w-6" />}
           title="Add homes by hand"
-          sub="Paste addresses or add lots one by one."
+          sub="Start blank and drop tiles for each home."
           hint="Works for any community"
           accent="from-fun-3/20 to-fun-3/5 text-fun-3-foreground"
           onClick={() => onPick("manual")}

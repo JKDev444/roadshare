@@ -17,9 +17,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { pathLengthFt, type Parcel, type RoadSegment } from "@/lib/community/api";
+import { pathLengthFt, type Parcel, type Point, type RoadSegment } from "@/lib/community/api";
 import { computeCostShare, formatUSD, type CostMethod } from "@/lib/community/costShare";
 import { PlatCanvas } from "@/components/community/PlatCanvas";
+import { PlatEditor } from "@/components/community/PlatEditor";
 
 type Props = {
   parcels: Parcel[];
@@ -30,6 +31,14 @@ type Props = {
   /** Called when the user asks their neighbors to vote. Should create a decision
    *  and typically writes the id back into the URL. Returns the share URL. */
   onAskForVotes?: (input: { projectName: string; total: number; method: CostMethod }) => Promise<string>;
+  /** When provided, the tab renders the interactive PlatEditor. */
+  editor?: {
+    onMoveParcel: (id: string, pos: { pos_x: number; pos_y: number }) => Promise<void> | void;
+    onRenameParcel: (id: string, label: string) => Promise<void> | void;
+    onDeleteParcel: (id: string) => Promise<void> | void;
+    onCreateParcel: (label: string, pos: { pos_x: number; pos_y: number }) => Promise<void> | void;
+    onUpdateRoad: (segmentId: string | null, geometry: Point[]) => Promise<void> | void;
+  };
 };
 
 type StepId = "home" | "road" | "project" | "split" | "result";
@@ -59,6 +68,7 @@ export function MyRoadTab({
   initialTotal,
   initialMethod,
   onAskForVotes,
+  editor,
 }: Props) {
   const sharedIn = !!(initialProject || initialTotal || initialMethod);
   const [step, setStep] = useState<StepId>(sharedIn ? "home" : "home");
@@ -126,18 +136,38 @@ export function MyRoadTab({
           Start here → tap your home on the picture below.
         </div>
       )}
-      <PlatCanvas
-        parcels={parcels}
-        segments={segments}
-        title="Your road"
-        className="fun-shadow-sm"
-        selectedIds={yourHomeId ? [yourHomeId] : []}
-        youId={yourHomeId}
-        onSelectParcel={(id) => {
-          setYourHomeId(id);
-          if (step === "home") setStep("road");
-        }}
-      />
+      {editor ? (
+        <PlatEditor
+          parcels={parcels}
+          segments={segments}
+          title="Your road"
+          className="fun-shadow-sm"
+          selectedIds={yourHomeId ? [yourHomeId] : []}
+          youId={yourHomeId}
+          onSelectParcel={(id) => {
+            setYourHomeId(id);
+            if (step === "home") setStep("road");
+          }}
+          onMoveParcel={editor.onMoveParcel}
+          onRenameParcel={editor.onRenameParcel}
+          onDeleteParcel={editor.onDeleteParcel}
+          onCreateParcel={editor.onCreateParcel}
+          onUpdateRoad={editor.onUpdateRoad}
+        />
+      ) : (
+        <PlatCanvas
+          parcels={parcels}
+          segments={segments}
+          title="Your road"
+          className="fun-shadow-sm"
+          selectedIds={yourHomeId ? [yourHomeId] : []}
+          youId={yourHomeId}
+          onSelectParcel={(id) => {
+            setYourHomeId(id);
+            if (step === "home") setStep("road");
+          }}
+        />
+      )}
 
       {/* Step rail */}
       <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-card/90 p-2 text-xs shadow-sm sm:grid-cols-5">
