@@ -216,7 +216,7 @@ function SearchAddresses({
   function add(hit: NominatimHit) {
     const address = formatHit(hit);
     if (selected.some((s) => s.address === address)) return;
-    setSelected((prev) => [...prev, { label: `Lot ${prev.length + 1}`, address }]);
+    setSelected((prev) => [...prev, { label: `Home ${prev.length + 1}`, address }]);
     setQuery("");
     setHits([]);
   }
@@ -384,7 +384,7 @@ function ManualLots({
               className="col-span-2"
               value={r.lot ?? ""}
               onChange={(e) => update(i, { lot: e.target.value })}
-              placeholder="Lot #"
+              placeholder="Home #"
             />
             <Input
               className="col-span-3"

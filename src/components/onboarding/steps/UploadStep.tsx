@@ -89,7 +89,7 @@ export function UploadStep({
       <div>
         <h2 className="font-display text-xl font-semibold">Upload your road or community documents</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          RoadShare will look for community names, lot references, road names, maintenance
+          RoadShare will look for community names, home references, road names, maintenance
           responsibilities, and cost-sharing language.
         </p>
       </div>

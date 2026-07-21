@@ -10,7 +10,7 @@ function rowsFor(draft: CcrDraft): Row[] {
     { label: "Community name", state: m.community_found ? "found" : "missing" },
     { label: "Region", state: m.region_found ? "found" : "missing" },
     {
-      label: `${m.lot_refs_found ?? draft.lots.length} lot references`,
+      label: `${m.lot_refs_found ?? draft.lots.length} homes`,
       state: (m.lot_refs_found ?? draft.lots.length) > 0 ? "found" : "missing",
     },
     {

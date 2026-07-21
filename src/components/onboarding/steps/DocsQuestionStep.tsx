@@ -30,7 +30,7 @@ export function DocsQuestionStep({
       id: "no",
       icon: X,
       title: "No documents — enter by hand",
-      body: "Paste an address list, search, or add lots manually. Documents can be uploaded later.",
+      body: "Paste an address list, search, or add homes manually. Documents can be uploaded later.",
     },
     {
       id: "unsure",
