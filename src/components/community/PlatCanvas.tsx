@@ -261,12 +261,8 @@ function layout(parcels: Parcel[], segments: RoadSegment[]): {
     return { polys: [], roads: [], empty: true };
   }
 
-  // Bail out on very large communities — cramming hundreds of tiny rects into a
-  // fixed viewBox produces illegible label soup. Above ~120 parcels the road
-  // picture becomes noise; the search box is a better way to find your home.
-  if (parcels.length > 120 && segments.length === 0) {
-    return { polys: [], roads: [], empty: false, tooManyOrphans: true };
-  }
+  // For very large communities without geometry, fall through to the orphan
+  // grid below. We render homes as small dots so hundreds still fit clearly.
 
   // Compute bounds; if no geometry, invent a synthetic box for the orphans grid.
   let minLng: number;
