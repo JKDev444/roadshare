@@ -27,9 +27,9 @@ type FoundParcel = {
 
 type LoadState =
   | { kind: "idle" }
-  | { kind: "loading"; radius: number }
+  | { kind: "loading"; radius: number; attempt: number }
   | { kind: "ok"; radius: number; parcels: FoundParcel[]; source: "dcad" | "osm" }
-  | { kind: "empty"; radius: number }
+  | { kind: "empty"; radius: number; exhausted: boolean }
   | { kind: "error"; message: string };
 
 // Feet. We start tight (in-town neighborhoods) and expand aggressively so
@@ -78,9 +78,9 @@ export function FindNeighborsStep({
     typeof basicInfo.lat === "number" && typeof basicInfo.lng === "number";
 
   const runLookup = useCallback(
-    async (radiusFt: number) => {
+    async (radiusFt: number, attempt = 1) => {
       if (!hasCoords) return;
-      setState({ kind: "loading", radius: radiusFt });
+      setState({ kind: "loading", radius: radiusFt, attempt });
       try {
         const res = await lookupFn({
           data: {
@@ -99,12 +99,28 @@ export function FindNeighborsStep({
           lng: p.lng,
         }));
         if (parcels.length === 0) {
-          setState({ kind: "empty", radius: radiusFt });
+          // Auto-widen: if there are more radii to try, roll straight into
+          // the next one instead of dead-ending the user at "0 found".
+          const nextIdx = radiusIndex.current + 1;
+          if (nextIdx < RADIUS_STEPS.length) {
+            radiusIndex.current = nextIdx;
+            void runLookup(RADIUS_STEPS[nextIdx], attempt + 1);
+            return;
+          }
+          setState({ kind: "empty", radius: radiusFt, exhausted: true });
         } else {
           setState({ kind: "ok", radius: radiusFt, parcels, source: res.source });
           setSelected(new Set(parcels.map((p) => p.id)));
         }
       } catch (err) {
+        // On transient failure, try the next radius before giving up —
+        // rural lookups against Overpass sometimes need a retry.
+        const nextIdx = radiusIndex.current + 1;
+        if (nextIdx < RADIUS_STEPS.length) {
+          radiusIndex.current = nextIdx;
+          void runLookup(RADIUS_STEPS[nextIdx], attempt + 1);
+          return;
+        }
         setState({
           kind: "error",
           message: err instanceof Error ? err.message : "Lookup failed.",
@@ -207,7 +223,16 @@ export function FindNeighborsStep({
       {state.kind === "loading" && (
         <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-10 text-sm text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          <p>Scanning about {formatDistance(state.radius)} around your home…</p>
+          <p>
+            {state.attempt === 1
+              ? `Scanning about ${formatDistance(state.radius)} around your home…`
+              : `No luck yet — widening the search to ${formatDistance(state.radius)}…`}
+          </p>
+          {state.attempt > 1 && (
+            <p className="text-[11px] text-muted-foreground/80">
+              Rural roads can take a couple of tries.
+            </p>
+          )}
         </div>
       )}
 
