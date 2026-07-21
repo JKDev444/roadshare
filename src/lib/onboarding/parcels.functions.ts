@@ -58,6 +58,8 @@ async function runOverpass(query: string): Promise<OsmElement[]> {
   let lastErr: unknown = null;
   for (const url of OVERPASS_ENDPOINTS) {
     try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 20_000);
       const res = await fetch(url, {
         method: "POST",
         headers: {
@@ -66,7 +68,8 @@ async function runOverpass(query: string): Promise<OsmElement[]> {
           Accept: "application/json",
         },
         body: `data=${encodeURIComponent(query)}`,
-      });
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timer));
       if (!res.ok) {
         lastErr = new Error(`Overpass ${res.status} @ ${new URL(url).host}`);
         continue;
