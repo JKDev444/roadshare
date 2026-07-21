@@ -8,7 +8,7 @@ import { listCommunities } from "@/lib/community/api";
 import { CoachMark } from "@/components/onboarding/CoachMark";
 
 export const Route = createFileRoute("/_authenticated/map")({
-  head: () => ({ meta: [{ title: "GIS & Roads — RoadShare" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "Your Road — RoadShare" }, { name: "robots", content: "noindex" }] }),
   component: MapPage,
 });
 
@@ -19,14 +19,14 @@ function MapPage() {
     <AppShell>
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">GIS & Road Geometry</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">Your road</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Draw, split, and correct private-road centerlines, then assign maintenance responsibility. Pick a community to open its editor.
+            Draw or adjust the road your community shares, then see how costs split fairly.
           </p>
         </div>
-        <CoachMark id="map-index" title="Road geometry powers fair splits">
-          Pick a community to open its road editor. The lengths and frontage you draw here feed
-          the distance- and frontage-based cost allocations.
+        <CoachMark id="map-index" title="Drawing the road sets the fair-share numbers">
+          Open a community to trace the road. The length and frontage you record here are used
+          to split costs fairly between neighbors.
         </CoachMark>
         {isLoading ? (
           <div className="h-32 animate-pulse rounded-2xl border border-border bg-card" />

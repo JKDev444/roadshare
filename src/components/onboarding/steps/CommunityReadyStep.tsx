@@ -49,7 +49,7 @@ export function CommunityReadyStep({
       label:
         roadFeet > 0
           ? `Approximately ${roadFeet.toLocaleString()} feet of roadway`
-          : "Road length still to be measured",
+          : "Road length not measured yet",
       tint: "bg-amber-500/12 text-amber-600 dark:text-amber-500",
     },
     {

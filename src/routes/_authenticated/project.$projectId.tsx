@@ -300,7 +300,7 @@ function AllocationTable({ projectId, method, rows }: { projectId: string; metho
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <th className="px-3 py-2 font-semibold">Lot</th>
+            <th className="px-3 py-2 font-semibold">Home</th>
             <th className="px-3 py-2 font-semibold">Benefits</th>
             {showWeight && <th className="px-3 py-2 font-semibold">Weight</th>}
             {showOverride && <th className="px-3 py-2 font-semibold">Override $</th>}
@@ -430,7 +430,7 @@ function ScenarioCompare({ a, b }: { a: Scenario; b: Scenario }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-2 py-1.5 font-semibold">Lot</th>
+              <th className="px-2 py-1.5 font-semibold">Home</th>
               <th className="px-2 py-1.5 text-right font-semibold">A</th>
               <th className="px-2 py-1.5 text-right font-semibold">B</th>
               <th className="px-2 py-1.5 text-right font-semibold">Δ</th>

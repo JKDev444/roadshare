@@ -157,13 +157,13 @@ function SummarySection({
       <div>
         <h3 className="font-display text-lg font-semibold">Here's what we found</h3>
         <p className="text-xs text-muted-foreground">
-          Nothing has been finalized. You confirm each item before it's used in cost calculations.
+          Nothing is locked in yet. You can confirm or change each item before it is used in cost calculations.
         </p>
       </div>
       <ul className="space-y-1.5 text-sm">
-        <SummaryRow label="Community" value={draft.community.name || "Not found"} />
-        <SummaryRow label="Region" value={draft.community.region || "Not found"} />
-        <SummaryRow label="Lot references" value={String(draft.lots.length)} />
+        <SummaryRow label="Community" value={draft.community.name || "Not set"} />
+        <SummaryRow label="Region" value={draft.community.region || "Not set"} />
+        <SummaryRow label="Homes" value={String(draft.lots.length)} />
         <SummaryRow
           label="With street addresses"
           value={String(draft.lots.filter((l) => l.address).length)}
@@ -171,13 +171,13 @@ function SummarySection({
         <SummaryRow label="Roads" value={String(draft.roads.length)} />
         <SummaryRow
           label="Maintenance summary"
-          value={draft.maintenance_summary ? "Found" : "Not found"}
+          value={draft.maintenance_summary ? "Found" : "Not added yet"}
         />
         <SummaryRow
           label="Cost-sharing formula"
-          value={draft.assessment_formula ? "Possible match" : "Not found"}
+          value={draft.assessment_formula ? "Possible match" : "Not added yet"}
         />
-        <SummaryRow label="Property map (geometry)" value="Not found" />
+        <SummaryRow label="Property map" value="Not added yet" />
       </ul>
       {(draft.meta?.missing_exhibits ?? []).length > 0 && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-xs">
@@ -380,7 +380,7 @@ function RoadsSection({ draft, onChange }: { draft: CcrDraft; onChange: (d: CcrD
               className="h-8 flex-1"
             />
             <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
-              {r.has_geometry ? "Confirmed" : "No geometry"}
+              {r.has_geometry ? "Confirmed" : "Road not drawn"}
             </span>
             <ProvenanceChip p={r.provenance} />
           </li>

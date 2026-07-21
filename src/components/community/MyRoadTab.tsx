@@ -341,7 +341,7 @@ function HomeStep({
       <ul className={cn("grid gap-2 sm:grid-cols-2", bigList && "max-h-[420px] overflow-y-auto pr-1")}>
         {filtered.length === 0 ? (
           <li className="col-span-full rounded-xl border border-dashed border-border bg-background/60 p-4 text-center text-sm text-muted-foreground">
-            No homes match “{query}”. Try a lot number or a street name.
+            No homes match “{query}”. Try a home number or a street name.
           </li>
         ) : (
           filtered.map((p) => {
