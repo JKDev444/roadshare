@@ -5,7 +5,7 @@ export function parseAddressList(text: string): Array<{ label: string; address: 
     .map((l) => l.trim())
     .filter((l) => l.length > 0);
   return lines.slice(0, 250).map((address, i) => ({
-    label: `Lot ${i + 1}`,
+    label: `Home ${i + 1}`,
     address,
   }));
 }

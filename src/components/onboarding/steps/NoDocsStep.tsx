@@ -261,7 +261,7 @@ function SearchAddresses({
         )}
         {query.length >= 3 && !loading && hits.length === 0 && (
           <p className="mt-1 text-xs text-muted-foreground">
-            No matches. Try a different spelling, or use Paste an Address List / Add Lots Manually.
+            No matches. Try a different spelling, or use Paste an Address List / Add Homes Manually.
           </p>
         )}
       </div>

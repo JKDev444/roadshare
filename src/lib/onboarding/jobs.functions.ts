@@ -8,7 +8,7 @@ export const JOB_STAGES = [
   "Checking file quality",
   "Reading document pages",
   "Identifying community and road information",
-  "Looking for properties and lot references",
+  "Looking for properties and home references",
   "Finding maintenance and cost-sharing language",
   "Checking for amendments and missing exhibits",
   "Preparing the review",
