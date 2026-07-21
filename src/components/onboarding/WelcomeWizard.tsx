@@ -67,7 +67,7 @@ const SAMPLE_DRAFT: CcrDraft = {
     { name: "Aspen Court", responsibility: "shared", surface: "gravel", provenance: "sample" as const, has_geometry: true },
   ],
   maintenance_summary:
-    "All 12 lot owners share the cost of grading and snow removal equally.",
+    "All 12 homeowners share the cost of grading and snow removal equally.",
   assessment_formula: "Equal 1/12 share per lot",
   meta: {
     community_found: true,
