@@ -52,10 +52,10 @@ const SAMPLE_DRAFT: CcrDraft = {
   community: {
     name: "Cedar Hollow (Sample)",
     region: "Larimer County, CO",
-    description: "Sample workspace — 12-lot private road community with a shared gravel lane and cul-de-sac. Safe to delete anytime.",
+    description: "Sample workspace — 12-home private road community with a shared gravel lane and cul-de-sac. Safe to delete anytime.",
   },
   lots: Array.from({ length: 12 }).map((_, i) => ({
-    label: `Lot ${i + 1}`,
+    label: `Home ${i + 1}`,
     owner_name: null,
     address: null,
     area_sqft: null,
@@ -294,7 +294,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
       }));
     } else if (r.kind === "manual") {
       lots = r.items.map((it, i) => ({
-        label: it.label || (it.lot ? `Lot ${it.lot}` : `Lot ${i + 1}`),
+        label: it.label || (it.lot ? `Home ${it.lot}` : `Home ${i + 1}`),
         address: it.address || null,
         provenance: "entered" as const,
       }));
@@ -302,8 +302,8 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
     // Include the starting address as first lot when going the "no docs" path.
     if (basicInfo.startingAddress) {
       lots = [
-        { label: "Lot 1", address: basicInfo.startingAddress, provenance: "entered" as const },
-        ...lots.map((l, i) => ({ ...l, label: `Lot ${i + 2}` })),
+        { label: "Home 1", address: basicInfo.startingAddress, provenance: "entered" as const },
+        ...lots.map((l, i) => ({ ...l, label: `Home ${i + 2}` })),
       ];
     }
     const d: CcrDraft = {

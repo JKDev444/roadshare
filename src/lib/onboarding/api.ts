@@ -83,7 +83,7 @@ export async function applyCcrDraft(
       }
       return {
         community_id: community.id,
-        label: lot.label || `Lot ${i + 1}`,
+        label: lot.label || `Home ${i + 1}`,
         owner_name: lot.owner_name ?? null,
         address: lot.address ?? null,
         area_sqft: lot.area_sqft ?? null,
