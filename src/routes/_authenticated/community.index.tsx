@@ -106,26 +106,31 @@ function CommunityIndex() {
                 key={c.id}
                 className="group relative flex flex-col rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-1 hover:shadow-md"
               >
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <MapPinned className="h-5 w-5" />
-                </span>
-                <h3 className="mt-4 font-display text-lg font-semibold">{c.name}</h3>
-                {c.region && <p className="text-xs font-medium text-muted-foreground">{c.region}</p>}
-                {c.description && (
-                  <p className="mt-2 line-clamp-2 flex-1 text-sm text-muted-foreground">{c.description}</p>
-                )}
-                <div className="mt-4 flex items-center justify-between">
-                  <Button size="sm" asChild>
-                    <Link to="/community/$id" params={{ id: c.id }}>
-                      Open my road <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </Button>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <MapPinned className="h-5 w-5" />
+                  </span>
                   <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 shrink-0 text-muted-foreground"
+                          aria-label="Community options"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <AlertDialogTrigger asChild>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete {c.name}?</AlertDialogTitle>
@@ -139,6 +144,18 @@ function CommunityIndex() {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
+                </div>
+                <h3 className="mt-4 font-display text-lg font-semibold">{c.name}</h3>
+                {c.region && <p className="text-xs font-medium text-muted-foreground">{c.region}</p>}
+                {c.description && (
+                  <p className="mt-2 line-clamp-2 flex-1 text-sm text-muted-foreground">{c.description}</p>
+                )}
+                <div className="mt-4 flex items-center">
+                  <Button size="sm" asChild>
+                    <Link to="/community/$id" params={{ id: c.id }}>
+                      Open my road <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
                 </div>
               </div>
             ))}
