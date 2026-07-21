@@ -120,12 +120,23 @@ export function MyRoadTab({
           </p>
         </div>
       )}
-      {/* Always-visible road picture */}
+      {/* Always-visible road picture — clickable to pick your home */}
+      {step === "home" && !yourHomeId && (
+        <div className="rounded-2xl border border-primary/30 bg-primary/5 px-4 py-2 text-xs font-semibold text-primary">
+          Start here → tap your home on the picture below.
+        </div>
+      )}
       <PlatCanvas
         parcels={parcels}
         segments={segments}
         title="Your road"
         className="fun-shadow-sm"
+        selectedIds={yourHomeId ? [yourHomeId] : []}
+        youId={yourHomeId}
+        onSelectParcel={(id) => {
+          setYourHomeId(id);
+          if (step === "home") setStep("road");
+        }}
       />
 
       {/* Step rail */}
@@ -349,11 +360,14 @@ function RoadStep({
   segmentCount: number;
   onNext: () => void;
 }) {
+  const hasRoad = segmentCount > 0;
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        The road picture above shows the stretch of road you'll split. If it doesn't match, add or
-        edit the road below the planner.
+        The road picture above shows the stretch of road you'll split.
+        {hasRoad
+          ? " If it doesn't match, edit the road below the planner."
+          : " We haven't drawn your actual road yet — that's OK. You can still pick a split method and see numbers; add the road later to make the picture match."}
       </p>
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-xl border border-border bg-muted/40 p-3">
@@ -367,8 +381,14 @@ function RoadStep({
           </div>
         </div>
       </div>
+      {!hasRoad && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs">
+          Want the picture to show your actual road? Open <strong>Edit the list of homes</strong> below
+          — you can add a road stretch there. The math still works without it.
+        </div>
+      )}
       <Button className="w-full" onClick={onNext}>
-        Looks right <ArrowRight className="h-4 w-4" />
+        {hasRoad ? "Looks right" : "Continue"} <ArrowRight className="h-4 w-4" />
       </Button>
     </div>
   );
