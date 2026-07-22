@@ -33,7 +33,7 @@ type SectionId =
 const SECTIONS: Array<{ id: SectionId; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { id: "summary", label: "Summary", icon: ClipboardList },
   { id: "community", label: "Community", icon: Building2 },
-  { id: "properties", label: "Properties", icon: Home },
+  { id: "properties", label: "Homes", icon: Home },
   { id: "roads", label: "Roads", icon: RouteIcon },
   { id: "maintenance", label: "Maintenance Rules", icon: Scale },
   { id: "documents", label: "Documents", icon: FileText },
@@ -177,7 +177,7 @@ function SummarySection({
           label="Cost-sharing formula"
           value={draft.assessment_formula ? "Possible match" : "Not added yet"}
         />
-        <SummaryRow label="Property map" value="Not added yet" />
+        <SummaryRow label="Road map" value="Not drawn yet" />
       </ul>
       {(draft.meta?.missing_exhibits ?? []).length > 0 && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-xs">
@@ -282,12 +282,12 @@ function PropertiesSection({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-display text-lg font-semibold">
-            {unresolvedOnly ? "Items to Review" : "Properties"}
+            {unresolvedOnly ? "Items to review" : "Homes"}
           </h3>
           <p className="text-xs text-muted-foreground">
             {unresolvedOnly
-              ? "These properties are missing details you may want to add."
-              : "Confirm the properties. Each shows where it came from."}
+              ? "These homes are missing details you may want to add."
+              : "Confirm each home. We'll show where it came from."}
           </p>
         </div>
         <p className="text-xs text-muted-foreground">{visible.length} of {draft.lots.length}</p>
@@ -295,7 +295,7 @@ function PropertiesSection({
 
       {visible.length === 0 && (
         <div className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-          {unresolvedOnly ? "Nothing needs your attention here." : "No properties yet. Add some from the previous step."}
+          {unresolvedOnly ? "Nothing needs your attention here." : "No homes yet. Add some from the previous step."}
         </div>
       )}
 
@@ -482,11 +482,11 @@ function FinishSection({
       </div>
       <ul className="space-y-1 text-sm">
         <li>Community: <strong>{draft.community.name || "Untitled"}</strong></li>
-        <li>Properties added: {draft.lots.length}{confirmed > 0 ? ` (${confirmed} confirmed)` : ""}</li>
+        <li>Homes added: {draft.lots.length}{confirmed > 0 ? ` (${confirmed} confirmed)` : ""}</li>
         <li>Roads: {draft.roads.length}</li>
         <li>Documents: {filenames.length}</li>
         {unresolved > 0 && (
-          <li className="text-muted-foreground">{unresolved} propert{unresolved === 1 ? "y" : "ies"} can still get an address later — that's fine.</li>
+          <li className="text-muted-foreground">{unresolved} home{unresolved === 1 ? "" : "s"} can still get an address later — that's fine.</li>
         )}
       </ul>
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
