@@ -179,9 +179,9 @@ export function PlatMap({
   }
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       {/* Map title bar */}
-      <div className="flex items-center justify-between border-b border-border/70 bg-card/80 px-4 py-2.5 backdrop-blur">
+      <div className="flex shrink-0 items-center justify-between border-b border-border/70 bg-card/80 px-4 py-2.5 backdrop-blur">
         <div className="flex items-center gap-2">
           <span className="font-display text-sm font-semibold tracking-tight">
             {title ?? layout.roadName}
@@ -217,7 +217,7 @@ export function PlatMap({
       <svg
         viewBox={`0 0 ${VIEW.w} ${VIEW.h}`}
         preserveAspectRatio="xMidYMid meet"
-        className={"block h-full w-full select-none " + (placing ? "cursor-crosshair" : "")}
+        className={"block h-full max-h-full w-full min-h-0 flex-1 select-none " + (placing ? "cursor-crosshair" : "")}
         role="img"
         aria-label={`${title ?? layout.roadName} plat map`}
         onPointerMove={handleMove}
