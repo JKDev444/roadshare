@@ -462,6 +462,13 @@ export function Planner({
 function StepPanel({
   parcels,
   entrancesList,
+  segments,
+  totalSteps,
+  displayStepN,
+  onSetSegmentLength,
+  onSetSegmentWidth,
+  onRenameSegment,
+  onGoToNeighbors,
   step,
   query,
   setQuery,
@@ -482,6 +489,13 @@ function StepPanel({
 }: {
   parcels: LayoutParcel[];
   entrancesList: LayoutEntrance[];
+  segments?: Segment[];
+  totalSteps: number;
+  displayStepN: number;
+  onSetSegmentLength?: (id: string, lengthFt: number | undefined) => void;
+  onSetSegmentWidth?: (id: string, widthFt: number) => void;
+  onRenameSegment?: (id: string) => void;
+  onGoToNeighbors: () => void;
   step: WalkStep;
   query: string;
   setQuery: (value: string) => void;
@@ -510,7 +524,7 @@ function StepPanel({
           <Icon className="h-5 w-5" />
         </span>
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wider text-primary">Step {meta.n} of 4</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-primary">Step {displayStepN} of {totalSteps}</p>
           <h2 className="font-display text-xl font-bold tracking-tight">{meta.title}</h2>
         </div>
       </div>
