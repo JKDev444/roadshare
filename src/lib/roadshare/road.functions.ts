@@ -2,10 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+import type { Json } from "@/integrations/supabase/types";
+
 export type MyRoad = {
   id: string;
   name: string | null;
-  state: Record<string, unknown>;
+  state: Json;
   created_at: string;
   updated_at: string;
 };
