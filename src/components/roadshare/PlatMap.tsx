@@ -6,7 +6,7 @@ interface PlatMapProps {
   you: string | null;
   entrances: string[];
   hovered: string | null;
-  activeStep?: "home" | "neighbors" | "entrances" | "review";
+ activeStep?: "home" | "road" | "neighbors" | "entrances" | "review";
   title?: string;
   rotation?: 0 | 90 | 180 | 270;
   onToggleParcel: (id: string) => void;

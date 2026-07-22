@@ -29,7 +29,7 @@ import { buildLayout, cedarHollowLayout, type Home as RoadHome, type Layout, typ
 import { computeAllocation, type Methodology } from "@/lib/roadshare/engine";
 import { cn } from "@/lib/utils";
 
-type WalkStep = "home" | "neighbors" | "entrances" | "review";
+type WalkStep = "home" | "road" | "neighbors" | "entrances" | "review";
 
 export type PlannerSnapshot = {
   step: WalkStep;
@@ -50,9 +50,10 @@ const METHODS: { id: Methodology; label: string; helper: string }[] = [
 
 const STEP_META: Record<WalkStep, { n: number; title: string; short: string; icon: ComponentType<{ className?: string }> }> = {
   home: { n: 1, title: "Pick your home", short: "Start here", icon: Home },
-  neighbors: { n: 2, title: "Choose who shares", short: "Neighbors", icon: Sparkles },
-  entrances: { n: 3, title: "Confirm entrances", short: "Entrances", icon: MapPin },
-  review: { n: 4, title: "See your share", short: "Result", icon: RouteIcon },
+  road: { n: 2, title: "Confirm your road", short: "Your road", icon: RouteIcon },
+  neighbors: { n: 3, title: "Choose who shares", short: "Neighbors", icon: Sparkles },
+  entrances: { n: 4, title: "Confirm entrances", short: "Entrances", icon: MapPin },
+  review: { n: 5, title: "See your share", short: "Result", icon: RouteIcon },
 };
 
 function homeGroupFor(id: string | null, parcels: LayoutParcel[]) {
@@ -119,6 +120,11 @@ export function Planner({
   }, [homes, roadName, segments]);
   const PARCELS = layout.parcels;
   const ENTRANCES = layout.entrances;
+  const hasRoadStep = !!(segments && segments.length > 0);
+  const visibleSteps: WalkStep[] = hasRoadStep
+    ? ["home", "road", "neighbors", "entrances", "review"]
+    : ["home", "neighbors", "entrances", "review"];
+  const stepIndex = (s: WalkStep) => visibleSteps.indexOf(s);
 
   const [step, setStep] = useState<WalkStep>(initialState?.step ?? "home");
   const [you, setYou] = useState<string | null>(initialState?.you ?? null);
@@ -188,7 +194,7 @@ export function Planner({
     setYou(id);
     setQuery(home.address);
     setSelected((current) => (current.includes(id) ? current : [id, ...current]));
-    setStep("neighbors");
+    setStep(hasRoadStep ? "road" : "neighbors");
   }
 
   function toggleParcel(id: string) {
@@ -248,11 +254,19 @@ export function Planner({
   );
 
   const stepStrip = (
-    <div className="grid gap-2 rounded-2xl border border-border bg-card/90 p-3 text-xs shadow-sm sm:grid-cols-4">
-      {(Object.keys(STEP_META) as WalkStep[]).map((key) => {
+    <div
+      className={cn(
+        "grid gap-2 rounded-2xl border border-border bg-card/90 p-3 text-xs shadow-sm",
+        hasRoadStep ? "sm:grid-cols-5" : "sm:grid-cols-4",
+      )}
+    >
+      {visibleSteps.map((key, idx) => {
         const meta = STEP_META[key];
+        const displayN = idx + 1;
+        const curIdx = stepIndex(step);
         const done =
           (key === "home" && !!you) ||
+          (key === "road" && curIdx > idx) ||
           (key === "neighbors" && selected.length > 1) ||
           (key === "entrances" && entrances.length > 0) ||
           (key === "review" && canReview);
@@ -278,7 +292,7 @@ export function Planner({
             </span>
             <span className="min-w-0">
               <span className="block truncate font-semibold">{meta.short}</span>
-              <span className="block truncate text-muted-foreground">Step {meta.n}</span>
+              <span className="block truncate text-muted-foreground">Step {displayN}</span>
             </span>
           </button>
         );
@@ -292,6 +306,13 @@ export function Planner({
         <StepPanel
           parcels={PARCELS}
           entrancesList={ENTRANCES}
+          segments={segments}
+          totalSteps={visibleSteps.length}
+          displayStepN={stepIndex(step) + 1}
+          onSetSegmentLength={onSetSegmentLength}
+          onSetSegmentWidth={onSetSegmentWidth}
+          onRenameSegment={onRenameSegment}
+          onGoToNeighbors={() => setStep("neighbors")}
           step={step}
           query={query}
           setQuery={setQuery}
@@ -441,6 +462,13 @@ export function Planner({
 function StepPanel({
   parcels,
   entrancesList,
+  segments,
+  totalSteps,
+  displayStepN,
+  onSetSegmentLength,
+  onSetSegmentWidth,
+  onRenameSegment,
+  onGoToNeighbors,
   step,
   query,
   setQuery,
@@ -461,6 +489,13 @@ function StepPanel({
 }: {
   parcels: LayoutParcel[];
   entrancesList: LayoutEntrance[];
+  segments?: Segment[];
+  totalSteps: number;
+  displayStepN: number;
+  onSetSegmentLength?: (id: string, lengthFt: number | undefined) => void;
+  onSetSegmentWidth?: (id: string, widthFt: number) => void;
+  onRenameSegment?: (id: string) => void;
+  onGoToNeighbors: () => void;
   step: WalkStep;
   query: string;
   setQuery: (value: string) => void;
@@ -489,7 +524,7 @@ function StepPanel({
           <Icon className="h-5 w-5" />
         </span>
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wider text-primary">Step {meta.n} of 4</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-primary">Step {displayStepN} of {totalSteps}</p>
           <h2 className="font-display text-xl font-bold tracking-tight">{meta.title}</h2>
         </div>
       </div>
@@ -517,6 +552,73 @@ function StepPanel({
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {step === "road" && segments && (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Set how long each road is (in feet) and how wide. This drives the cost math — leave length blank to use the map's estimate.
+          </p>
+          <ul className="space-y-2">
+            {segments.map((s) => (
+              <li key={s.id} className="rounded-xl border border-border bg-background p-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <RouteIcon className="h-4 w-4 text-primary" />
+                  <span className="min-w-0 flex-1 truncate font-semibold text-sm">{s.name}</span>
+                  {onRenameSegment && (
+                    <button
+                      type="button"
+                      onClick={() => onRenameSegment(s.id)}
+                      className="rounded p-1 text-muted-foreground hover:bg-accent"
+                      aria-label="Rename road"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length (feet)</span>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min={50}
+                      max={20000}
+                      step={10}
+                      className="h-9"
+                      value={s.lengthFt ?? ""}
+                      placeholder="auto"
+                      onChange={(e) => {
+                        const v = e.target.value.trim();
+                        onSetSegmentLength?.(s.id, v === "" ? undefined : Math.max(0, Number(v)));
+                      }}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Width</span>
+                    <select
+                      className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
+                      value={String(s.widthFt)}
+                      onChange={(e) => onSetSegmentWidth?.(s.id, Number(e.target.value))}
+                    >
+                      <option value="12">1 lane · 12 ft</option>
+                      <option value="16">Narrow · 16 ft</option>
+                      <option value="20">2 lane · 20 ft</option>
+                      <option value="24">Wide · 24 ft</option>
+                      <option value="30">Extra wide · 30 ft</option>
+                    </select>
+                  </label>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <Button className="w-full" onClick={onGoToNeighbors}>
+            Looks right — next <ArrowRight className="h-4 w-4" />
+          </Button>
+          <p className="text-[11px] text-muted-foreground">
+            Tip: you can also add more roads or edit them later from the "Roads" panel below.
+          </p>
         </div>
       )}
 
