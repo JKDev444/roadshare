@@ -39,7 +39,7 @@ function MyRoadPage() {
 
   const handleStateChange = useCallback(
     (snapshot: PlannerSnapshot) => {
-      void save({ data: { state: snapshot as unknown as Record<string, unknown> } }).catch(() => {
+      void save({ data: { state: snapshot as unknown as import("@/integrations/supabase/types").Json } }).catch(() => {
         /* silent — next change retries */
       });
     },
