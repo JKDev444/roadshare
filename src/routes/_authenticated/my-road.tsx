@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Planner, type PlannerSnapshot } from "@/components/roadshare/Planner";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import type { Home as RoadHome } from "@/lib/roadshare/layout";
 import { getMyRoad, resetMyRoad, saveMyRoadState } from "@/lib/roadshare/road.functions";
 
 export const Route = createFileRoute("/_authenticated/my-road")({
@@ -21,6 +22,10 @@ export const Route = createFileRoute("/_authenticated/my-road")({
   beforeLoad: async () => {
     const road = await getMyRoad();
     if (!road) throw redirect({ to: "/welcome" });
+    const st = (road.state ?? null) as { homes?: RoadHome[] } | null;
+    if (!st || !Array.isArray(st.homes) || st.homes.length === 0) {
+      throw redirect({ to: "/welcome" });
+    }
     return { road };
   },
   loader: ({ context }) => context.road,
@@ -35,15 +40,28 @@ function MyRoadPage() {
   const save = useServerFn(saveMyRoadState);
   const [busy, setBusy] = useState(false);
 
-  const initialSnapshot = (road.state ?? null) as Partial<PlannerSnapshot> | null;
+  const state = (road.state ?? {}) as Partial<PlannerSnapshot> & { homes?: RoadHome[]; roadName?: string };
+  const homes = state.homes ?? [];
+  const roadName = state.roadName ?? road.name ?? "My road";
+  const initialSnapshot: Partial<PlannerSnapshot> = {
+    step: state.step,
+    you: state.you ?? null,
+    selected: state.selected ?? [],
+    entrances: state.entrances ?? [],
+    methodology: state.methodology,
+    roadWidth: state.roadWidth,
+    fundingPeriod: state.fundingPeriod,
+    surfaces: state.surfaces,
+  };
 
   const handleStateChange = useCallback(
     (snapshot: PlannerSnapshot) => {
-      void save({ data: { state: snapshot as unknown as import("@/integrations/supabase/types").Json } }).catch(() => {
+      const merged = { ...snapshot, homes, roadName } as unknown as import("@/integrations/supabase/types").Json;
+      void save({ data: { state: merged } }).catch(() => {
         /* silent — next change retries */
       });
     },
-    [save],
+    [save, homes, roadName],
   );
 
   // Easter egg: typing "roadshare" resets the account and returns to /welcome.
@@ -102,7 +120,7 @@ function MyRoadPage() {
           </div>
         </div>
       </header>
-      <Planner initialState={initialSnapshot} onStateChange={handleStateChange} />
+      <Planner homes={homes} roadName={roadName} initialState={initialSnapshot} onStateChange={handleStateChange} />
     </div>
   );
 }

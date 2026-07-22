@@ -18,7 +18,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { DEFAULTS, ENTRANCES, PARCELS, SURFACE_TYPES } from "@/lib/roadshare/data";
+import { DEFAULTS, SURFACE_TYPES } from "@/lib/roadshare/data";
+import { buildLayout, cedarHollowLayout, type Home as RoadHome, type Layout, type LayoutEntrance, type LayoutParcel } from "@/lib/roadshare/layout";
 import { computeAllocation, type Methodology } from "@/lib/roadshare/engine";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +29,7 @@ export type PlannerSnapshot = {
   step: WalkStep;
   you: string | null;
   selected: string[];
-  entrances: ("west" | "north")[];
+  entrances: string[];
   methodology: Methodology;
   roadWidth: number;
   fundingPeriod: number;
@@ -48,13 +49,13 @@ const STEP_META: Record<WalkStep, { n: number; title: string; short: string; ico
   review: { n: 4, title: "See your share", short: "Result", icon: RouteIcon },
 };
 
-function homeGroupFor(id: string | null) {
-  if (!id) return PARCELS.slice(0, 10).map((p) => p.id);
-  const home = PARCELS.find((p) => p.id === id);
-  if (!home) return PARCELS.slice(0, 10).map((p) => p.id);
+function homeGroupFor(id: string | null, parcels: LayoutParcel[]) {
+  if (!id) return parcels.map((p) => p.id);
+  const home = parcels.find((p) => p.id === id);
+  if (!home) return parcels.map((p) => p.id);
   const street = home.address.replace(/^\d+\s+/, "");
-  const sameStreet = PARCELS.filter((p) => p.address.includes(street)).map((p) => p.id);
-  return sameStreet.length >= 3 ? sameStreet : PARCELS.map((p) => p.id);
+  const sameStreet = parcels.filter((p) => p.address.includes(street)).map((p) => p.id);
+  return sameStreet.length >= 3 ? sameStreet : parcels.map((p) => p.id);
 }
 
 function addressNumber(address: string) {
@@ -62,12 +63,23 @@ function addressNumber(address: string) {
 }
 
 export function Planner({
+  homes,
+  roadName,
   initialState,
   onStateChange,
 }: {
+  homes?: RoadHome[];
+  roadName?: string;
   initialState?: Partial<PlannerSnapshot> | null;
   onStateChange?: (snapshot: PlannerSnapshot) => void;
 } = {}) {
+  const layout = useMemo<Layout>(() => {
+    if (homes && homes.length > 0) return buildLayout(homes, roadName || "My road");
+    return cedarHollowLayout();
+  }, [homes, roadName]);
+  const PARCELS = layout.parcels;
+  const ENTRANCES = layout.entrances;
+
   const [step, setStep] = useState<WalkStep>(initialState?.step ?? "home");
   const [you, setYou] = useState<string | null>(initialState?.you ?? null);
   const [query, setQuery] = useState(() => {
@@ -75,7 +87,9 @@ export function Planner({
     return home?.address ?? "";
   });
   const [selected, setSelected] = useState<string[]>(initialState?.selected ?? []);
-  const [entrances, setEntrances] = useState<("west" | "north")[]>(initialState?.entrances ?? []);
+  const [entrances, setEntrances] = useState<string[]>(
+    initialState?.entrances ?? (homes && homes.length ? layout.entrances.map((e) => e.id) : []),
+  );
   const [hovered, setHovered] = useState<string | null>(null);
   const [methodology, setMethodology] = useState<Methodology>(initialState?.methodology ?? "distance");
   const [roadWidth, setRoadWidth] = useState(initialState?.roadWidth ?? DEFAULTS.roadWidth);
@@ -105,7 +119,7 @@ export function Planner({
     return PARCELS.filter((p) => p.address.toLowerCase().includes(q)).slice(0, 6);
   }, [query]);
 
-  const suggested = useMemo(() => homeGroupFor(you), [you]);
+  const suggested = useMemo(() => homeGroupFor(you, PARCELS), [you, PARCELS]);
 
   const result = useMemo(
     () =>
@@ -118,8 +132,9 @@ export function Planner({
         roadWidth,
         fundingPeriod,
         you,
+        layout,
       }),
-    [selected, entrances, methodology, surfaces, roadWidth, fundingPeriod, you],
+    [selected, entrances, methodology, surfaces, roadWidth, fundingPeriod, you, layout],
   );
 
   const pickedHome = PARCELS.find((p) => p.id === you);
@@ -150,12 +165,12 @@ export function Planner({
     setStep("entrances");
   }
 
-  function toggleEntrance(id: "west" | "north") {
+  function toggleEntrance(id: string) {
     setEntrances((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]));
   }
 
   function useBothEntrances() {
-    setEntrances(["west", "north"]);
+    setEntrances(layout.entrances.map((e) => e.id));
     setStep("review");
   }
 
@@ -164,7 +179,7 @@ export function Planner({
     setYou(null);
     setQuery("");
     setSelected([]);
-    setEntrances([]);
+    setEntrances(homes && homes.length ? layout.entrances.map((e) => e.id) : []);
     setHovered(null);
     setMethodology("distance");
     setRoadWidth(DEFAULTS.roadWidth);
@@ -194,6 +209,7 @@ export function Planner({
             </div>
 
             <PlatMap
+              layout={layout}
               selected={selected}
               you={you}
               entrances={entrances}
@@ -245,6 +261,8 @@ export function Planner({
           <aside className="min-w-0 space-y-3 lg:sticky lg:top-20 lg:h-fit">
             <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
               <StepPanel
+                parcels={PARCELS}
+                entrancesList={ENTRANCES}
                 step={step}
                 query={query}
                 setQuery={setQuery}
@@ -307,6 +325,8 @@ export function Planner({
 }
 
 function StepPanel({
+  parcels,
+  entrancesList,
   step,
   query,
   setQuery,
@@ -325,20 +345,22 @@ function StepPanel({
   onGoToReview,
   canReview,
 }: {
+  parcels: LayoutParcel[];
+  entrancesList: LayoutEntrance[];
   step: WalkStep;
   query: string;
   setQuery: (value: string) => void;
-  matches: typeof PARCELS;
-  pickedHome?: (typeof PARCELS)[number];
+  matches: LayoutParcel[];
+  pickedHome?: LayoutParcel;
   selected: string[];
   suggested: string[];
-  entrances: ("west" | "north")[];
+  entrances: string[];
   methodology: Methodology;
   setMethodology: (value: Methodology) => void;
   onPickHome: (id: string) => void;
   onUseSuggestions: () => void;
   onClearNeighbors: () => void;
-  onToggleEntrance: (id: "west" | "north") => void;
+  onToggleEntrance: (id: string) => void;
   onUseBothEntrances: () => void;
   onGoToReview: () => void;
   canReview: boolean;
@@ -366,7 +388,7 @@ function StepPanel({
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Try 101 Cedar Hollow Lane" className="h-11 pl-9" />
           </div>
           <div className="space-y-2">
-            {(matches.length > 0 ? matches : PARCELS.slice(0, 4)).map((p) => (
+            {(matches.length > 0 ? matches : parcels.slice(0, 4)).map((p) => (
               <button
                 key={p.id}
                 type="button"
@@ -412,7 +434,7 @@ function StepPanel({
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">Pick where the private road connects to public roads. Most communities use both in this sample.</p>
           <div className="space-y-2">
-            {ENTRANCES.map((entrance) => {
+            {entrancesList.map((entrance) => {
               const active = entrances.includes(entrance.id);
               return (
                 <button
