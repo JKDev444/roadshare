@@ -41,6 +41,7 @@ export function NoDocsStep({
   onUploadInstead,
   onBack,
   submitting,
+  initialMode = "menu",
 }: {
   state?: string;
   basicInfo: BasicInfo;
@@ -48,8 +49,14 @@ export function NoDocsStep({
   onUploadInstead: () => void;
   onBack: () => void;
   submitting?: boolean;
+  initialMode?: Mode;
 }) {
-  const [mode, setMode] = useState<Mode>("menu");
+  const [mode, setMode] = useState<Mode>(initialMode);
+  // When the user was routed straight to a sub-mode from Step 1, "Back"
+  // should exit onboarding to Step 1 rather than reveal the intermediate
+  // chooser menu they never saw.
+  const backToStart = initialMode !== "menu";
+  const subCancel = () => (backToStart ? onBack() : setMode("menu"));
 
   if (mode === "menu") {
     return (
@@ -119,16 +126,16 @@ export function NoDocsStep({
   }
 
   if (mode === "search") {
-    return <SearchAddresses state={state} onCancel={() => setMode("menu")} onSubmit={onSubmit} submitting={submitting} />;
+    return <SearchAddresses state={state} onCancel={subCancel} onSubmit={onSubmit} submitting={submitting} />;
   }
   if (mode === "paste") {
-    return <PasteList onCancel={() => setMode("menu")} onSubmit={onSubmit} submitting={submitting} />;
+    return <PasteList onCancel={subCancel} onSubmit={onSubmit} submitting={submitting} />;
   }
   if (mode === "manual") {
-    return <ManualLots onCancel={() => setMode("menu")} onSubmit={onSubmit} submitting={submitting} />;
+    return <ManualLots onCancel={subCancel} onSubmit={onSubmit} submitting={submitting} />;
   }
   return (
-    <EmptyWorkspace onCancel={() => setMode("menu")} onSubmit={onSubmit} submitting={submitting} />
+    <EmptyWorkspace onCancel={subCancel} onSubmit={onSubmit} submitting={submitting} />
   );
 }
 

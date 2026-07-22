@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -104,6 +104,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
   const open = openOverride ?? shouldOpen;
 
   const [step, setStep] = useState<Step>("start");
+  const [nodocsMode, setNodocsMode] = useState<"menu" | "paste" | "manual">("menu");
   const [confirmClose, setConfirmClose] = useState(false);
   const [basicInfo, setBasicInfo] = useState<BasicInfo | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -155,9 +156,14 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
   }, [open, jobId, listActiveJobFn]);
 
   // Restore in-browser resume state when the wizard opens without an in-flight job.
+  const resumeAttemptedRef = useRef(false);
   useEffect(() => {
     if (!open || jobId) return;
     if (step !== "start") return;
+    // Only ever auto-restore once per open — otherwise Back buttons that
+    // return to "start" would immediately be re-forwarded to the saved step.
+    if (resumeAttemptedRef.current) return;
+    resumeAttemptedRef.current = true;
     const saved = loadResumeState(userId);
     if (!saved) return;
     if (saved.basicInfo) setBasicInfo(saved.basicInfo);
@@ -167,6 +173,11 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
       setStep(saved.step as Step);
     }
   }, [open, jobId, step, userId]);
+
+  // Reset the resume guard when the wizard closes, so the next open still restores.
+  useEffect(() => {
+    if (!open) resumeAttemptedRef.current = false;
+  }, [open]);
 
   // Persist a lightweight snapshot whenever the user's step or basicInfo changes.
   useEffect(() => {
@@ -185,8 +196,17 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
     setOpenOverride(false);
     if (markSkip && !completed) update({ wizard_skipped: true });
     if (completed) clearResumeState(userId);
+    // If the user is exiting mid-flow, drop the resume snapshot too so a
+    // "Save & exit" is a real exit — not a trap that reopens the wizard.
+    if (markSkip) clearResumeState(userId);
+    // Strip the ?welcome=1 param so the dashboard behind the wizard is a
+    // clean landing instead of re-triggering forceOpen on refresh.
+    if (typeof window !== "undefined" && window.location.search) {
+      window.history.replaceState(null, "", "/dashboard");
+    }
     setTimeout(() => {
       setStep("start");
+      setNodocsMode("menu");
       setBasicInfo(null);
       setJobId(null);
       setJobFilenames([]);
@@ -412,11 +432,13 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
                 } else if (choice === "address") setStep("basic");
                 else if (choice === "paste") {
                   setBasicInfo({ communityName: "", city: "", state: "", startingAddress: "" });
+                  setNodocsMode("paste");
                   setStep("nodocs");
                 }
                 else {
                   // "manual" — we still need a stub basicInfo for handleNoDocs.
                   setBasicInfo({ communityName: "", city: "", state: "", startingAddress: "" });
+                  setNodocsMode("manual");
                   setStep("nodocs");
                 }
               }}
@@ -491,8 +513,12 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
               basicInfo={basicInfo}
               onSubmit={handleNoDocs}
               onUploadInstead={() => setStep("upload")}
-              onBack={() => setStep("start")}
+              onBack={() => {
+                setNodocsMode("menu");
+                setStep("start");
+              }}
               submitting={applying}
+              initialMode={nodocsMode}
             />
           )}
 
@@ -599,16 +625,16 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
             />
           )}
         </div>
+        {confirmClose && (
+          <ConfirmSaveExit
+            onCancel={() => setConfirmClose(false)}
+            onExit={() => {
+              setConfirmClose(false);
+              close(true);
+            }}
+          />
+        )}
       </DialogContent>
-      {confirmClose && (
-        <ConfirmSaveExit
-          onCancel={() => setConfirmClose(false)}
-          onExit={() => {
-            setConfirmClose(false);
-            close(true);
-          }}
-        />
-      )}
     </Dialog>
   );
 }
@@ -621,7 +647,7 @@ function ConfirmSaveExit({
   onExit: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+    <div className="absolute inset-0 z-[100] flex items-center justify-center rounded-lg bg-black/70 p-4">
       <div className="w-full max-w-sm rounded-2xl border border-border bg-background p-5 shadow-2xl">
         <h3 className="font-display text-lg font-bold">Save and finish later?</h3>
         <p className="mt-2 text-sm text-muted-foreground">
