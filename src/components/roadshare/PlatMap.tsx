@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from "react";
+
 import type { Layout } from "@/lib/roadshare/layout";
 
 interface PlatMapProps {
@@ -6,7 +8,7 @@ interface PlatMapProps {
   you: string | null;
   entrances: string[];
   hovered: string | null;
- activeStep?: "home" | "road" | "neighbors" | "entrances" | "review";
+  activeStep?: "home" | "road" | "neighbors" | "entrances" | "review";
   title?: string;
   rotation?: 0 | 90 | 180 | 270;
   onToggleParcel: (id: string) => void;
@@ -14,6 +16,16 @@ interface PlatMapProps {
   onToggleEntrance: (id: string) => void;
   onRenameParcel?: (id: string) => void;
   onDeleteParcel?: (id: string) => void;
+  /** Called when a home is dragged to a new SVG position (top-left of bbox). */
+  onMoveHome?: (id: string, x: number, y: number) => void;
+  /** Called when a whole road segment is translated. */
+  onMoveSegment?: (id: string, ax: number, ay: number, bx: number, by: number) => void;
+  /** Called when a single endpoint of a road is moved. */
+  onMoveSegmentEndpoint?: (id: string, endpoint: "a" | "b", x: number, y: number) => void;
+  /** When set, the map is in place-a-road mode for this segment id. */
+  placingRoadId?: string | null;
+  onPlaceRoad?: (segmentId: string, ax: number, ay: number, bx: number, by: number) => void;
+  onCancelPlaceRoad?: () => void;
 }
 
 // Axis-aligned bounding box for a rectangular parcel polygon.
@@ -24,6 +36,13 @@ function bbox(poly: [number, number][]) {
   const y = Math.min(...ys);
   return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
 }
+
+const DRAG_THRESHOLD = 4;
+
+type DragState =
+  | { kind: "home"; id: string; startX: number; startY: number; dx: number; dy: number; moved: boolean }
+  | { kind: "segMove"; id: string; startX: number; startY: number; dx: number; dy: number; moved: boolean }
+  | { kind: "segEndpoint"; id: string; endpoint: "a" | "b"; startX: number; startY: number; dx: number; dy: number; moved: boolean };
 
 export function PlatMap({
   layout,
@@ -39,12 +58,126 @@ export function PlatMap({
   onToggleEntrance,
   onRenameParcel,
   onDeleteParcel,
+  onMoveHome,
+  onMoveSegment,
+  onMoveSegmentEndpoint,
+  placingRoadId = null,
+  onPlaceRoad,
+  onCancelPlaceRoad,
 }: PlatMapProps) {
   const { view: VIEW, nodes: NODES, edges: EDGES, entrances: ENTRANCES, parcels: PARCELS } = layout;
   const node = (id: string) => NODES[id];
   const hoveredParcel = PARCELS.find((p) => p.id === hovered);
   // For labels: only draw named-road text overlays for the Cedar Hollow sample.
   const isCedar = ENTRANCES.some((e) => e.id === "north");
+
+  const gRef = useRef<SVGGElement | null>(null);
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const [placeFirst, setPlaceFirst] = useState<{ x: number; y: number } | null>(null);
+  const [placeHover, setPlaceHover] = useState<{ x: number; y: number } | null>(null);
+  const placing = !!placingRoadId;
+
+  function toSvg(clientX: number, clientY: number): { x: number; y: number } | null {
+    const g = gRef.current;
+    if (!g) return null;
+    const svg = g.ownerSVGElement;
+    if (!svg) return null;
+    const ctm = g.getScreenCTM();
+    if (!ctm) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const p = pt.matrixTransform(ctm.inverse());
+    return { x: p.x, y: p.y };
+  }
+
+  function startDrag(kind: DragState["kind"], id: string, endpoint: "a" | "b" | undefined, e: React.PointerEvent) {
+    if (placing) return;
+    (e.target as Element).setPointerCapture(e.pointerId);
+    const pt = toSvg(e.clientX, e.clientY);
+    if (!pt) return;
+    if (kind === "segEndpoint") {
+      setDrag({ kind, id, endpoint: endpoint!, startX: pt.x, startY: pt.y, dx: 0, dy: 0, moved: false });
+    } else {
+      setDrag({ kind: kind as "home" | "segMove", id, startX: pt.x, startY: pt.y, dx: 0, dy: 0, moved: false });
+    }
+  }
+
+  function handleMove(e: React.PointerEvent) {
+    const pt = toSvg(e.clientX, e.clientY);
+    if (!pt) return;
+    if (placing) {
+      setPlaceHover(pt);
+      return;
+    }
+    if (!drag) return;
+    const dx = pt.x - drag.startX;
+    const dy = pt.y - drag.startY;
+    const moved = drag.moved || Math.hypot(dx, dy) > DRAG_THRESHOLD;
+    setDrag({ ...drag, dx, dy, moved });
+  }
+
+  function handleUp(e: React.PointerEvent) {
+    if (placing) {
+      const pt = toSvg(e.clientX, e.clientY);
+      if (!pt) return;
+      if (!placeFirst) {
+        setPlaceFirst(pt);
+        setPlaceHover(pt);
+      } else {
+        if (placingRoadId && onPlaceRoad) {
+          onPlaceRoad(placingRoadId, placeFirst.x, placeFirst.y, pt.x, pt.y);
+        }
+        setPlaceFirst(null);
+        setPlaceHover(null);
+      }
+      return;
+    }
+    if (!drag) return;
+    if (drag.moved) {
+      if (drag.kind === "home" && onMoveHome) {
+        const parcel = PARCELS.find((p) => p.id === drag.id);
+        if (parcel) {
+          const { x, y } = bbox(parcel.poly);
+          onMoveHome(drag.id, x + drag.dx, y + drag.dy);
+        }
+      } else if (drag.kind === "segMove" && onMoveSegment) {
+        const a = NODES[`${drag.id}_W`];
+        const b = NODES[`${drag.id}_E`];
+        if (a && b) onMoveSegment(drag.id, a.x + drag.dx, a.y + drag.dy, b.x + drag.dx, b.y + drag.dy);
+      } else if (drag.kind === "segEndpoint" && onMoveSegmentEndpoint) {
+        const n = NODES[`${drag.id}_${drag.endpoint === "a" ? "W" : "E"}`];
+        if (n) onMoveSegmentEndpoint(drag.id, drag.endpoint, n.x + drag.dx, n.y + drag.dy);
+      }
+    }
+    setDrag(null);
+  }
+
+  // Escape or right-click cancels placement.
+  useEffect(() => {
+    if (!placing) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setPlaceFirst(null);
+        setPlaceHover(null);
+        onCancelPlaceRoad?.();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [placing, onCancelPlaceRoad]);
+
+  function segDelta(id: string): { dax: number; day: number; dbx: number; dby: number } {
+    if (!drag) return { dax: 0, day: 0, dbx: 0, dby: 0 };
+    if (drag.kind === "segMove" && drag.id === id) return { dax: drag.dx, day: drag.dy, dbx: drag.dx, dby: drag.dy };
+    if (drag.kind === "segEndpoint" && drag.id === id) {
+      return drag.endpoint === "a"
+        ? { dax: drag.dx, day: drag.dy, dbx: 0, dby: 0 }
+        : { dax: 0, day: 0, dbx: drag.dx, dby: drag.dy };
+    }
+    return { dax: 0, day: 0, dbx: 0, dby: 0 };
+  }
+
   return (
     <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       {/* Map title bar */}
@@ -54,7 +187,11 @@ export function PlatMap({
             {title ?? layout.roadName}
           </span>
           <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            {activeStep === "home"
+            {placing
+              ? placeFirst
+                ? "Click to place the far end · Esc to cancel"
+                : "Click to place the road start · Esc to cancel"
+              : activeStep === "home"
               ? "Tap a home to start"
               : activeStep === "neighbors"
                 ? "Tap homes to add or remove"
@@ -79,11 +216,23 @@ export function PlatMap({
 
       <svg
         viewBox={`0 0 ${VIEW.w} ${VIEW.h}`}
-        className="block w-full select-none"
+        preserveAspectRatio="xMidYMid meet"
+        className={"block h-full w-full select-none " + (placing ? "cursor-crosshair" : "")}
         role="img"
         aria-label={`${title ?? layout.roadName} plat map`}
+        onPointerMove={handleMove}
+        onPointerUp={handleUp}
+        onContextMenu={(e) => {
+          if (placing) {
+            e.preventDefault();
+            setPlaceFirst(null);
+            setPlaceHover(null);
+            onCancelPlaceRoad?.();
+          }
+        }}
       >
         <g
+          ref={gRef}
           transform={
             rotation
               ? `rotate(${rotation} ${VIEW.w / 2} ${VIEW.h / 2})`
@@ -135,8 +284,9 @@ export function PlatMap({
         {EDGES.map((e) => {
           const a = node(e.a);
           const b = node(e.b);
+          const d = segDelta(e.id);
           return (
-            <line key={`c-${e.id}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="var(--color-map-asphalt-edge)" strokeWidth="24" strokeLinecap="round" />
+            <line key={`c-${e.id}`} x1={a.x + d.dax} y1={a.y + d.day} x2={b.x + d.dbx} y2={b.y + d.dby} stroke="var(--color-map-asphalt-edge)" strokeWidth="24" strokeLinecap="round" />
           );
         })}
         {isCedar && NODES.E && (
@@ -148,26 +298,44 @@ export function PlatMap({
         {EDGES.map((e) => {
           const a = node(e.a);
           const b = node(e.b);
+          const d = segDelta(e.id);
           return (
-            <line key={`a-${e.id}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="var(--color-map-asphalt)" strokeWidth="19" strokeLinecap="round" />
+            <line
+              key={`a-${e.id}`}
+              x1={a.x + d.dax}
+              y1={a.y + d.day}
+              x2={b.x + d.dbx}
+              y2={b.y + d.dby}
+              stroke="var(--color-map-asphalt)"
+              strokeWidth="19"
+              strokeLinecap="round"
+              style={{ cursor: onMoveSegment ? "grab" : "pointer" }}
+              onPointerDown={(ev) => {
+                if (onMoveSegment) {
+                  ev.stopPropagation();
+                  startDrag("segMove", e.id, undefined, ev);
+                }
+              }}
+            />
           );
         })}
         {/* Dashed lane centerlines */}
         {EDGES.map((e) => {
           const a = node(e.a);
           const b = node(e.b);
+          const d = segDelta(e.id);
           return (
             <line
               key={`l-${e.id}`}
-              x1={a.x}
-              y1={a.y}
-              x2={b.x}
-              y2={b.y}
+              x1={a.x + d.dax}
+              y1={a.y + d.day}
+              x2={b.x + d.dbx}
+              y2={b.y + d.dby}
               stroke="var(--color-map-lane)"
               strokeWidth="1.6"
               strokeDasharray="9 8"
               opacity="0.7"
-              style={{ animation: "rs-dash 1.4s linear infinite" }}
+              style={{ animation: "rs-dash 1.4s linear infinite", pointerEvents: "none" }}
             />
           );
         })}
@@ -176,10 +344,11 @@ export function PlatMap({
         {!isCedar && EDGES.map((e) => {
           const a = node(e.a);
           const b = node(e.b);
-          const midX = (a.x + b.x) / 2;
-          const midY = (a.y + b.y) / 2 - 6;
+          const d = segDelta(e.id);
+          const midX = (a.x + d.dax + b.x + d.dbx) / 2;
+          const midY = (a.y + d.day + b.y + d.dby) / 2 - 6;
           return (
-            <text key={`rl-${e.id}`} x={midX} y={midY} fill="var(--color-map-lane)" fontSize="10" fontWeight="600" fontFamily="var(--font-mono)" textAnchor="middle" letterSpacing="1.5" opacity="0.95">
+            <text key={`rl-${e.id}`} x={midX} y={midY} fill="var(--color-map-lane)" fontSize="10" fontWeight="600" fontFamily="var(--font-mono)" textAnchor="middle" letterSpacing="1.5" opacity="0.95" pointerEvents="none">
               {(e.road || layout.roadName).toUpperCase()}
             </text>
           );
@@ -190,7 +359,12 @@ export function PlatMap({
           const isSel = selected.includes(p.id);
           const isYou = you === p.id;
           const isHover = hovered === p.id;
-          const { x, y, w, h } = bbox(p.poly);
+          const bb = bbox(p.poly);
+          const hd = drag && drag.kind === "home" && drag.id === p.id ? { dx: drag.dx, dy: drag.dy } : { dx: 0, dy: 0 };
+          const x = bb.x + hd.dx;
+          const y = bb.y + hd.dy;
+          const w = bb.w;
+          const h = bb.h;
           let fill = "var(--color-map-parcel)";
           let stroke = "var(--color-map-parcel-edge)";
           let sw = 1;
@@ -207,8 +381,14 @@ export function PlatMap({
           return (
             <g
               key={p.id}
-              className="cursor-pointer"
+              style={{ cursor: onMoveHome ? "grab" : "pointer" }}
+              onPointerDown={(e) => {
+                if (placing) return;
+                if (onMoveHome) startDrag("home", p.id, undefined, e);
+              }}
               onClick={(e) => {
+                if (placing) return;
+                if (drag && drag.kind === "home" && drag.id === p.id && drag.moved) return;
                 if (e.shiftKey && onDeleteParcel) {
                   onDeleteParcel(p.id);
                   return;
@@ -232,18 +412,18 @@ export function PlatMap({
               />
               {isSel && (
                 <line
-                  x1={p.frontageLine[0][0]}
-                  y1={p.frontageLine[0][1]}
-                  x2={p.frontageLine[1][0]}
-                  y2={p.frontageLine[1][1]}
+                  x1={p.frontageLine[0][0] + hd.dx}
+                  y1={p.frontageLine[0][1] + hd.dy}
+                  x2={p.frontageLine[1][0] + hd.dx}
+                  y2={p.frontageLine[1][1] + hd.dy}
                   stroke={isYou ? "var(--color-gold)" : "var(--color-selected)"}
                   strokeWidth="4.5"
                   strokeLinecap="round"
                 />
               )}
               <text
-                x={p.label[0]}
-                y={p.label[1]}
+                x={p.label[0] + hd.dx}
+                y={p.label[1] + hd.dy}
                 fill="var(--color-map-ink)"
                 fontSize="9"
                 fontWeight={isYou || isSel ? 700 : 500}
@@ -261,35 +441,83 @@ export function PlatMap({
         {/* Entrances */}
         {ENTRANCES.map((e) => {
           const pinned = entrances.includes(e.id);
+          // Find owning segment + endpoint so drag reshapes the road.
+          const segId = e.node.replace(/_(W|E)$/, "");
+          const endpoint: "a" | "b" = e.node.endsWith("_W") ? "a" : "b";
+          const d = segDelta(segId);
+          const ex = e.x + (endpoint === "a" ? d.dax : d.dbx);
+          const ey = e.y + (endpoint === "a" ? d.day : d.dby);
           return (
-            <g key={e.id} className="cursor-pointer" onClick={() => onToggleEntrance(e.id)}>
+            <g
+              key={e.id}
+              style={{ cursor: onMoveSegmentEndpoint ? "grab" : "pointer" }}
+              onPointerDown={(ev) => {
+                if (placing) return;
+                if (onMoveSegmentEndpoint) {
+                  ev.stopPropagation();
+                  startDrag("segEndpoint", segId, endpoint, ev);
+                }
+              }}
+              onClick={(ev) => {
+                if (placing) return;
+                if (drag && drag.kind === "segEndpoint" && drag.id === segId && drag.moved) return;
+                ev.stopPropagation();
+                onToggleEntrance(e.id);
+              }}
+            >
               {!pinned && (
                 <circle
-                  cx={e.x}
-                  cy={e.y}
+                  cx={ex}
+                  cy={ey}
                   r="13"
                   fill="none"
                   stroke="var(--color-gold)"
                   strokeWidth="2"
-                  style={{ transformOrigin: `${e.x}px ${e.y}px`, animation: "rs-pulse 2s ease-out infinite" }}
+                  style={{ transformOrigin: `${ex}px ${ey}px`, animation: "rs-pulse 2s ease-out infinite" }}
                 />
               )}
               {pinned ? (
-                <g style={{ transformOrigin: `${e.x}px ${e.y}px` }} className="animate-scale-in">
+                <g style={{ transformOrigin: `${ex}px ${ey}px` }} className="animate-scale-in">
                   <path
-                    d={`M ${e.x} ${e.y} C ${e.x - 11} ${e.y - 14}, ${e.x - 9} ${e.y - 30}, ${e.x} ${e.y - 30} C ${e.x + 9} ${e.y - 30}, ${e.x + 11} ${e.y - 14}, ${e.x} ${e.y} Z`}
+                    d={`M ${ex} ${ey} C ${ex - 11} ${ey - 14}, ${ex - 9} ${ey - 30}, ${ex} ${ey - 30} C ${ex + 9} ${ey - 30}, ${ex + 11} ${ey - 14}, ${ex} ${ey} Z`}
                     fill="var(--color-primary)"
                     stroke="var(--color-card)"
                     strokeWidth="1.5"
                   />
-                  <circle cx={e.x} cy={e.y - 21} r="4.5" fill="var(--color-card)" />
+                  <circle cx={ex} cy={ey - 21} r="4.5" fill="var(--color-card)" />
                 </g>
               ) : (
-                <circle cx={e.x} cy={e.y} r="7.5" fill="var(--color-card)" stroke="var(--color-primary)" strokeWidth="2" />
+                <circle cx={ex} cy={ey} r="7.5" fill="var(--color-card)" stroke="var(--color-primary)" strokeWidth="2" />
               )}
             </g>
           );
         })}
+
+        {/* Placing-a-road preview */}
+        {placing && placeFirst && placeHover && (
+          <g pointerEvents="none">
+            <line
+              x1={placeFirst.x}
+              y1={placeFirst.y}
+              x2={placeHover.x}
+              y2={placeHover.y}
+              stroke="var(--color-primary)"
+              strokeWidth="18"
+              strokeOpacity="0.4"
+              strokeLinecap="round"
+            />
+            <line
+              x1={placeFirst.x}
+              y1={placeFirst.y}
+              x2={placeHover.x}
+              y2={placeHover.y}
+              stroke="var(--color-primary)"
+              strokeWidth="2"
+              strokeDasharray="6 6"
+            />
+            <circle cx={placeFirst.x} cy={placeFirst.y} r="6" fill="var(--color-primary)" />
+          </g>
+        )}
 
         {/* Hover tooltip */}
         {hoveredParcel && (
