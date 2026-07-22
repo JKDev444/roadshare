@@ -1,13 +1,20 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate, useRouter, redirect } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { LogOut, RotateCcw, Route as RouteIcon } from "lucide-react";
+import { LogOut, MoreHorizontal, RotateCcw, Route as RouteIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Planner, type PlannerSnapshot } from "@/components/roadshare/Planner";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
-import type { Home as RoadHome } from "@/lib/roadshare/layout";
+import { makeHomeId, type Home as RoadHome } from "@/lib/roadshare/layout";
 import { getMyRoad, resetMyRoad, saveMyRoadState } from "@/lib/roadshare/road.functions";
 
 export const Route = createFileRoute("/_authenticated/my-road")({
@@ -40,9 +47,84 @@ function MyRoadPage() {
   const save = useServerFn(saveMyRoadState);
   const [busy, setBusy] = useState(false);
 
-  const state = (road.state ?? {}) as Partial<PlannerSnapshot> & { homes?: RoadHome[]; roadName?: string };
-  const homes = state.homes ?? [];
+  const state = (road.state ?? {}) as Partial<PlannerSnapshot> & {
+    homes?: RoadHome[];
+    roadName?: string;
+    rotation?: 0 | 90 | 180 | 270;
+  };
+  const initialHomes = state.homes ?? [];
   const roadName = state.roadName ?? road.name ?? "My road";
+  const initialRotation = (state.rotation ?? 0) as 0 | 90 | 180 | 270;
+
+  const [homes, setHomes] = useState<RoadHome[]>(initialHomes);
+  const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(initialRotation);
+  const historyRef = useRef<RoadHome[][]>([initialHomes]);
+  const futureRef = useRef<RoadHome[][]>([]);
+  const [historyTick, setHistoryTick] = useState(0);
+  const canUndo = useMemo(() => historyRef.current.length > 1, [historyTick]);
+  const canRedo = useMemo(() => futureRef.current.length > 0, [historyTick]);
+
+  function pushHistory(next: RoadHome[]) {
+    historyRef.current.push(next);
+    if (historyRef.current.length > 50) historyRef.current.shift();
+    futureRef.current = [];
+    setHomes(next);
+    setHistoryTick((t) => t + 1);
+  }
+
+  function handleAddHome() {
+    const next = [...homes, { id: makeHomeId(), label: `Home ${homes.length + 1}`, address: null }];
+    pushHistory(next);
+  }
+  function handleDeleteHome(id: string) {
+    if (homes.length <= 1) return;
+    const next = homes.filter((h) => h.id !== id);
+    pushHistory(next);
+  }
+  function handleRenameHome(id: string) {
+    const cur = homes.find((h) => h.id === id);
+    if (!cur) return;
+    const initial = cur.address ?? cur.label;
+    const val = typeof window !== "undefined" ? window.prompt("Rename this home", initial) : null;
+    if (val == null) return;
+    const trimmed = val.trim().slice(0, 80);
+    if (!trimmed) return;
+    const next = homes.map((h) => (h.id === id ? { ...h, label: trimmed, address: trimmed } : h));
+    pushHistory(next);
+  }
+  function handleRotate() {
+    setRotation((r) => (((r + 90) % 360) as 0 | 90 | 180 | 270));
+  }
+  function handleUndo() {
+    if (historyRef.current.length <= 1) return;
+    const cur = historyRef.current.pop()!;
+    futureRef.current.push(cur);
+    setHomes(historyRef.current[historyRef.current.length - 1]);
+    setHistoryTick((t) => t + 1);
+  }
+  function handleRedo() {
+    const next = futureRef.current.pop();
+    if (!next) return;
+    historyRef.current.push(next);
+    setHomes(next);
+    setHistoryTick((t) => t + 1);
+  }
+
+  // Keyboard shortcuts: Ctrl/Cmd+Z / Shift+Ctrl+Z
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const meta = e.metaKey || e.ctrlKey;
+      if (!meta || e.key.toLowerCase() !== "z") return;
+      const target = e.target as HTMLElement | null;
+      if (target && ["INPUT", "TEXTAREA"].includes(target.tagName)) return;
+      e.preventDefault();
+      if (e.shiftKey) handleRedo();
+      else handleUndo();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [homes]);
+
   const initialSnapshot: Partial<PlannerSnapshot> = {
     step: state.step,
     you: state.you ?? null,
@@ -56,13 +138,22 @@ function MyRoadPage() {
 
   const handleStateChange = useCallback(
     (snapshot: PlannerSnapshot) => {
-      const merged = { ...snapshot, homes, roadName } as unknown as import("@/integrations/supabase/types").Json;
+      const merged = { ...snapshot, homes, roadName, rotation } as unknown as import("@/integrations/supabase/types").Json;
       void save({ data: { state: merged } }).catch(() => {
         /* silent — next change retries */
       });
     },
-    [save, homes, roadName],
+    [save, homes, roadName, rotation],
   );
+
+  // Persist homes/rotation changes even without planner snapshot changes.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const merged = { homes, roadName, rotation } as unknown as import("@/integrations/supabase/types").Json;
+      void save({ data: { state: merged } }).catch(() => {});
+    }, 700);
+    return () => clearTimeout(t);
+  }, [homes, rotation, roadName, save]);
 
   // Easter egg: typing "roadshare" resets the account and returns to /welcome.
   useEffect(() => {
@@ -110,17 +201,40 @@ function MyRoadPage() {
               <span className="block text-[11px] uppercase tracking-wider text-muted-foreground">RoadShare</span>
             </span>
           </Link>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={doReset} disabled={busy}>
-              <RotateCcw className="h-4 w-4" /> Start over
-            </Button>
-            <Button variant="ghost" size="sm" onClick={signOut}>
-              <LogOut className="h-4 w-4" /> Sign out
-            </Button>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="More options" disabled={busy}>
+                <MoreHorizontal className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={doReset} disabled={busy}>
+                <RotateCcw className="mr-2 h-4 w-4" /> Start over
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={signOut}>
+                <LogOut className="mr-2 h-4 w-4" /> Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
-      <Planner variant="app" homes={homes} roadName={roadName} initialState={initialSnapshot} onStateChange={handleStateChange} />
+      <Planner
+        variant="app"
+        homes={homes}
+        roadName={roadName}
+        initialState={initialSnapshot}
+        onStateChange={handleStateChange}
+        rotation={rotation}
+        onAddHome={handleAddHome}
+        onRenameHome={handleRenameHome}
+        onDeleteHome={handleDeleteHome}
+        onRotate={handleRotate}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+      />
     </div>
   );
 }
