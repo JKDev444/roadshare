@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -156,9 +156,14 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
   }, [open, jobId, listActiveJobFn]);
 
   // Restore in-browser resume state when the wizard opens without an in-flight job.
+  const resumeAttemptedRef = useRef(false);
   useEffect(() => {
     if (!open || jobId) return;
     if (step !== "start") return;
+    // Only ever auto-restore once per open — otherwise Back buttons that
+    // return to "start" would immediately be re-forwarded to the saved step.
+    if (resumeAttemptedRef.current) return;
+    resumeAttemptedRef.current = true;
     const saved = loadResumeState(userId);
     if (!saved) return;
     if (saved.basicInfo) setBasicInfo(saved.basicInfo);
@@ -168,6 +173,11 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
       setStep(saved.step as Step);
     }
   }, [open, jobId, step, userId]);
+
+  // Reset the resume guard when the wizard closes, so the next open still restores.
+  useEffect(() => {
+    if (!open) resumeAttemptedRef.current = false;
+  }, [open]);
 
   // Persist a lightweight snapshot whenever the user's step or basicInfo changes.
   useEffect(() => {
@@ -186,6 +196,9 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
     setOpenOverride(false);
     if (markSkip && !completed) update({ wizard_skipped: true });
     if (completed) clearResumeState(userId);
+    // If the user is exiting mid-flow, drop the resume snapshot too so a
+    // "Save & exit" is a real exit — not a trap that reopens the wizard.
+    if (markSkip) clearResumeState(userId);
     // Strip the ?welcome=1 param so the dashboard behind the wizard is a
     // clean landing instead of re-triggering forceOpen on refresh.
     void navigate({ to: "/dashboard", search: {} as never, replace: true }).catch(() => {});
