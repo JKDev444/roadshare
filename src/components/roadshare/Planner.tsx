@@ -20,6 +20,7 @@ import {
 
 import { PlatMap } from "@/components/roadshare/PlatMap";
 import { ResultsPanel } from "@/components/roadshare/ResultsPanel";
+import { DocumentsPanel } from "@/components/roadshare/DocumentsPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -421,6 +422,7 @@ export function Planner({
               onAssignHomeSegment={onAssignHomeSegment}
             />
           )}
+          <DocumentsPanel />
         </aside>
       </main>
     );
