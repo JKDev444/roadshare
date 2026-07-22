@@ -647,11 +647,8 @@ function ConfirmSaveExit({
   onCancel: () => void;
   onExit: () => void;
 }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  if (!mounted || typeof document === "undefined") return null;
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
       <div className="w-full max-w-sm rounded-2xl border border-border bg-background p-5 shadow-2xl">
         <h3 className="font-display text-lg font-bold">Save and finish later?</h3>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -667,8 +664,7 @@ function ConfirmSaveExit({
           </Button>
         </div>
       </div>
-    </div>,
-    document.body,
+    </div>
   );
 }
 
