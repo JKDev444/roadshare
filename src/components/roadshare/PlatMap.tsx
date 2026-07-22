@@ -8,9 +8,12 @@ interface PlatMapProps {
   hovered: string | null;
   activeStep?: "home" | "neighbors" | "entrances" | "review";
   title?: string;
+  rotation?: 0 | 90 | 180 | 270;
   onToggleParcel: (id: string) => void;
   onHoverParcel: (id: string | null) => void;
   onToggleEntrance: (id: string) => void;
+  onRenameParcel?: (id: string) => void;
+  onDeleteParcel?: (id: string) => void;
 }
 
 // Axis-aligned bounding box for a rectangular parcel polygon.
@@ -30,9 +33,12 @@ export function PlatMap({
   hovered,
   activeStep = "home",
   title,
+  rotation = 0,
   onToggleParcel,
   onHoverParcel,
   onToggleEntrance,
+  onRenameParcel,
+  onDeleteParcel,
 }: PlatMapProps) {
   const { view: VIEW, nodes: NODES, edges: EDGES, entrances: ENTRANCES, parcels: PARCELS } = layout;
   const node = (id: string) => NODES[id];
@@ -77,6 +83,14 @@ export function PlatMap({
         role="img"
         aria-label={`${title ?? layout.roadName} plat map`}
       >
+        <g
+          transform={
+            rotation
+              ? `rotate(${rotation} ${VIEW.w / 2} ${VIEW.h / 2})`
+              : undefined
+          }
+          style={{ transition: "transform 300ms ease" }}
+        >
         <defs>
           <linearGradient id="land" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--color-map-land-top)" />
@@ -195,7 +209,14 @@ export function PlatMap({
             <g
               key={p.id}
               className="cursor-pointer"
-              onClick={() => onToggleParcel(p.id)}
+              onClick={(e) => {
+                if (e.shiftKey && onDeleteParcel) {
+                  onDeleteParcel(p.id);
+                  return;
+                }
+                onToggleParcel(p.id);
+              }}
+              onDoubleClick={() => onRenameParcel?.(p.id)}
               onMouseEnter={() => onHoverParcel(p.id)}
               onMouseLeave={() => onHoverParcel(null)}
             >
@@ -314,6 +335,7 @@ export function PlatMap({
           <text x="40" y="-5" fill="var(--color-map-ink)" fontSize="8.5" fontFamily="var(--font-mono)" textAnchor="middle">
             100 ft
           </text>
+        </g>
         </g>
       </svg>
     </div>
