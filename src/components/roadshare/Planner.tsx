@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { DEFAULTS, SURFACE_TYPES } from "@/lib/roadshare/data";
-import { buildLayout, cedarHollowLayout, type Home, type Layout, type LayoutParcel } from "@/lib/roadshare/layout";
+import { buildLayout, cedarHollowLayout, type Home as RoadHome, type Layout, type LayoutEntrance, type LayoutParcel } from "@/lib/roadshare/layout";
 import { computeAllocation, type Methodology } from "@/lib/roadshare/engine";
 import { cn } from "@/lib/utils";
 
@@ -68,7 +68,7 @@ export function Planner({
   initialState,
   onStateChange,
 }: {
-  homes?: Home[];
+  homes?: RoadHome[];
   roadName?: string;
   initialState?: Partial<PlannerSnapshot> | null;
   onStateChange?: (snapshot: PlannerSnapshot) => void;
@@ -325,6 +325,8 @@ export function Planner({
 }
 
 function StepPanel({
+  parcels,
+  entrancesList,
   step,
   query,
   setQuery,
@@ -343,20 +345,22 @@ function StepPanel({
   onGoToReview,
   canReview,
 }: {
+  parcels: LayoutParcel[];
+  entrancesList: LayoutEntrance[];
   step: WalkStep;
   query: string;
   setQuery: (value: string) => void;
-  matches: typeof PARCELS;
-  pickedHome?: (typeof PARCELS)[number];
+  matches: LayoutParcel[];
+  pickedHome?: LayoutParcel;
   selected: string[];
   suggested: string[];
-  entrances: ("west" | "north")[];
+  entrances: string[];
   methodology: Methodology;
   setMethodology: (value: Methodology) => void;
   onPickHome: (id: string) => void;
   onUseSuggestions: () => void;
   onClearNeighbors: () => void;
-  onToggleEntrance: (id: "west" | "north") => void;
+  onToggleEntrance: (id: string) => void;
   onUseBothEntrances: () => void;
   onGoToReview: () => void;
   canReview: boolean;
@@ -384,7 +388,7 @@ function StepPanel({
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Try 101 Cedar Hollow Lane" className="h-11 pl-9" />
           </div>
           <div className="space-y-2">
-            {(matches.length > 0 ? matches : PARCELS.slice(0, 4)).map((p) => (
+            {(matches.length > 0 ? matches : parcels.slice(0, 4)).map((p) => (
               <button
                 key={p.id}
                 type="button"
@@ -430,7 +434,7 @@ function StepPanel({
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">Pick where the private road connects to public roads. Most communities use both in this sample.</p>
           <div className="space-y-2">
-            {ENTRANCES.map((entrance) => {
+            {entrancesList.map((entrance) => {
               const active = entrances.includes(entrance.id);
               return (
                 <button
