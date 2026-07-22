@@ -1,18 +1,16 @@
-import { EDGES, ENTRANCES, NODES, PARCELS, VIEW, type NodeId } from "@/lib/roadshare/data";
+import type { Layout } from "@/lib/roadshare/layout";
 
 interface PlatMapProps {
+  layout: Layout;
   selected: string[];
   you: string | null;
-  entrances: ("west" | "north")[];
+  entrances: string[];
   hovered: string | null;
   activeStep?: "home" | "neighbors" | "entrances" | "review";
+  title?: string;
   onToggleParcel: (id: string) => void;
   onHoverParcel: (id: string | null) => void;
-  onToggleEntrance: (id: "west" | "north") => void;
-}
-
-function node(id: NodeId) {
-  return NODES[id];
+  onToggleEntrance: (id: string) => void;
 }
 
 // Axis-aligned bounding box for a rectangular parcel polygon.
@@ -25,23 +23,29 @@ function bbox(poly: [number, number][]) {
 }
 
 export function PlatMap({
+  layout,
   selected,
   you,
   entrances,
   hovered,
   activeStep = "home",
+  title,
   onToggleParcel,
   onHoverParcel,
   onToggleEntrance,
 }: PlatMapProps) {
+  const { view: VIEW, nodes: NODES, edges: EDGES, entrances: ENTRANCES, parcels: PARCELS } = layout;
+  const node = (id: string) => NODES[id];
   const hoveredParcel = PARCELS.find((p) => p.id === hovered);
+  // For labels: only draw named-road text overlays for the Cedar Hollow sample.
+  const isCedar = ENTRANCES.some((e) => e.id === "north");
   return (
     <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       {/* Map title bar */}
       <div className="flex items-center justify-between border-b border-border/70 bg-card/80 px-4 py-2.5 backdrop-blur">
         <div className="flex items-center gap-2">
           <span className="font-display text-sm font-semibold tracking-tight">
-            Cedar Hollow
+            {title ?? layout.roadName}
           </span>
           <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
             {activeStep === "home"
@@ -71,7 +75,7 @@ export function PlatMap({
         viewBox={`0 0 ${VIEW.w} ${VIEW.h}`}
         className="block w-full select-none"
         role="img"
-        aria-label="Cedar Hollow plat map"
+        aria-label={`${title ?? layout.roadName} plat map`}
       >
         <defs>
           <linearGradient id="land" x1="0" y1="0" x2="0" y2="1">
@@ -96,15 +100,22 @@ export function PlatMap({
         <rect width={VIEW.w} height={VIEW.h} fill="url(#land)" />
         <rect width={VIEW.w} height={VIEW.h} fill="url(#grid)" />
 
-        {/* Public roads (asphalt bands) */}
-        <PublicRoad d={`M 30 12 L 30 ${VIEW.h - 12}`} width={18} />
-        <PublicRoad d={`M 40 30 L ${VIEW.w - 12} 30`} width={18} />
-        <text x="17" y={VIEW.h / 2} fill="var(--color-map-ink)" fontSize="10.5" fontWeight="600" fontFamily="var(--font-mono)" transform={`rotate(-90 17 ${VIEW.h / 2})`} textAnchor="middle" letterSpacing="1">
-          COUNTY RD 12
-        </text>
-        <text x={VIEW.w - 30} y="22" fill="var(--color-map-ink)" fontSize="10.5" fontWeight="600" fontFamily="var(--font-mono)" textAnchor="end" letterSpacing="1">
-          RIDGE RD
-        </text>
+        {/* Public road stubs at each entrance */}
+        {ENTRANCES.map((e) => (
+          <PublicRoad
+            key={`pub-${e.id}`}
+            d={
+              e.y < 100
+                ? `M ${e.x} 8 L ${e.x} ${e.y}`
+                : e.y > VIEW.h - 100
+                  ? `M ${e.x} ${e.y} L ${e.x} ${VIEW.h - 8}`
+                  : e.x < 100
+                    ? `M 8 ${e.y} L ${e.x} ${e.y}`
+                    : `M ${e.x} ${e.y} L ${VIEW.w - 8} ${e.y}`
+            }
+            width={16}
+          />
+        ))}
 
         {/* Private road casing + asphalt */}
         {EDGES.map((e) => {
@@ -114,8 +125,12 @@ export function PlatMap({
             <line key={`c-${e.id}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="var(--color-map-asphalt-edge)" strokeWidth="24" strokeLinecap="round" />
           );
         })}
-        <circle cx={NODES.E.x} cy={NODES.E.y} r="26" fill="var(--color-map-asphalt-edge)" />
-        <circle cx={NODES.E.x} cy={NODES.E.y} r="21" fill="var(--color-map-asphalt)" />
+        {isCedar && NODES.E && (
+          <>
+            <circle cx={NODES.E.x} cy={NODES.E.y} r="26" fill="var(--color-map-asphalt-edge)" />
+            <circle cx={NODES.E.x} cy={NODES.E.y} r="21" fill="var(--color-map-asphalt)" />
+          </>
+        )}
         {EDGES.map((e) => {
           const a = node(e.a);
           const b = node(e.b);
@@ -143,13 +158,19 @@ export function PlatMap({
           );
         })}
 
-        {/* Road name labels */}
-        <text x="270" y="288" fill="var(--color-map-lane)" fontSize="10" fontWeight="600" fontFamily="var(--font-mono)" textAnchor="middle" letterSpacing="1.5" opacity="0.95">
-          CEDAR HOLLOW LANE
-        </text>
-        <text x="483" y="185" fill="var(--color-map-lane)" fontSize="10" fontWeight="600" fontFamily="var(--font-mono)" transform="rotate(-90 483 185)" textAnchor="middle" letterSpacing="1.5" opacity="0.95">
-          HOLLOW RIDGE CT
-        </text>
+        {/* Road name label (single-edge layouts only) */}
+        {EDGES.length === 1 && (() => {
+          const e = EDGES[0];
+          const a = node(e.a);
+          const b = node(e.b);
+          const midX = (a.x + b.x) / 2;
+          const midY = (a.y + b.y) / 2 - 6;
+          return (
+            <text x={midX} y={midY} fill="var(--color-map-lane)" fontSize="10" fontWeight="600" fontFamily="var(--font-mono)" textAnchor="middle" letterSpacing="1.5" opacity="0.95">
+              {layout.roadName.toUpperCase()}
+            </text>
+          );
+        })()}
 
         {/* Parcels */}
         {PARCELS.map((p) => {
