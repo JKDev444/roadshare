@@ -29,6 +29,7 @@ import { Route as SolutionsAudienceRouteImport } from './routes/solutions.$audie
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedWelcomeRouteImport } from './routes/_authenticated/welcome'
+import { Route as AuthenticatedMyRoadRouteImport } from './routes/_authenticated/my-road'
 
 const ToolsRoute = ToolsRouteImport.update({
   id: '/tools',
@@ -129,6 +130,11 @@ const AuthenticatedWelcomeRoute = AuthenticatedWelcomeRouteImport.update({
   path: '/welcome',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMyRoadRoute = AuthenticatedMyRoadRouteImport.update({
+  id: '/my-road',
+  path: '/my-road',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -143,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tools': typeof ToolsRouteWithChildren
+  '/my-road': typeof AuthenticatedMyRoadRoute
   '/welcome': typeof AuthenticatedWelcomeRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$slug': typeof ProductSlugRoute
@@ -162,6 +169,7 @@ export interface FileRoutesByTo {
   '/robots.txt': typeof RobotsDottxtRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/my-road': typeof AuthenticatedMyRoadRoute
   '/welcome': typeof AuthenticatedWelcomeRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$slug': typeof ProductSlugRoute
@@ -185,6 +193,7 @@ export interface FileRoutesById {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tools': typeof ToolsRouteWithChildren
+  '/_authenticated/my-road': typeof AuthenticatedMyRoadRoute
   '/_authenticated/welcome': typeof AuthenticatedWelcomeRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$slug': typeof ProductSlugRoute
@@ -208,6 +217,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/tools'
+    | '/my-road'
     | '/welcome'
     | '/auth/callback'
     | '/product/$slug'
@@ -227,6 +237,7 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/security'
     | '/sitemap.xml'
+    | '/my-road'
     | '/welcome'
     | '/auth/callback'
     | '/product/$slug'
@@ -249,6 +260,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/tools'
+    | '/_authenticated/my-road'
     | '/_authenticated/welcome'
     | '/auth/callback'
     | '/product/$slug'
@@ -417,14 +429,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWelcomeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/my-road': {
+      id: '/_authenticated/my-road'
+      path: '/my-road'
+      fullPath: '/my-road'
+      preLoaderRoute: typeof AuthenticatedMyRoadRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedMyRoadRoute: typeof AuthenticatedMyRoadRoute
   AuthenticatedWelcomeRoute: typeof AuthenticatedWelcomeRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedMyRoadRoute: AuthenticatedMyRoadRoute,
   AuthenticatedWelcomeRoute: AuthenticatedWelcomeRoute,
 }
 
