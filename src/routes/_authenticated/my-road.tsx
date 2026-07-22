@@ -1,13 +1,13 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate, useRouter, redirect } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { LogOut, RotateCcw, Route as RouteIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { Planner } from "@/components/roadshare/Planner";
+import { Planner, type PlannerSnapshot } from "@/components/roadshare/Planner";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { getMyRoad, resetMyRoad } from "@/lib/roadshare/road.functions";
+import { getMyRoad, resetMyRoad, saveMyRoadState } from "@/lib/roadshare/road.functions";
 
 export const Route = createFileRoute("/_authenticated/my-road")({
   ssr: false,
@@ -32,7 +32,19 @@ function MyRoadPage() {
   const navigate = useNavigate();
   const router = useRouter();
   const reset = useServerFn(resetMyRoad);
+  const save = useServerFn(saveMyRoadState);
   const [busy, setBusy] = useState(false);
+
+  const initialSnapshot = (road.state ?? null) as Partial<PlannerSnapshot> | null;
+
+  const handleStateChange = useCallback(
+    (snapshot: PlannerSnapshot) => {
+      void save({ data: { state: snapshot as unknown as Record<string, unknown> } }).catch(() => {
+        /* silent — next change retries */
+      });
+    },
+    [save],
+  );
 
   // Easter egg: typing "roadshare" resets the account and returns to /welcome.
   useEffect(() => {
@@ -90,7 +102,7 @@ function MyRoadPage() {
           </div>
         </div>
       </header>
-      <Planner />
+      <Planner initialState={initialSnapshot} onStateChange={handleStateChange} />
     </div>
   );
 }
