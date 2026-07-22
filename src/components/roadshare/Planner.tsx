@@ -314,9 +314,9 @@ export function Planner({
       <main className="grid h-[calc(100dvh-57px)] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px]">
         <section className="relative min-w-0 overflow-hidden bg-muted/20">
           <div className="absolute inset-0 flex flex-col">
-            <div className="flex-1 min-h-0 p-3 sm:p-4">
-              <div className="h-full [&>div]:h-full [&_svg]:h-full [&_svg]:w-full">
-                {platBlock}
+            <div className="flex-1 min-h-0 overflow-auto p-3 sm:p-4">
+              <div className="flex h-full items-center justify-center">
+                <div className="w-full max-w-[1200px]">{platBlock}</div>
               </div>
             </div>
             <div className="border-t border-border bg-background/95 p-3 backdrop-blur">
