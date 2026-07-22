@@ -11,9 +11,9 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 function sanitizeRedirect(value: string | undefined): string {
-  if (!value) return "/dashboard";
+  if (!value) return "/my-road";
   if (value.startsWith("/") && !value.startsWith("//")) return value;
-  return "/dashboard";
+  return "/my-road";
 }
 
 export const Route = createFileRoute("/auth")({

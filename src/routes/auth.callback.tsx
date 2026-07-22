@@ -16,7 +16,7 @@ function AuthCallback() {
   function finishSignIn() {
     const stored = window.sessionStorage.getItem("roadshare-post-auth-redirect");
     window.sessionStorage.removeItem("roadshare-post-auth-redirect");
-    const target = stored?.startsWith("/") && !stored.startsWith("//") ? stored : "/dashboard";
+    const target = stored?.startsWith("/") && !stored.startsWith("//") ? stored : "/my-road";
     navigate({ to: target });
   }
 
