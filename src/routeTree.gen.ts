@@ -24,24 +24,11 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ToolsIndexRouteImport } from './routes/tools.index'
 import { Route as ProductIndexRouteImport } from './routes/product.index'
-import { Route as VoteDecisionIdRouteImport } from './routes/vote.$decisionId'
 import { Route as ToolsCedarHollowRouteImport } from './routes/tools.cedar-hollow'
 import { Route as SolutionsAudienceRouteImport } from './routes/solutions.$audience'
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
-import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
-import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
-import { Route as AuthenticatedPulseRouteImport } from './routes/_authenticated/pulse'
-import { Route as AuthenticatedPortfolioRouteImport } from './routes/_authenticated/portfolio'
-import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
-import { Route as AuthenticatedDocumentsRouteImport } from './routes/_authenticated/documents'
-import { Route as AuthenticatedDecisionsRouteImport } from './routes/_authenticated/decisions'
-import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedClausesRouteImport } from './routes/_authenticated/clauses'
-import { Route as AuthenticatedAskRouteImport } from './routes/_authenticated/ask'
-import { Route as AuthenticatedCommunityIndexRouteImport } from './routes/_authenticated/community.index'
-import { Route as AuthenticatedProjectProjectIdRouteImport } from './routes/_authenticated/project.$projectId'
-import { Route as AuthenticatedCommunityIdRouteImport } from './routes/_authenticated/community.$id'
+import { Route as AuthenticatedWelcomeRouteImport } from './routes/_authenticated/welcome'
 
 const ToolsRoute = ToolsRouteImport.update({
   id: '/tools',
@@ -117,11 +104,6 @@ const ProductIndexRoute = ProductIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ProductRoute,
 } as any)
-const VoteDecisionIdRoute = VoteDecisionIdRouteImport.update({
-  id: '/vote/$decisionId',
-  path: '/vote/$decisionId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ToolsCedarHollowRoute = ToolsCedarHollowRouteImport.update({
   id: '/cedar-hollow',
   path: '/cedar-hollow',
@@ -142,74 +124,11 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/callback',
   getParentRoute: () => AuthRoute,
 } as any)
-const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
+const AuthenticatedWelcomeRoute = AuthenticatedWelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedPulseRoute = AuthenticatedPulseRouteImport.update({
-  id: '/pulse',
-  path: '/pulse',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedPortfolioRoute = AuthenticatedPortfolioRouteImport.update({
-  id: '/portfolio',
-  path: '/portfolio',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedMapRoute = AuthenticatedMapRouteImport.update({
-  id: '/map',
-  path: '/map',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedDocumentsRoute = AuthenticatedDocumentsRouteImport.update({
-  id: '/documents',
-  path: '/documents',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedDecisionsRoute = AuthenticatedDecisionsRouteImport.update({
-  id: '/decisions',
-  path: '/decisions',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedClausesRoute = AuthenticatedClausesRouteImport.update({
-  id: '/clauses',
-  path: '/clauses',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAskRoute = AuthenticatedAskRouteImport.update({
-  id: '/ask',
-  path: '/ask',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedCommunityIndexRoute =
-  AuthenticatedCommunityIndexRouteImport.update({
-    id: '/community/',
-    path: '/community/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedProjectProjectIdRoute =
-  AuthenticatedProjectProjectIdRouteImport.update({
-    id: '/project/$projectId',
-    path: '/project/$projectId',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedCommunityIdRoute =
-  AuthenticatedCommunityIdRouteImport.update({
-    id: '/community/$id',
-    path: '/community/$id',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -224,26 +143,13 @@ export interface FileRoutesByFullPath {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tools': typeof ToolsRouteWithChildren
-  '/ask': typeof AuthenticatedAskRoute
-  '/clauses': typeof AuthenticatedClausesRoute
-  '/dashboard': typeof AuthenticatedDashboardRoute
-  '/decisions': typeof AuthenticatedDecisionsRoute
-  '/documents': typeof AuthenticatedDocumentsRoute
-  '/map': typeof AuthenticatedMapRoute
-  '/portfolio': typeof AuthenticatedPortfolioRoute
-  '/pulse': typeof AuthenticatedPulseRoute
-  '/reports': typeof AuthenticatedReportsRoute
-  '/settings': typeof AuthenticatedSettingsRoute
+  '/welcome': typeof AuthenticatedWelcomeRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$slug': typeof ProductSlugRoute
   '/solutions/$audience': typeof SolutionsAudienceRoute
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
-  '/vote/$decisionId': typeof VoteDecisionIdRoute
   '/product/': typeof ProductIndexRoute
   '/tools/': typeof ToolsIndexRoute
-  '/community/$id': typeof AuthenticatedCommunityIdRoute
-  '/project/$projectId': typeof AuthenticatedProjectProjectIdRoute
-  '/community/': typeof AuthenticatedCommunityIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -256,26 +162,13 @@ export interface FileRoutesByTo {
   '/robots.txt': typeof RobotsDottxtRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/ask': typeof AuthenticatedAskRoute
-  '/clauses': typeof AuthenticatedClausesRoute
-  '/dashboard': typeof AuthenticatedDashboardRoute
-  '/decisions': typeof AuthenticatedDecisionsRoute
-  '/documents': typeof AuthenticatedDocumentsRoute
-  '/map': typeof AuthenticatedMapRoute
-  '/portfolio': typeof AuthenticatedPortfolioRoute
-  '/pulse': typeof AuthenticatedPulseRoute
-  '/reports': typeof AuthenticatedReportsRoute
-  '/settings': typeof AuthenticatedSettingsRoute
+  '/welcome': typeof AuthenticatedWelcomeRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$slug': typeof ProductSlugRoute
   '/solutions/$audience': typeof SolutionsAudienceRoute
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
-  '/vote/$decisionId': typeof VoteDecisionIdRoute
   '/product': typeof ProductIndexRoute
   '/tools': typeof ToolsIndexRoute
-  '/community/$id': typeof AuthenticatedCommunityIdRoute
-  '/project/$projectId': typeof AuthenticatedProjectProjectIdRoute
-  '/community': typeof AuthenticatedCommunityIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -292,26 +185,13 @@ export interface FileRoutesById {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tools': typeof ToolsRouteWithChildren
-  '/_authenticated/ask': typeof AuthenticatedAskRoute
-  '/_authenticated/clauses': typeof AuthenticatedClausesRoute
-  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/decisions': typeof AuthenticatedDecisionsRoute
-  '/_authenticated/documents': typeof AuthenticatedDocumentsRoute
-  '/_authenticated/map': typeof AuthenticatedMapRoute
-  '/_authenticated/portfolio': typeof AuthenticatedPortfolioRoute
-  '/_authenticated/pulse': typeof AuthenticatedPulseRoute
-  '/_authenticated/reports': typeof AuthenticatedReportsRoute
-  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/welcome': typeof AuthenticatedWelcomeRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$slug': typeof ProductSlugRoute
   '/solutions/$audience': typeof SolutionsAudienceRoute
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
-  '/vote/$decisionId': typeof VoteDecisionIdRoute
   '/product/': typeof ProductIndexRoute
   '/tools/': typeof ToolsIndexRoute
-  '/_authenticated/community/$id': typeof AuthenticatedCommunityIdRoute
-  '/_authenticated/project/$projectId': typeof AuthenticatedProjectProjectIdRoute
-  '/_authenticated/community/': typeof AuthenticatedCommunityIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -328,26 +208,13 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/tools'
-    | '/ask'
-    | '/clauses'
-    | '/dashboard'
-    | '/decisions'
-    | '/documents'
-    | '/map'
-    | '/portfolio'
-    | '/pulse'
-    | '/reports'
-    | '/settings'
+    | '/welcome'
     | '/auth/callback'
     | '/product/$slug'
     | '/solutions/$audience'
     | '/tools/cedar-hollow'
-    | '/vote/$decisionId'
     | '/product/'
     | '/tools/'
-    | '/community/$id'
-    | '/project/$projectId'
-    | '/community/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -360,26 +227,13 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/security'
     | '/sitemap.xml'
-    | '/ask'
-    | '/clauses'
-    | '/dashboard'
-    | '/decisions'
-    | '/documents'
-    | '/map'
-    | '/portfolio'
-    | '/pulse'
-    | '/reports'
-    | '/settings'
+    | '/welcome'
     | '/auth/callback'
     | '/product/$slug'
     | '/solutions/$audience'
     | '/tools/cedar-hollow'
-    | '/vote/$decisionId'
     | '/product'
     | '/tools'
-    | '/community/$id'
-    | '/project/$projectId'
-    | '/community'
   id:
     | '__root__'
     | '/'
@@ -395,26 +249,13 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/tools'
-    | '/_authenticated/ask'
-    | '/_authenticated/clauses'
-    | '/_authenticated/dashboard'
-    | '/_authenticated/decisions'
-    | '/_authenticated/documents'
-    | '/_authenticated/map'
-    | '/_authenticated/portfolio'
-    | '/_authenticated/pulse'
-    | '/_authenticated/reports'
-    | '/_authenticated/settings'
+    | '/_authenticated/welcome'
     | '/auth/callback'
     | '/product/$slug'
     | '/solutions/$audience'
     | '/tools/cedar-hollow'
-    | '/vote/$decisionId'
     | '/product/'
     | '/tools/'
-    | '/_authenticated/community/$id'
-    | '/_authenticated/project/$projectId'
-    | '/_authenticated/community/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -432,7 +273,6 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ToolsRoute: typeof ToolsRouteWithChildren
   SolutionsAudienceRoute: typeof SolutionsAudienceRoute
-  VoteDecisionIdRoute: typeof VoteDecisionIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -542,13 +382,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductIndexRouteImport
       parentRoute: typeof ProductRoute
     }
-    '/vote/$decisionId': {
-      id: '/vote/$decisionId'
-      path: '/vote/$decisionId'
-      fullPath: '/vote/$decisionId'
-      preLoaderRoute: typeof VoteDecisionIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/tools/cedar-hollow': {
       id: '/tools/cedar-hollow'
       path: '/cedar-hollow'
@@ -577,130 +410,22 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof AuthRoute
     }
-    '/_authenticated/settings': {
-      id: '/_authenticated/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/reports': {
-      id: '/_authenticated/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof AuthenticatedReportsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/pulse': {
-      id: '/_authenticated/pulse'
-      path: '/pulse'
-      fullPath: '/pulse'
-      preLoaderRoute: typeof AuthenticatedPulseRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/portfolio': {
-      id: '/_authenticated/portfolio'
-      path: '/portfolio'
-      fullPath: '/portfolio'
-      preLoaderRoute: typeof AuthenticatedPortfolioRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/map': {
-      id: '/_authenticated/map'
-      path: '/map'
-      fullPath: '/map'
-      preLoaderRoute: typeof AuthenticatedMapRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/documents': {
-      id: '/_authenticated/documents'
-      path: '/documents'
-      fullPath: '/documents'
-      preLoaderRoute: typeof AuthenticatedDocumentsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/decisions': {
-      id: '/_authenticated/decisions'
-      path: '/decisions'
-      fullPath: '/decisions'
-      preLoaderRoute: typeof AuthenticatedDecisionsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/dashboard': {
-      id: '/_authenticated/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/clauses': {
-      id: '/_authenticated/clauses'
-      path: '/clauses'
-      fullPath: '/clauses'
-      preLoaderRoute: typeof AuthenticatedClausesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/ask': {
-      id: '/_authenticated/ask'
-      path: '/ask'
-      fullPath: '/ask'
-      preLoaderRoute: typeof AuthenticatedAskRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/community/': {
-      id: '/_authenticated/community/'
-      path: '/community'
-      fullPath: '/community/'
-      preLoaderRoute: typeof AuthenticatedCommunityIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/project/$projectId': {
-      id: '/_authenticated/project/$projectId'
-      path: '/project/$projectId'
-      fullPath: '/project/$projectId'
-      preLoaderRoute: typeof AuthenticatedProjectProjectIdRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/community/$id': {
-      id: '/_authenticated/community/$id'
-      path: '/community/$id'
-      fullPath: '/community/$id'
-      preLoaderRoute: typeof AuthenticatedCommunityIdRouteImport
+    '/_authenticated/welcome': {
+      id: '/_authenticated/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof AuthenticatedWelcomeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAskRoute: typeof AuthenticatedAskRoute
-  AuthenticatedClausesRoute: typeof AuthenticatedClausesRoute
-  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedDecisionsRoute: typeof AuthenticatedDecisionsRoute
-  AuthenticatedDocumentsRoute: typeof AuthenticatedDocumentsRoute
-  AuthenticatedMapRoute: typeof AuthenticatedMapRoute
-  AuthenticatedPortfolioRoute: typeof AuthenticatedPortfolioRoute
-  AuthenticatedPulseRoute: typeof AuthenticatedPulseRoute
-  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
-  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
-  AuthenticatedCommunityIdRoute: typeof AuthenticatedCommunityIdRoute
-  AuthenticatedProjectProjectIdRoute: typeof AuthenticatedProjectProjectIdRoute
-  AuthenticatedCommunityIndexRoute: typeof AuthenticatedCommunityIndexRoute
+  AuthenticatedWelcomeRoute: typeof AuthenticatedWelcomeRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedAskRoute: AuthenticatedAskRoute,
-  AuthenticatedClausesRoute: AuthenticatedClausesRoute,
-  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedDecisionsRoute: AuthenticatedDecisionsRoute,
-  AuthenticatedDocumentsRoute: AuthenticatedDocumentsRoute,
-  AuthenticatedMapRoute: AuthenticatedMapRoute,
-  AuthenticatedPortfolioRoute: AuthenticatedPortfolioRoute,
-  AuthenticatedPulseRoute: AuthenticatedPulseRoute,
-  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
-  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
-  AuthenticatedCommunityIdRoute: AuthenticatedCommunityIdRoute,
-  AuthenticatedProjectProjectIdRoute: AuthenticatedProjectProjectIdRoute,
-  AuthenticatedCommunityIndexRoute: AuthenticatedCommunityIndexRoute,
+  AuthenticatedWelcomeRoute: AuthenticatedWelcomeRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -756,7 +481,6 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ToolsRoute: ToolsRouteWithChildren,
   SolutionsAudienceRoute: SolutionsAudienceRoute,
-  VoteDecisionIdRoute: VoteDecisionIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
