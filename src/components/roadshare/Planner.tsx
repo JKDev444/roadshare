@@ -120,6 +120,11 @@ export function Planner({
   }, [homes, roadName, segments]);
   const PARCELS = layout.parcels;
   const ENTRANCES = layout.entrances;
+  const hasRoadStep = !!(segments && segments.length > 0);
+  const visibleSteps: WalkStep[] = hasRoadStep
+    ? ["home", "road", "neighbors", "entrances", "review"]
+    : ["home", "neighbors", "entrances", "review"];
+  const stepIndex = (s: WalkStep) => visibleSteps.indexOf(s);
 
   const [step, setStep] = useState<WalkStep>(initialState?.step ?? "home");
   const [you, setYou] = useState<string | null>(initialState?.you ?? null);
@@ -249,11 +254,19 @@ export function Planner({
   );
 
   const stepStrip = (
-    <div className="grid gap-2 rounded-2xl border border-border bg-card/90 p-3 text-xs shadow-sm sm:grid-cols-4">
-      {(Object.keys(STEP_META) as WalkStep[]).map((key) => {
+    <div
+      className={cn(
+        "grid gap-2 rounded-2xl border border-border bg-card/90 p-3 text-xs shadow-sm",
+        hasRoadStep ? "sm:grid-cols-5" : "sm:grid-cols-4",
+      )}
+    >
+      {visibleSteps.map((key, idx) => {
         const meta = STEP_META[key];
+        const displayN = idx + 1;
+        const curIdx = stepIndex(step);
         const done =
           (key === "home" && !!you) ||
+          (key === "road" && curIdx > idx) ||
           (key === "neighbors" && selected.length > 1) ||
           (key === "entrances" && entrances.length > 0) ||
           (key === "review" && canReview);
@@ -279,7 +292,7 @@ export function Planner({
             </span>
             <span className="min-w-0">
               <span className="block truncate font-semibold">{meta.short}</span>
-              <span className="block truncate text-muted-foreground">Step {meta.n}</span>
+              <span className="block truncate text-muted-foreground">Step {displayN}</span>
             </span>
           </button>
         );
@@ -293,6 +306,13 @@ export function Planner({
         <StepPanel
           parcels={PARCELS}
           entrancesList={ENTRANCES}
+          segments={segments}
+          totalSteps={visibleSteps.length}
+          displayStepN={stepIndex(step) + 1}
+          onSetSegmentLength={onSetSegmentLength}
+          onSetSegmentWidth={onSetSegmentWidth}
+          onRenameSegment={onRenameSegment}
+          onGoToNeighbors={() => setStep("neighbors")}
           step={step}
           query={query}
           setQuery={setQuery}
