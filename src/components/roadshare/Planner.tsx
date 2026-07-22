@@ -9,6 +9,12 @@ import {
   Search,
   SlidersHorizontal,
   Sparkles,
+  Plus,
+  RotateCw,
+  Undo2,
+  Redo2,
+  Pencil,
+  Trash2,
   X,
 } from "lucide-react";
 
@@ -68,12 +74,30 @@ export function Planner({
   initialState,
   onStateChange,
   variant = "demo",
+  rotation = 0,
+  onAddHome,
+  onRenameHome,
+  onDeleteHome,
+  onRotate,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
 }: {
   homes?: RoadHome[];
   roadName?: string;
   initialState?: Partial<PlannerSnapshot> | null;
   onStateChange?: (snapshot: PlannerSnapshot) => void;
   variant?: "demo" | "app";
+  rotation?: 0 | 90 | 180 | 270;
+  onAddHome?: () => void;
+  onRenameHome?: (id: string) => void;
+  onDeleteHome?: (id: string) => void;
+  onRotate?: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
 } = {}) {
   const layout = useMemo<Layout>(() => {
     if (homes && homes.length > 0) return buildLayout(homes, roadName || "My road");
@@ -200,9 +224,12 @@ export function Planner({
       entrances={entrances}
       hovered={hovered}
       activeStep={step}
+      rotation={rotation}
       onToggleParcel={toggleParcel}
       onHoverParcel={setHovered}
       onToggleEntrance={toggleEntrance}
+      onRenameParcel={onRenameHome}
+      onDeleteParcel={onDeleteHome}
     />
   );
 
@@ -315,8 +342,19 @@ export function Planner({
         <section className="relative min-w-0 overflow-hidden bg-muted/20">
           <div className="absolute inset-0 flex flex-col">
             <div className="flex-1 min-h-0 overflow-auto p-3 sm:p-4">
-              <div className="flex h-full items-center justify-center">
+              <div className="relative flex h-full items-center justify-center">
                 <div className="w-full max-w-[1200px]">{platBlock}</div>
+                <PlatToolbar
+                  onAddHome={onAddHome}
+                  onRotate={onRotate}
+                  onUndo={onUndo}
+                  onRedo={onRedo}
+                  canUndo={canUndo}
+                  canRedo={canRedo}
+                />
+                <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-background/90 px-3 py-1 text-[11px] text-muted-foreground shadow-sm ring-1 ring-border">
+                  Double-click a home to rename · Shift-click to remove
+                </div>
               </div>
             </div>
             <div className="border-t border-border bg-background/95 p-3 backdrop-blur">
@@ -326,6 +364,15 @@ export function Planner({
         </section>
         <aside className="min-w-0 overflow-y-auto border-l border-border bg-background p-4 space-y-3">
           {rightRail}
+          {(onAddHome || onRenameHome || onDeleteHome) && homes && homes.length > 0 && (
+            <HomesPanel
+              homes={homes}
+              parcels={PARCELS}
+              onAddHome={onAddHome}
+              onRenameHome={onRenameHome}
+              onDeleteHome={onDeleteHome}
+            />
+          )}
         </aside>
       </main>
     );
