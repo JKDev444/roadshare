@@ -172,19 +172,18 @@ export function PlatMap({
           );
         })}
 
-        {/* Road name label (single-edge layouts only) */}
-        {EDGES.length === 1 && (() => {
-          const e = EDGES[0];
+        {/* Road name label per edge */}
+        {!isCedar && EDGES.map((e) => {
           const a = node(e.a);
           const b = node(e.b);
           const midX = (a.x + b.x) / 2;
           const midY = (a.y + b.y) / 2 - 6;
           return (
-            <text x={midX} y={midY} fill="var(--color-map-lane)" fontSize="10" fontWeight="600" fontFamily="var(--font-mono)" textAnchor="middle" letterSpacing="1.5" opacity="0.95">
-              {layout.roadName.toUpperCase()}
+            <text key={`rl-${e.id}`} x={midX} y={midY} fill="var(--color-map-lane)" fontSize="10" fontWeight="600" fontFamily="var(--font-mono)" textAnchor="middle" letterSpacing="1.5" opacity="0.95">
+              {(e.road || layout.roadName).toUpperCase()}
             </text>
           );
-        })()}
+        })}
 
         {/* Parcels */}
         {PARCELS.map((p, idx) => {

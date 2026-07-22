@@ -101,7 +101,10 @@ function responsibilityFor(
   // distance: average across pinned entrances
   if (entranceNodes.length === 0) return 0;
   const perEntrance = entranceNodes.map((n) => distanceResponsibility(p, n, layout));
-  return perEntrance.reduce((a, b) => a + b, 0) / perEntrance.length;
+  // Clamp cross-component (disconnected) distances so multi-segment plats stay finite.
+  const cap = layout.totalRoadFt || 1;
+  const finite = perEntrance.map((v) => (isFinite(v) ? v : cap));
+  return finite.reduce((a, b) => a + b, 0) / finite.length;
 }
 
 export function computeAllocation(input: AllocationInput): AllocationResult {
@@ -122,7 +125,11 @@ export function computeAllocation(input: AllocationInput): AllocationResult {
     (s, x) => s + ((Number(x.pct) || 0) / 100) * (Number(x.cost) || 0),
     0,
   );
-  const pavementArea = layout.totalRoadFt * (Number(roadWidth) || 0);
+  const fallbackWidth = Number(roadWidth) || 0;
+  const pavementArea = layout.edges.reduce(
+    (s, e) => s + e.length * (e.widthFt && e.widthFt > 0 ? e.widthFt : fallbackWidth),
+    0,
+  );
   const totalCost = pctValid ? pavementArea * blendedRate : 0;
   const period = Math.max(1, Number(fundingPeriod) || 1);
 

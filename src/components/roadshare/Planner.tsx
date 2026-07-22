@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { DEFAULTS, SURFACE_TYPES } from "@/lib/roadshare/data";
-import { buildLayout, cedarHollowLayout, type Home as RoadHome, type Layout, type LayoutEntrance, type LayoutParcel } from "@/lib/roadshare/layout";
+import { buildLayout, cedarHollowLayout, type Home as RoadHome, type Layout, type LayoutEntrance, type LayoutParcel, type Segment } from "@/lib/roadshare/layout";
 import { computeAllocation, type Methodology } from "@/lib/roadshare/engine";
 import { cn } from "@/lib/utils";
 
@@ -71,6 +71,7 @@ function addressNumber(address: string) {
 export function Planner({
   homes,
   roadName,
+  segments,
   initialState,
   onStateChange,
   variant = "demo",
@@ -78,6 +79,12 @@ export function Planner({
   onAddHome,
   onRenameHome,
   onDeleteHome,
+  onAssignHomeSegment,
+  onAddSegment,
+  onRenameSegment,
+  onDeleteSegment,
+  onSetSegmentLength,
+  onSetSegmentWidth,
   onRotate,
   onUndo,
   onRedo,
@@ -86,6 +93,7 @@ export function Planner({
 }: {
   homes?: RoadHome[];
   roadName?: string;
+  segments?: Segment[];
   initialState?: Partial<PlannerSnapshot> | null;
   onStateChange?: (snapshot: PlannerSnapshot) => void;
   variant?: "demo" | "app";
@@ -93,6 +101,12 @@ export function Planner({
   onAddHome?: () => void;
   onRenameHome?: (id: string) => void;
   onDeleteHome?: (id: string) => void;
+  onAssignHomeSegment?: (homeId: string, segmentId: string) => void;
+  onAddSegment?: () => void;
+  onRenameSegment?: (id: string) => void;
+  onDeleteSegment?: (id: string) => void;
+  onSetSegmentLength?: (id: string, lengthFt: number | undefined) => void;
+  onSetSegmentWidth?: (id: string, widthFt: number) => void;
   onRotate?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
@@ -100,9 +114,9 @@ export function Planner({
   canRedo?: boolean;
 } = {}) {
   const layout = useMemo<Layout>(() => {
-    if (homes && homes.length > 0) return buildLayout(homes, roadName || "My road");
+    if (homes && homes.length > 0) return buildLayout(homes, roadName || "My road", segments);
     return cedarHollowLayout();
-  }, [homes, roadName]);
+  }, [homes, roadName, segments]);
   const PARCELS = layout.parcels;
   const ENTRANCES = layout.entrances;
 
@@ -351,6 +365,7 @@ export function Planner({
                   onRedo={onRedo}
                   canUndo={canUndo}
                   canRedo={canRedo}
+                  onAddSegment={onAddSegment}
                 />
                 <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-background/90 px-3 py-1 text-[11px] text-muted-foreground shadow-sm ring-1 ring-border">
                   Double-click a home to rename · Shift-click to remove
@@ -364,13 +379,25 @@ export function Planner({
         </section>
         <aside className="min-w-0 overflow-y-auto border-l border-border bg-background p-4 space-y-3">
           {rightRail}
+          {segments && segments.length > 0 && (
+            <RoadsPanel
+              segments={segments}
+              onAddSegment={onAddSegment}
+              onRenameSegment={onRenameSegment}
+              onDeleteSegment={onDeleteSegment}
+              onSetSegmentLength={onSetSegmentLength}
+              onSetSegmentWidth={onSetSegmentWidth}
+            />
+          )}
           {(onAddHome || onRenameHome || onDeleteHome) && homes && homes.length > 0 && (
             <HomesPanel
               homes={homes}
               parcels={PARCELS}
+              segments={segments}
               onAddHome={onAddHome}
               onRenameHome={onRenameHome}
               onDeleteHome={onDeleteHome}
+              onAssignHomeSegment={onAssignHomeSegment}
             />
           )}
         </aside>
@@ -656,6 +683,7 @@ function SliderControl({
 
 function PlatToolbar({
   onAddHome,
+  onAddSegment,
   onRotate,
   onUndo,
   onRedo,
@@ -663,18 +691,24 @@ function PlatToolbar({
   canRedo,
 }: {
   onAddHome?: () => void;
+  onAddSegment?: () => void;
   onRotate?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
 }) {
-  if (!onAddHome && !onRotate && !onUndo && !onRedo) return null;
+  if (!onAddHome && !onAddSegment && !onRotate && !onUndo && !onRedo) return null;
   return (
     <div className="absolute left-6 top-6 z-10 flex items-center gap-1 rounded-full bg-background/95 p-1 shadow-md ring-1 ring-border backdrop-blur">
       {onAddHome && (
         <Button size="sm" variant="ghost" onClick={onAddHome} className="h-8 rounded-full px-3">
           <Plus className="h-4 w-4" /> Add home
+        </Button>
+      )}
+      {onAddSegment && (
+        <Button size="sm" variant="ghost" onClick={onAddSegment} className="h-8 rounded-full px-3">
+          <RouteIcon className="h-4 w-4" /> Add road
         </Button>
       )}
       {onRotate && (
@@ -699,16 +733,21 @@ function PlatToolbar({
 function HomesPanel({
   homes,
   parcels,
+  segments,
   onAddHome,
   onRenameHome,
   onDeleteHome,
+  onAssignHomeSegment,
 }: {
   homes: RoadHome[];
   parcels: LayoutParcel[];
+  segments?: Segment[];
   onAddHome?: () => void;
   onRenameHome?: (id: string) => void;
   onDeleteHome?: (id: string) => void;
+  onAssignHomeSegment?: (homeId: string, segmentId: string) => void;
 }) {
+  const showSegPicker = !!(segments && segments.length > 1 && onAssignHomeSegment);
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
@@ -721,13 +760,25 @@ function HomesPanel({
       </div>
       <ul className="space-y-1.5 max-h-72 overflow-auto pr-1">
         {homes.map((h, i) => {
-          const parcel = parcels[i];
+          const parcel = parcels.find((p) => p.id === h.id.replace(/[^a-z0-9_-]/gi, "")) ?? parcels[i];
           const label = parcel?.address ?? h.label;
           const pid = parcel?.id ?? h.id;
           return (
             <li key={h.id} className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-2 py-1.5 text-xs">
               <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-muted font-mono text-[10px] font-bold">{i + 1}</span>
               <span className="min-w-0 flex-1 truncate">{label}</span>
+              {showSegPicker && (
+                <select
+                  className="h-7 rounded-md border border-border bg-background px-1 text-[11px]"
+                  value={h.segmentId ?? segments![0].id}
+                  onChange={(e) => onAssignHomeSegment!(h.id, e.target.value)}
+                  aria-label="Road segment"
+                >
+                  {segments!.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              )}
               {onRenameHome && (
                 <button type="button" aria-label="Rename" onClick={() => onRenameHome(pid)} className="rounded p-1 text-muted-foreground hover:bg-accent">
                   <Pencil className="h-3.5 w-3.5" />
@@ -741,6 +792,88 @@ function HomesPanel({
             </li>
           );
         })}
+      </ul>
+    </div>
+  );
+}
+
+function RoadsPanel({
+  segments,
+  onAddSegment,
+  onRenameSegment,
+  onDeleteSegment,
+  onSetSegmentLength,
+  onSetSegmentWidth,
+}: {
+  segments: Segment[];
+  onAddSegment?: () => void;
+  onRenameSegment?: (id: string) => void;
+  onDeleteSegment?: (id: string) => void;
+  onSetSegmentLength?: (id: string, lengthFt: number | undefined) => void;
+  onSetSegmentWidth?: (id: string, widthFt: number) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="font-display text-sm font-bold">Roads</h3>
+        {onAddSegment && (
+          <Button size="sm" variant="outline" onClick={onAddSegment} className="h-7 px-2 text-xs">
+            <Plus className="h-3.5 w-3.5" /> Add road
+          </Button>
+        )}
+      </div>
+      <ul className="space-y-2">
+        {segments.map((s) => (
+          <li key={s.id} className="rounded-lg border border-border/60 bg-background p-2">
+            <div className="mb-1.5 flex items-center gap-1.5">
+              <RouteIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold">{s.name}</span>
+              {onRenameSegment && (
+                <button type="button" aria-label="Rename road" onClick={() => onRenameSegment(s.id)} className="rounded p-1 text-muted-foreground hover:bg-accent">
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {onDeleteSegment && segments.length > 1 && (
+                <button type="button" aria-label="Remove road" onClick={() => onDeleteSegment(s.id)} className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block">
+                <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length (ft)</span>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  min={50}
+                  max={20000}
+                  step={10}
+                  className="h-8 text-xs"
+                  value={s.lengthFt ?? ""}
+                  placeholder="auto"
+                  onChange={(e) => {
+                    const v = e.target.value.trim();
+                    onSetSegmentLength?.(s.id, v === "" ? undefined : Math.max(0, Number(v)));
+                  }}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Width (ft)</span>
+                <select
+                  className="h-8 w-full rounded-md border border-border bg-background px-1 text-xs"
+                  value={String(s.widthFt)}
+                  onChange={(e) => onSetSegmentWidth?.(s.id, Number(e.target.value))}
+                >
+                  <option value="12">1-lane · 12</option>
+                  <option value="16">Narrow · 16</option>
+                  <option value="20">2-lane · 20</option>
+                  <option value="24">Wide · 24</option>
+                  <option value="30">Extra wide · 30</option>
+                </select>
+              </label>
+            </div>
+          </li>
+        ))}
       </ul>
     </div>
   );
