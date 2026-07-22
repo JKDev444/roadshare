@@ -1,7 +1,36 @@
 // Build a road layout from a list of homes. Used by /my-road so the planner
 // renders each user's own homes instead of the hard-coded Cedar Hollow sample.
 
-import type { Edge, Entrance, Parcel } from "./data";
+import type { RoadPos, SurfaceType } from "./data";
+
+export interface LayoutEdge {
+  id: string;
+  a: string;
+  b: string;
+  length: number;
+  road: string;
+}
+
+export interface LayoutEntrance {
+  id: string;
+  node: string;
+  label: string;
+  meets: string;
+  x: number;
+  y: number;
+}
+
+export interface LayoutParcel {
+  id: string;
+  address: string;
+  poly: [number, number][];
+  label: [number, number];
+  frontage: [RoadPos, RoadPos];
+  frontageLine: [[number, number], [number, number]];
+  note?: string;
+}
+
+export type { SurfaceType };
 
 export type Home = {
   id: string;
@@ -15,9 +44,9 @@ export interface Layout {
   view: { w: number; h: number };
   ftPerUnit: number;
   nodes: NodeMap;
-  edges: Edge[];
-  entrances: Entrance[];
-  parcels: Parcel[];
+  edges: LayoutEdge[];
+  entrances: LayoutEntrance[];
+  parcels: LayoutParcel[];
   totalRoadFt: number;
   roadName: string;
   entryDirs: string[]; // ordered entrance ids that flank the road
@@ -59,22 +88,22 @@ export function buildLayout(homes: Home[], roadName: string): Layout {
   const roadLenUnits = nodes.E.x - nodes.W.x;
   const roadLenFt = roadLenUnits * FT_PER_UNIT;
 
-  const edges: Edge[] = [
-    { id: "WE", a: "W" as never, b: "E" as never, length: roadLenFt, road: roadName },
+  const edges: LayoutEdge[] = [
+    { id: "WE", a: "W", b: "E", length: roadLenFt, road: roadName },
   ];
 
-  const entrances: Entrance[] = [
+  const entrances: LayoutEntrance[] = [
     {
-      id: "west" as never,
-      node: "W" as never,
+      id: "west",
+      node: "W",
       label: "West entrance",
       meets: "Public road",
       x: nodes.W.x,
       y: nodes.W.y,
     },
     {
-      id: "east" as never,
-      node: "E" as never,
+      id: "east",
+      node: "E",
       label: "East entrance",
       meets: "Public road",
       x: nodes.E.x,
@@ -86,7 +115,7 @@ export function buildLayout(homes: Home[], roadName: string): Layout {
     return (x - nodes.W.x) * FT_PER_UNIT;
   }
 
-  const parcels: Parcel[] = homes.map((h, i) => {
+  const parcels: LayoutParcel[] = homes.map((h, i) => {
     const isSouth = i % 2 === 0;
     const posInRow = isSouth ? southIdx.indexOf(i) : northIdx.indexOf(i);
     const lotW = isSouth ? sLotW : nLotW;
@@ -117,7 +146,7 @@ export function buildLayout(homes: Home[], roadName: string): Layout {
     };
   });
 
-  return {
+  const layout: Layout = {
     view: VIEW,
     ftPerUnit: FT_PER_UNIT,
     nodes,
@@ -128,6 +157,7 @@ export function buildLayout(homes: Home[], roadName: string): Layout {
     roadName,
     entryDirs: ["west", "east"],
   };
+  return layout;
 }
 
 export function makeHomeId() {
