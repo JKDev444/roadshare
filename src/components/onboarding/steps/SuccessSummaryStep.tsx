@@ -23,7 +23,7 @@ function rowsFor(draft: CcrDraft): Row[] {
     },
     { label: "Maintenance responsibility", state: m.maintenance_found ? "found" : "missing" },
     { label: "Cost-sharing formula", state: m.formula_found ? "possible" : "missing" },
-    { label: "Property map", state: "missing" },
+    { label: "Road map", state: "missing" },
   ];
 }
 
