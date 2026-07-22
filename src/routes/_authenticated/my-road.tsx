@@ -293,6 +293,7 @@ function MyRoadPage() {
         canRedo={canRedo}
         onMoveHome={handleMoveHome}
         onMoveSegment={handleMoveSegment}
+        onMoveSegmentEndpoint={handleMoveSegmentEndpoint}
         placingRoadId={placingRoadId}
         onPlaceRoad={handlePlaceRoad}
         onCancelPlaceRoad={handleCancelPlaceRoad}
