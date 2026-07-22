@@ -201,11 +201,9 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
     if (markSkip) clearResumeState(userId);
     // Strip the ?welcome=1 param so the dashboard behind the wizard is a
     // clean landing instead of re-triggering forceOpen on refresh.
-    void navigate({
-      to: "/dashboard",
-      search: { welcome: undefined } as never,
-      replace: true,
-    }).catch(() => {});
+    if (typeof window !== "undefined" && window.location.search) {
+      window.history.replaceState(null, "", "/dashboard");
+    }
     setTimeout(() => {
       setStep("start");
       setNodocsMode("menu");
