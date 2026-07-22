@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FileText, Loader2, Plus, Trash2, ExternalLink } from "lucide-react";
+import { ChevronDown, ExternalLink, FileText, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ export function DocumentsPanel() {
   const [items, setItems] = useState<DocItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -94,22 +95,25 @@ export function DocumentsPanel() {
 
   return (
     <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold">Documents</h3>
-        </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-7 px-2 text-xs"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading || !userId}
-        >
-          {uploading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Plus className="mr-1 h-3 w-3" />}
-          Upload
-        </Button>
-        <input
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 text-left"
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
+            <FileText className="h-4 w-4" />
+          </span>
+          <span className="min-w-0">
+            <span className="block font-display text-sm font-semibold">Documents</span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {items.length === 0 ? "HOA rules, agreements, invoices" : `${items.length} saved`}
+            </span>
+          </span>
+        </span>
+        <ChevronDown className={"h-4 w-4 shrink-0 text-muted-foreground transition-transform " + (open ? "rotate-180" : "")} />
+      </button>
+      <input
           ref={inputRef}
           type="file"
           accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.heic"
@@ -120,11 +124,22 @@ export function DocumentsPanel() {
             e.target.value = "";
           }}
         />
-      </div>
-      <p className="mb-2 text-[11px] text-muted-foreground">
-        Keep your HOA rules, road agreements, or invoices here. Only you can see them.
-      </p>
-      {loading ? (
+      {open && (
+        <div className="mt-3 space-y-2 border-t border-border pt-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] text-muted-foreground">Only you can see these.</p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              onClick={() => inputRef.current?.click()}
+              disabled={uploading || !userId}
+            >
+              {uploading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Plus className="mr-1 h-3 w-3" />}
+              Upload
+            </Button>
+          </div>
+          {loading ? (
         <p className="text-xs text-muted-foreground">Loading…</p>
       ) : items.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border/70 p-3 text-xs text-muted-foreground">
@@ -148,6 +163,8 @@ export function DocumentsPanel() {
             </li>
           ))}
         </ul>
+      )}
+        </div>
       )}
     </div>
   );
