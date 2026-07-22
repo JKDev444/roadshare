@@ -1,19 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, Link, useNavigate, useRouter, redirect } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter, redirect } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { LogOut, MoreHorizontal, RotateCcw, Route as RouteIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import { AppHeader, MapToolbar } from "@/components/roadshare/AppHeader";
 import { Planner, type PlannerSnapshot } from "@/components/roadshare/Planner";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { supabase } from "@/integrations/supabase/client";
 import { makeHomeId, makeSegmentId, type Home as RoadHome, type Segment as RoadSegment } from "@/lib/roadshare/layout";
 import { getMyRoad, resetMyRoad, saveMyRoadState } from "@/lib/roadshare/road.functions";
 
@@ -64,6 +55,7 @@ function MyRoadPage() {
   const [homes, setHomes] = useState<RoadHome[]>(initialHomes);
   const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(initialRotation);
   const [segments, setSegments] = useState<RoadSegment[]>(initialSegments);
+  const [placingRoadId, setPlacingRoadId] = useState<string | null>(null);
   const historyRef = useRef<RoadHome[][]>([initialHomes]);
   const futureRef = useRef<RoadHome[][]>([]);
   const [historyTick, setHistoryTick] = useState(0);
@@ -79,7 +71,10 @@ function MyRoadPage() {
   }
 
   function handleAddHome() {
-    const next = [...homes, { id: makeHomeId(), label: `Home ${homes.length + 1}`, address: null, segmentId: segments[0]?.id }];
+    const next = [
+      ...homes,
+      { id: makeHomeId(), label: `Home ${homes.length + 1}`, address: null, segmentId: segments[0]?.id },
+    ];
     pushHistory(next);
   }
   function handleDeleteHome(id: string) {
@@ -103,8 +98,26 @@ function MyRoadPage() {
   }
 
   function handleAddSegment() {
-    const next: RoadSegment = { id: makeSegmentId(), name: `Road ${segments.length + 1}`, widthFt: 20 };
+    const id = makeSegmentId();
+    const next: RoadSegment = { id, name: `Road ${segments.length + 1}`, widthFt: 20 };
     setSegments((prev) => [...prev, next]);
+    setPlacingRoadId(id);
+  }
+  function handlePlaceRoad(id: string, ax: number, ay: number, bx: number, by: number) {
+    setSegments((prev) => prev.map((s) => (s.id === id ? { ...s, geometry: { ax, ay, bx, by } } : s)));
+    setPlacingRoadId(null);
+  }
+  function handleCancelPlaceRoad() {
+    if (!placingRoadId) return;
+    setSegments((prev) => prev.filter((s) => s.id !== placingRoadId));
+    setPlacingRoadId(null);
+  }
+  function handleMoveHome(id: string, x: number, y: number) {
+    const next = homes.map((h) => (h.id === id ? { ...h, position: { x, y } } : h));
+    pushHistory(next);
+  }
+  function handleMoveSegment(id: string, ax: number, ay: number, bx: number, by: number) {
+    setSegments((prev) => prev.map((s) => (s.id === id ? { ...s, geometry: { ax, ay, bx, by } } : s)));
   }
   function handleRenameSegment(id: string) {
     const cur = segments.find((s) => s.id === id);
@@ -221,42 +234,27 @@ function MyRoadPage() {
     }
   }
 
-  async function signOut() {
-    await supabase.auth.signOut();
-    navigate({ to: "/" });
-  }
-
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 border-b border-border/70 bg-background/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
-          <Link to="/my-road" className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-sm">
-              <RouteIcon className="h-4 w-4" />
-            </span>
-            <span className="min-w-0">
-              <span className="block font-display text-sm font-bold leading-tight">{road.name ?? "My road"}</span>
-              <span className="block text-[11px] uppercase tracking-wider text-muted-foreground">RoadShare</span>
-            </span>
-          </Link>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="More options" disabled={busy}>
-                <MoreHorizontal className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={doReset} disabled={busy}>
-                <RotateCcw className="mr-2 h-4 w-4" /> Start over
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={signOut}>
-                <LogOut className="mr-2 h-4 w-4" /> Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </header>
+      <AppHeader
+        roadName={road.name ?? "My road"}
+        active="map"
+        onReset={doReset}
+        busy={busy}
+        toolbar={
+          <MapToolbar
+            onAddHome={handleAddHome}
+            onAddSegment={handleAddSegment}
+            onRotate={handleRotate}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            placingRoadId={placingRoadId}
+            onCancelPlaceRoad={handleCancelPlaceRoad}
+          />
+        }
+      />
       <Planner
         variant="app"
         homes={homes}
@@ -279,6 +277,11 @@ function MyRoadPage() {
         onRedo={handleRedo}
         canUndo={canUndo}
         canRedo={canRedo}
+        onMoveHome={handleMoveHome}
+        onMoveSegment={handleMoveSegment}
+        placingRoadId={placingRoadId}
+        onPlaceRoad={handlePlaceRoad}
+        onCancelPlaceRoad={handleCancelPlaceRoad}
       />
     </div>
   );

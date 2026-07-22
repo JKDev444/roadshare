@@ -39,6 +39,9 @@ export type Home = {
   label: string;
   address?: string | null;
   segmentId?: string;
+  /** Optional pixel position (top-left of bbox) inside the plat SVG. When
+   * set, this parcel is drawn at this position instead of the auto row. */
+  position?: { x: number; y: number } | null;
 };
 
 export type Segment = {
@@ -46,6 +49,9 @@ export type Segment = {
   name: string;
   lengthFt?: number; // overrides geometric length in cost math
   widthFt: number;
+  /** Optional custom road geometry (endpoints in SVG units). When set, the
+   * segment is drawn as this line instead of the auto west→east row. */
+  geometry?: { ax: number; ay: number; bx: number; by: number } | null;
 };
 
 export type NodeMap = Record<string, { id: string; x: number; y: number }>;
@@ -64,7 +70,21 @@ export interface Layout {
 
 const FT_PER_UNIT = 1.25;
 const BASE_VIEW_W = 900;
+const BASE_VIEW_H = 620;
 const ROAD_MARGIN = 70; // horizontal margin from edge of viewport to first lot
+const LOT_W = 130;
+const LOT_H = 82;
+
+function projectOntoSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const L2 = dx * dx + dy * dy;
+  if (L2 === 0) return { t: 0, cx: ax, cy: ay, len: 0 };
+  let t = ((px - ax) * dx + (py - ay) * dy) / L2;
+  if (t < 0) t = 0;
+  else if (t > 1) t = 1;
+  return { t, cx: ax + t * dx, cy: ay + t * dy, len: Math.sqrt(L2) };
+}
 
 function slug(id: string) {
   return id.replace(/[^a-z0-9_-]/gi, "");
@@ -84,9 +104,14 @@ export function buildLayout(
       ? segments
       : [{ id: "s1", name: roadName, widthFt: 20 }];
 
-  const rowCount = segs.length;
+  // Auto rows are only used for segments without custom geometry. Count them
+  // so we can size the viewport for the auto layout, then extend the view
+  // afterwards to include any custom positions.
+  const autoSegs = segs.filter((s) => !s.geometry);
+  const rowCount = Math.max(autoSegs.length, 1);
   const rowH = 200;
-  const VIEW = { w: BASE_VIEW_W, h: Math.max(440, 100 + rowCount * rowH) };
+  const autoH = Math.max(BASE_VIEW_H, 100 + rowCount * rowH);
+  const VIEW = { w: BASE_VIEW_W, h: autoH };
   const usableW = VIEW.w - ROAD_MARGIN * 2;
 
   const nodes: NodeMap = {};
@@ -94,13 +119,27 @@ export function buildLayout(
   const entrances: LayoutEntrance[] = [];
   const entryDirs: string[] = [];
 
-  segs.forEach((seg, si) => {
-    const roadY = 60 + si * rowH + rowH / 2;
+  let autoIdx = 0;
+  segs.forEach((seg) => {
     const wId = `${seg.id}_W`;
     const eId = `${seg.id}_E`;
-    nodes[wId] = { id: wId, x: ROAD_MARGIN, y: roadY };
-    nodes[eId] = { id: eId, x: VIEW.w - ROAD_MARGIN, y: roadY };
-    const geomLenFt = (nodes[eId].x - nodes[wId].x) * FT_PER_UNIT;
+    let ax: number, ay: number, bx: number, by: number;
+    if (seg.geometry) {
+      ax = seg.geometry.ax;
+      ay = seg.geometry.ay;
+      bx = seg.geometry.bx;
+      by = seg.geometry.by;
+    } else {
+      const roadY = 60 + autoIdx * rowH + rowH / 2;
+      autoIdx += 1;
+      ax = ROAD_MARGIN;
+      ay = roadY;
+      bx = VIEW.w - ROAD_MARGIN;
+      by = roadY;
+    }
+    nodes[wId] = { id: wId, x: ax, y: ay };
+    nodes[eId] = { id: eId, x: bx, y: by };
+    const geomLenFt = Math.hypot(bx - ax, by - ay) * FT_PER_UNIT;
     const lengthFt = seg.lengthFt && seg.lengthFt > 0 ? seg.lengthFt : geomLenFt;
     edges.push({ id: seg.id, a: wId, b: eId, length: lengthFt, widthFt: seg.widthFt, road: seg.name });
     const westId = `${seg.id}_west`;
@@ -123,21 +162,63 @@ export function buildLayout(
   const parcels: LayoutParcel[] = [];
   segs.forEach((seg) => {
     const list = bySeg.get(seg.id) ?? [];
-    const roadY = nodes[`${seg.id}_W`].y;
+    const wNode = nodes[`${seg.id}_W`];
+    const eNode = nodes[`${seg.id}_E`];
+    const ax = wNode.x;
+    const ay = wNode.y;
+    const bx = eNode.x;
+    const by = eNode.y;
+    const segLenU = Math.hypot(bx - ax, by - ay) || 1;
+
+    // Auto-row fallback (only used for homes without a stored position).
+    const auto = list.filter((h) => !h.position);
     const southIdx: number[] = [];
     const northIdx: number[] = [];
-    list.forEach((_, i) => (i % 2 === 0 ? southIdx : northIdx).push(i));
+    auto.forEach((_, i) => (i % 2 === 0 ? southIdx : northIdx).push(i));
     const sCount = southIdx.length || 1;
     const nCount = northIdx.length || 1;
     const sLotW = usableW / sCount;
     const nLotW = usableW / nCount;
-    const wNode = nodes[`${seg.id}_W`];
-    const xToOffsetFt = (x: number) => (x - wNode.x) * FT_PER_UNIT;
+    const xToOffsetFt = (x: number) => (x - ax) * FT_PER_UNIT;
 
-    list.forEach((h, i) => {
+    let autoI = 0;
+    list.forEach((h) => {
+      if (h.position) {
+        const x1 = h.position.x;
+        const y1 = h.position.y;
+        const x2 = x1 + LOT_W;
+        const y2 = y1 + LOT_H;
+        const cx = x1 + LOT_W / 2;
+        const cy = y1 + LOT_H / 2;
+        const { t, len } = projectOntoSegment(cx, cy, ax, ay, bx, by);
+        const halfSpan = Math.min(0.5, (LOT_W / 2) / (len || segLenU));
+        const t1 = Math.max(0, t - halfSpan);
+        const t2 = Math.min(1, t + halfSpan);
+        const f1x = ax + t1 * (bx - ax);
+        const f1y = ay + t1 * (by - ay);
+        const f2x = ax + t2 * (bx - ax);
+        const f2y = ay + t2 * (by - ay);
+        const off1 = t1 * segLenU * FT_PER_UNIT;
+        const off2 = t2 * segLenU * FT_PER_UNIT;
+        parcels.push({
+          id: slug(h.id),
+          address: h.address?.trim() || h.label,
+          poly: [[x1, y1], [x2, y1], [x2, y2], [x1, y2]],
+          label: [cx, cy],
+          frontage: [
+            { edge: seg.id, offset: off1 },
+            { edge: seg.id, offset: off2 },
+          ],
+          frontageLine: [[f1x, f1y], [f2x, f2y]],
+        });
+        return;
+      }
+      // Auto placement (only meaningful for horizontal auto-segments).
+      const i = autoI++;
       const isSouth = i % 2 === 0;
       const posInRow = isSouth ? southIdx.indexOf(i) : northIdx.indexOf(i);
       const lotW = isSouth ? sLotW : nLotW;
+      const roadY = ay; // auto segments are horizontal, ay===by
       const x1 = ROAD_MARGIN + posInRow * lotW + 3;
       const x2 = ROAD_MARGIN + (posInRow + 1) * lotW - 3;
       const near = isSouth ? roadY + 8 : roadY - 8;
@@ -158,15 +239,32 @@ export function buildLayout(
           { edge: seg.id, offset: xToOffsetFt(x1) },
           { edge: seg.id, offset: xToOffsetFt(x2) },
         ],
-        frontageLine: [
-          [x1, roadY],
-          [x2, roadY],
-        ],
+        frontageLine: [[x1, roadY], [x2, roadY]],
       });
     });
   });
 
   const totalRoadFt = edges.reduce((s, e) => s + e.length, 0);
+
+  // Extend viewport if any custom geometry or home positions land outside.
+  const allXs: number[] = [];
+  const allYs: number[] = [];
+  Object.values(nodes).forEach((n) => {
+    allXs.push(n.x);
+    allYs.push(n.y);
+  });
+  parcels.forEach((p) => {
+    p.poly.forEach(([x, y]) => {
+      allXs.push(x);
+      allYs.push(y);
+    });
+  });
+  if (allXs.length) {
+    const maxX = Math.max(...allXs, VIEW.w);
+    const maxY = Math.max(...allYs, VIEW.h);
+    VIEW.w = Math.max(VIEW.w, Math.ceil(maxX + 40));
+    VIEW.h = Math.max(VIEW.h, Math.ceil(maxY + 40));
+  }
 
   return {
     view: VIEW,
