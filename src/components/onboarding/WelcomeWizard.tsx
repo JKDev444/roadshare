@@ -626,16 +626,16 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
             />
           )}
         </div>
+        {confirmClose && (
+          <ConfirmSaveExit
+            onCancel={() => setConfirmClose(false)}
+            onExit={() => {
+              setConfirmClose(false);
+              close(true);
+            }}
+          />
+        )}
       </DialogContent>
-      {confirmClose && (
-        <ConfirmSaveExit
-          onCancel={() => setConfirmClose(false)}
-          onExit={() => {
-            setConfirmClose(false);
-            close(true);
-          }}
-        />
-      )}
     </Dialog>
   );
 }
