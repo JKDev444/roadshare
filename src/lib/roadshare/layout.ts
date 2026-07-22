@@ -2,6 +2,7 @@
 // renders each user's own homes instead of the hard-coded Cedar Hollow sample.
 
 import type { RoadPos, SurfaceType } from "./data";
+import * as cedar from "./data";
 
 export interface LayoutEdge {
   id: string;
@@ -188,21 +189,18 @@ export function makeManualHomes(count: number, startingAddress?: string | null):
 
 // Adapter so the Cedar Hollow sample uses the same Layout shape.
 export function cedarHollowLayout(): Layout {
-  // Lazy require avoids circular type surface.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const data = require("./data") as typeof import("./data");
   const nodes: NodeMap = {};
-  for (const key of Object.keys(data.NODES) as (keyof typeof data.NODES)[]) {
-    const n = data.NODES[key];
+  for (const key of Object.keys(cedar.NODES) as (keyof typeof cedar.NODES)[]) {
+    const n = cedar.NODES[key];
     nodes[n.id] = { id: n.id, x: n.x, y: n.y };
   }
   return {
-    view: data.VIEW,
-    ftPerUnit: data.FT_PER_UNIT,
+    view: cedar.VIEW,
+    ftPerUnit: cedar.FT_PER_UNIT,
     nodes,
-    edges: data.EDGES.map((e) => ({ id: e.id, a: e.a, b: e.b, length: e.length, road: e.road })),
-    entrances: data.ENTRANCES.map((e) => ({ id: e.id, node: e.node, label: e.label, meets: e.meets, x: e.x, y: e.y })),
-    parcels: data.PARCELS.map((p) => ({
+    edges: cedar.EDGES.map((e) => ({ id: e.id, a: e.a, b: e.b, length: e.length, road: e.road })),
+    entrances: cedar.ENTRANCES.map((e) => ({ id: e.id, node: e.node, label: e.label, meets: e.meets, x: e.x, y: e.y })),
+    parcels: cedar.PARCELS.map((p) => ({
       id: p.id,
       address: p.address,
       poly: p.poly,
@@ -211,7 +209,7 @@ export function cedarHollowLayout(): Layout {
       frontageLine: p.frontageLine,
       note: p.note,
     })),
-    totalRoadFt: data.TOTAL_ROAD_FT,
+    totalRoadFt: cedar.TOTAL_ROAD_FT,
     roadName: "Cedar Hollow",
     entryDirs: ["west", "north"],
   };
