@@ -29,7 +29,7 @@ import { buildLayout, cedarHollowLayout, type Home as RoadHome, type Layout, typ
 import { computeAllocation, type Methodology } from "@/lib/roadshare/engine";
 import { cn } from "@/lib/utils";
 
-type WalkStep = "home" | "neighbors" | "entrances" | "review";
+type WalkStep = "home" | "road" | "neighbors" | "entrances" | "review";
 
 export type PlannerSnapshot = {
   step: WalkStep;
@@ -48,7 +48,14 @@ const METHODS: { id: Methodology; label: string; helper: string }[] = [
   { id: "equal", label: "Equal split", helper: "Every selected home pays the same." },
 ];
 
-const STEP_META: Record<WalkStep, { n: number; title: string; short: string; icon: ComponentType<{ className?: string }> }> = {
+const STEP_META_WITH_ROAD: Record<WalkStep, { n: number; title: string; short: string; icon: ComponentType<{ className?: string }> }> = {
+  home: { n: 1, title: "Pick your home", short: "Start here", icon: Home },
+  road: { n: 2, title: "Confirm your road", short: "Your road", icon: RouteIcon },
+  neighbors: { n: 3, title: "Choose who shares", short: "Neighbors", icon: Sparkles },
+  entrances: { n: 4, title: "Confirm entrances", short: "Entrances", icon: MapPin },
+  review: { n: 5, title: "See your share", short: "Result", icon: RouteIcon },
+};
+const STEP_META_DEMO: Record<Exclude<WalkStep, "road">, { n: number; title: string; short: string; icon: ComponentType<{ className?: string }> }> = {
   home: { n: 1, title: "Pick your home", short: "Start here", icon: Home },
   neighbors: { n: 2, title: "Choose who shares", short: "Neighbors", icon: Sparkles },
   entrances: { n: 3, title: "Confirm entrances", short: "Entrances", icon: MapPin },
