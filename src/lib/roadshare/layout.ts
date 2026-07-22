@@ -9,6 +9,7 @@ export interface LayoutEdge {
   a: string;
   b: string;
   length: number;
+  widthFt: number;
   road: string;
 }
 
@@ -37,6 +38,14 @@ export type Home = {
   id: string;
   label: string;
   address?: string | null;
+  segmentId?: string;
+};
+
+export type Segment = {
+  id: string;
+  name: string;
+  lengthFt?: number; // overrides geometric length in cost math
+  widthFt: number;
 };
 
 export type NodeMap = Record<string, { id: string; x: number; y: number }>;
@@ -54,111 +63,122 @@ export interface Layout {
 }
 
 const FT_PER_UNIT = 1.25;
-const VIEW = { w: 900, h: 440 };
-const ROAD_Y = 250;
+const BASE_VIEW_W = 900;
 const ROAD_MARGIN = 70; // horizontal margin from edge of viewport to first lot
-const NEAR_S = 258;
-const FAR_S = 340;
-const NEAR_N = 242;
-const FAR_N = 160;
 
 function slug(id: string) {
   return id.replace(/[^a-z0-9_-]/gi, "");
 }
 
-export function buildLayout(homes: Home[], roadName: string): Layout {
-  const n = Math.max(0, homes.length);
+export function makeSegmentId() {
+  return `seg_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function buildLayout(
+  homes: Home[],
+  roadName: string,
+  segments?: Segment[],
+): Layout {
+  const segs: Segment[] =
+    segments && segments.length > 0
+      ? segments
+      : [{ id: "s1", name: roadName, widthFt: 20 }];
+
+  const rowCount = segs.length;
+  const rowH = 200;
+  const VIEW = { w: BASE_VIEW_W, h: Math.max(440, 100 + rowCount * rowH) };
   const usableW = VIEW.w - ROAD_MARGIN * 2;
 
-  // Split homes: even indices to south row, odd to north row (interleave so
-  // small N still balances across both sides).
-  const southIdx: number[] = [];
-  const northIdx: number[] = [];
-  homes.forEach((_, i) => (i % 2 === 0 ? southIdx : northIdx).push(i));
+  const nodes: NodeMap = {};
+  const edges: LayoutEdge[] = [];
+  const entrances: LayoutEntrance[] = [];
+  const entryDirs: string[] = [];
 
-  const sCount = southIdx.length || 1;
-  const nCount = northIdx.length || 1;
-  const sLotW = usableW / sCount;
-  const nLotW = usableW / nCount;
-
-  const nodes: NodeMap = {
-    W: { id: "W", x: ROAD_MARGIN, y: ROAD_Y },
-    E: { id: "E", x: VIEW.w - ROAD_MARGIN, y: ROAD_Y },
-  };
-
-  const roadLenUnits = nodes.E.x - nodes.W.x;
-  const roadLenFt = roadLenUnits * FT_PER_UNIT;
-
-  const edges: LayoutEdge[] = [
-    { id: "WE", a: "W", b: "E", length: roadLenFt, road: roadName },
-  ];
-
-  const entrances: LayoutEntrance[] = [
-    {
-      id: "west",
-      node: "W",
-      label: "West entrance",
-      meets: "Public road",
-      x: nodes.W.x,
-      y: nodes.W.y,
-    },
-    {
-      id: "east",
-      node: "E",
-      label: "East entrance",
-      meets: "Public road",
-      x: nodes.E.x,
-      y: nodes.E.y,
-    },
-  ];
-
-  function xToOffset(x: number) {
-    return (x - nodes.W.x) * FT_PER_UNIT;
-  }
-
-  const parcels: LayoutParcel[] = homes.map((h, i) => {
-    const isSouth = i % 2 === 0;
-    const posInRow = isSouth ? southIdx.indexOf(i) : northIdx.indexOf(i);
-    const lotW = isSouth ? sLotW : nLotW;
-    const x1 = ROAD_MARGIN + posInRow * lotW + 3;
-    const x2 = ROAD_MARGIN + (posInRow + 1) * lotW - 3;
-    const near = isSouth ? NEAR_S : NEAR_N;
-    const far = isSouth ? FAR_S : FAR_N;
-    const poly: [number, number][] = [
-      [x1, near],
-      [x2, near],
-      [x2, far],
-      [x1, far],
-    ];
-    const label: [number, number] = [(x1 + x2) / 2, (near + far) / 2];
-    return {
-      id: slug(h.id),
-      address: h.address?.trim() || h.label,
-      poly,
-      label,
-      frontage: [
-        { edge: "WE", offset: xToOffset(x1) },
-        { edge: "WE", offset: xToOffset(x2) },
-      ],
-      frontageLine: [
-        [x1, ROAD_Y],
-        [x2, ROAD_Y],
-      ],
-    };
+  segs.forEach((seg, si) => {
+    const roadY = 60 + si * rowH + rowH / 2;
+    const wId = `${seg.id}_W`;
+    const eId = `${seg.id}_E`;
+    nodes[wId] = { id: wId, x: ROAD_MARGIN, y: roadY };
+    nodes[eId] = { id: eId, x: VIEW.w - ROAD_MARGIN, y: roadY };
+    const geomLenFt = (nodes[eId].x - nodes[wId].x) * FT_PER_UNIT;
+    const lengthFt = seg.lengthFt && seg.lengthFt > 0 ? seg.lengthFt : geomLenFt;
+    edges.push({ id: seg.id, a: wId, b: eId, length: lengthFt, widthFt: seg.widthFt, road: seg.name });
+    const westId = `${seg.id}_west`;
+    const eastId = `${seg.id}_east`;
+    entrances.push(
+      { id: westId, node: wId, label: rowCount > 1 ? `${seg.name} — west` : "West entrance", meets: "Public road", x: nodes[wId].x, y: nodes[wId].y },
+      { id: eastId, node: eId, label: rowCount > 1 ? `${seg.name} — east` : "East entrance", meets: "Public road", x: nodes[eId].x, y: nodes[eId].y },
+    );
+    entryDirs.push(westId, eastId);
   });
 
-  const layout: Layout = {
+  const segIds = new Set(segs.map((s) => s.id));
+  const bySeg = new Map<string, Home[]>();
+  segs.forEach((s) => bySeg.set(s.id, []));
+  homes.forEach((h) => {
+    const sid = h.segmentId && segIds.has(h.segmentId) ? h.segmentId : segs[0].id;
+    bySeg.get(sid)!.push(h);
+  });
+
+  const parcels: LayoutParcel[] = [];
+  segs.forEach((seg) => {
+    const list = bySeg.get(seg.id) ?? [];
+    const roadY = nodes[`${seg.id}_W`].y;
+    const southIdx: number[] = [];
+    const northIdx: number[] = [];
+    list.forEach((_, i) => (i % 2 === 0 ? southIdx : northIdx).push(i));
+    const sCount = southIdx.length || 1;
+    const nCount = northIdx.length || 1;
+    const sLotW = usableW / sCount;
+    const nLotW = usableW / nCount;
+    const wNode = nodes[`${seg.id}_W`];
+    const xToOffsetFt = (x: number) => (x - wNode.x) * FT_PER_UNIT;
+
+    list.forEach((h, i) => {
+      const isSouth = i % 2 === 0;
+      const posInRow = isSouth ? southIdx.indexOf(i) : northIdx.indexOf(i);
+      const lotW = isSouth ? sLotW : nLotW;
+      const x1 = ROAD_MARGIN + posInRow * lotW + 3;
+      const x2 = ROAD_MARGIN + (posInRow + 1) * lotW - 3;
+      const near = isSouth ? roadY + 8 : roadY - 8;
+      const far = isSouth ? roadY + 90 : roadY - 90;
+      const poly: [number, number][] = [
+        [x1, near],
+        [x2, near],
+        [x2, far],
+        [x1, far],
+      ];
+      const label: [number, number] = [(x1 + x2) / 2, (near + far) / 2];
+      parcels.push({
+        id: slug(h.id),
+        address: h.address?.trim() || h.label,
+        poly,
+        label,
+        frontage: [
+          { edge: seg.id, offset: xToOffsetFt(x1) },
+          { edge: seg.id, offset: xToOffsetFt(x2) },
+        ],
+        frontageLine: [
+          [x1, roadY],
+          [x2, roadY],
+        ],
+      });
+    });
+  });
+
+  const totalRoadFt = edges.reduce((s, e) => s + e.length, 0);
+
+  return {
     view: VIEW,
     ftPerUnit: FT_PER_UNIT,
     nodes,
     edges,
     entrances,
     parcels,
-    totalRoadFt: roadLenFt,
+    totalRoadFt,
     roadName,
-    entryDirs: ["west", "east"],
+    entryDirs,
   };
-  return layout;
 }
 
 export function makeHomeId() {
@@ -198,7 +218,7 @@ export function cedarHollowLayout(): Layout {
     view: cedar.VIEW,
     ftPerUnit: cedar.FT_PER_UNIT,
     nodes,
-    edges: cedar.EDGES.map((e) => ({ id: e.id, a: e.a, b: e.b, length: e.length, road: e.road })),
+    edges: cedar.EDGES.map((e) => ({ id: e.id, a: e.a, b: e.b, length: e.length, widthFt: 20, road: e.road })),
     entrances: cedar.ENTRANCES.map((e) => ({ id: e.id, node: e.node, label: e.label, meets: e.meets, x: e.x, y: e.y })),
     parcels: cedar.PARCELS.map((p) => ({
       id: p.id,
