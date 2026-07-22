@@ -20,7 +20,6 @@ import {
 
 import { PlatMap } from "@/components/roadshare/PlatMap";
 import { ResultsPanel } from "@/components/roadshare/ResultsPanel";
-import { DocumentsPanel } from "@/components/roadshare/DocumentsPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -92,6 +91,12 @@ export function Planner({
   onRedo,
   canUndo = false,
   canRedo = false,
+  onMoveHome,
+  onMoveSegment,
+  onMoveSegmentEndpoint,
+  placingRoadId = null,
+  onPlaceRoad,
+  onCancelPlaceRoad,
 }: {
   homes?: RoadHome[];
   roadName?: string;
@@ -114,6 +119,12 @@ export function Planner({
   onRedo?: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
+  onMoveHome?: (id: string, x: number, y: number) => void;
+  onMoveSegment?: (id: string, ax: number, ay: number, bx: number, by: number) => void;
+  onMoveSegmentEndpoint?: (id: string, endpoint: "a" | "b", x: number, y: number) => void;
+  placingRoadId?: string | null;
+  onPlaceRoad?: (segmentId: string, ax: number, ay: number, bx: number, by: number) => void;
+  onCancelPlaceRoad?: () => void;
 } = {}) {
   const layout = useMemo<Layout>(() => {
     if (homes && homes.length > 0) return buildLayout(homes, roadName || "My road", segments);
@@ -251,6 +262,12 @@ export function Planner({
       onToggleEntrance={toggleEntrance}
       onRenameParcel={onRenameHome}
       onDeleteParcel={onDeleteHome}
+      onMoveHome={onMoveHome}
+      onMoveSegment={onMoveSegment}
+      onMoveSegmentEndpoint={onMoveSegmentEndpoint}
+      placingRoadId={placingRoadId}
+      onPlaceRoad={onPlaceRoad}
+      onCancelPlaceRoad={onCancelPlaceRoad}
     />
   );
 
@@ -374,29 +391,20 @@ export function Planner({
   if (isApp) {
     // Full-bleed: plat fills the viewport, right rail is a fixed 380px column.
     return (
-      <main className="grid h-[calc(100dvh-57px)] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <section className="relative min-w-0 overflow-hidden bg-muted/20">
-          <div className="absolute inset-0 flex flex-col">
-            <div className="flex-1 min-h-0 overflow-auto p-3 sm:p-4">
-              <div className="relative flex h-full items-center justify-center">
-                <div className="w-full max-w-[1200px]">{platBlock}</div>
-                <PlatToolbar
-                  onAddHome={onAddHome}
-                  onRotate={onRotate}
-                  onUndo={onUndo}
-                  onRedo={onRedo}
-                  canUndo={canUndo}
-                  canRedo={canRedo}
-                  onAddSegment={onAddSegment}
-                />
-                <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-background/90 px-3 py-1 text-[11px] text-muted-foreground shadow-sm ring-1 ring-border">
-                  Double-click a home to rename · Shift-click to remove
-                </div>
-              </div>
+      <main className="grid h-[calc(100dvh-var(--rs-header-h,113px))] grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_380px]">
+        <section className="relative flex min-w-0 flex-col overflow-hidden bg-muted/20">
+          <div className="relative flex flex-1 min-h-0 items-stretch justify-center p-3 sm:p-4">
+            <div className="relative flex w-full flex-1 min-h-0 items-stretch">
+              <div className="flex w-full min-w-0 flex-1 flex-col">{platBlock}</div>
             </div>
-            <div className="border-t border-border bg-background/95 p-3 backdrop-blur">
-              {stepStrip}
+            <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-background/90 px-3 py-1 text-[11px] text-muted-foreground shadow-sm ring-1 ring-border">
+              {placingRoadId
+                ? "Click twice on the map to place the road · Esc to cancel"
+                : "Drag homes or roads to reposition · Double-click to rename · Shift-click to remove"}
             </div>
+          </div>
+          <div className="border-t border-border bg-background/95 p-3 backdrop-blur">
+            {stepStrip}
           </div>
         </section>
         <aside className="min-w-0 overflow-y-auto border-l border-border bg-background p-4 space-y-3">
@@ -422,7 +430,6 @@ export function Planner({
               onAssignHomeSegment={onAssignHomeSegment}
             />
           )}
-          <DocumentsPanel />
         </aside>
       </main>
     );
