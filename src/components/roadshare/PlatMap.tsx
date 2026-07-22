@@ -173,7 +173,7 @@ export function PlatMap({
         })()}
 
         {/* Parcels */}
-        {PARCELS.map((p) => {
+        {PARCELS.map((p, idx) => {
           const isSel = selected.includes(p.id);
           const isYou = you === p.id;
           const isHover = hovered === p.id;
@@ -232,7 +232,7 @@ export function PlatMap({
                 dominantBaseline="middle"
                 pointerEvents="none"
               >
-                {p.address.split(" ")[0]}
+                {(p.address.match(/\d+/)?.[0]) ?? String(idx + 1)}
               </text>
             </g>
           );
