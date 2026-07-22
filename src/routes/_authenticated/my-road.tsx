@@ -117,7 +117,21 @@ function MyRoadPage() {
     pushHistory(next);
   }
   function handleMoveSegment(id: string, ax: number, ay: number, bx: number, by: number) {
-    setSegments((prev) => prev.map((s) => (s.id === id ? { ...s, geometry: { ax, ay, bx, by } } : s)));
+    // Clear any manually-typed length so the displayed / used length reflects
+    // the new geometry. Users can retype a length if they want to override.
+    setSegments((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, geometry: { ax, ay, bx, by }, lengthFt: undefined } : s)),
+    );
+  }
+  function handleMoveSegmentEndpoint(id: string, endpoint: "a" | "b", x: number, y: number) {
+    setSegments((prev) =>
+      prev.map((s) => {
+        if (s.id !== id) return s;
+        const g = s.geometry ?? { ax: 0, ay: 0, bx: 0, by: 0 };
+        const next = endpoint === "a" ? { ...g, ax: x, ay: y } : { ...g, bx: x, by: y };
+        return { ...s, geometry: next, lengthFt: undefined };
+      }),
+    );
   }
   function handleRenameSegment(id: string) {
     const cur = segments.find((s) => s.id === id);
