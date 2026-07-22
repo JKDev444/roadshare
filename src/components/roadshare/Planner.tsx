@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentType, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentType, type Dispatch, type SetStateAction } from "react";
 import {
   ArrowRight,
   Check,
@@ -23,6 +23,17 @@ import { computeAllocation, type Methodology } from "@/lib/roadshare/engine";
 import { cn } from "@/lib/utils";
 
 type WalkStep = "home" | "neighbors" | "entrances" | "review";
+
+export type PlannerSnapshot = {
+  step: WalkStep;
+  you: string | null;
+  selected: string[];
+  entrances: ("west" | "north")[];
+  methodology: Methodology;
+  roadWidth: number;
+  fundingPeriod: number;
+  surfaces: { pct: number; cost: number }[];
+};
 
 const METHODS: { id: Methodology; label: string; helper: string }[] = [
   { id: "distance", label: "Road used", helper: "Homes farther down the road pay more." },
@@ -50,20 +61,43 @@ function addressNumber(address: string) {
   return address.split(" ")[0] || address;
 }
 
-export function Planner() {
-  const [step, setStep] = useState<WalkStep>("home");
-  const [you, setYou] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<string[]>([]);
-  const [entrances, setEntrances] = useState<("west" | "north")[]>([]);
+export function Planner({
+  initialState,
+  onStateChange,
+}: {
+  initialState?: Partial<PlannerSnapshot> | null;
+  onStateChange?: (snapshot: PlannerSnapshot) => void;
+} = {}) {
+  const [step, setStep] = useState<WalkStep>(initialState?.step ?? "home");
+  const [you, setYou] = useState<string | null>(initialState?.you ?? null);
+  const [query, setQuery] = useState(() => {
+    const home = PARCELS.find((p) => p.id === initialState?.you);
+    return home?.address ?? "";
+  });
+  const [selected, setSelected] = useState<string[]>(initialState?.selected ?? []);
+  const [entrances, setEntrances] = useState<("west" | "north")[]>(initialState?.entrances ?? []);
   const [hovered, setHovered] = useState<string | null>(null);
-  const [methodology, setMethodology] = useState<Methodology>("distance");
-  const [roadWidth, setRoadWidth] = useState(DEFAULTS.roadWidth);
-  const [fundingPeriod, setFundingPeriod] = useState(DEFAULTS.fundingPeriod);
+  const [methodology, setMethodology] = useState<Methodology>(initialState?.methodology ?? "distance");
+  const [roadWidth, setRoadWidth] = useState(initialState?.roadWidth ?? DEFAULTS.roadWidth);
+  const [fundingPeriod, setFundingPeriod] = useState(initialState?.fundingPeriod ?? DEFAULTS.fundingPeriod);
   const [assumptionsOpen, setAssumptionsOpen] = useState(false);
   const [surfaces, setSurfaces] = useState(
-    SURFACE_TYPES.map((s) => ({ pct: s.defaultPct, cost: s.defaultCost })),
+    initialState?.surfaces ?? SURFACE_TYPES.map((s) => ({ pct: s.defaultPct, cost: s.defaultCost })),
   );
+
+  // Debounced snapshot emit
+  const firstRun = useRef(true);
+  useEffect(() => {
+    if (!onStateChange) return;
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      onStateChange({ step, you, selected, entrances, methodology, roadWidth, fundingPeriod, surfaces });
+    }, 700);
+    return () => clearTimeout(t);
+  }, [step, you, selected, entrances, methodology, roadWidth, fundingPeriod, surfaces, onStateChange]);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();

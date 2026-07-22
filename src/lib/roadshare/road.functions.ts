@@ -52,3 +52,20 @@ export const resetMyRoad = createServerFn({ method: "POST" })
     if (error) throw error;
     return { ok: true };
   });
+
+export const saveMyRoadState = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { state: Json; name?: string | null }) => ({
+    state: input.state,
+    name: typeof input.name === "string" ? input.name.trim().slice(0, 80) : undefined,
+  }))
+  .handler(async ({ data, context }) => {
+    const patch: { state: Json; name?: string } = { state: data.state };
+    if (typeof data.name === "string" && data.name.length > 0) patch.name = data.name;
+    const { error } = await context.supabase
+      .from("roads")
+      .update(patch)
+      .eq("user_id", context.userId);
+    if (error) throw error;
+    return { ok: true };
+  });
