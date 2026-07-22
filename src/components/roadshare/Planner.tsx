@@ -194,7 +194,7 @@ export function Planner({
     setYou(id);
     setQuery(home.address);
     setSelected((current) => (current.includes(id) ? current : [id, ...current]));
-    setStep("neighbors");
+    setStep(hasRoadStep ? "road" : "neighbors");
   }
 
   function toggleParcel(id: string) {
