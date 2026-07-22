@@ -409,7 +409,7 @@ export function Planner({
         </section>
         <aside className="min-w-0 overflow-y-auto border-l border-border bg-background p-4 space-y-3">
           {rightRail}
-          {segments && segments.length > 0 && step !== "road" && step !== "review" && (
+          {segments && segments.length > 0 && step !== "home" && step !== "road" && step !== "review" && (
             <RoadsPanel
               segments={segments}
               onAddSegment={onAddSegment}
