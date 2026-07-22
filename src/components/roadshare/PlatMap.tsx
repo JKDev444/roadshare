@@ -145,9 +145,16 @@ export function PlatMap({
         const a = NODES[`${drag.id}_W`];
         const b = NODES[`${drag.id}_E`];
         if (a && b) onMoveSegment(drag.id, a.x + drag.dx, a.y + drag.dy, b.x + drag.dx, b.y + drag.dy);
-      } else if (drag.kind === "segEndpoint" && onMoveSegmentEndpoint) {
-        const n = NODES[`${drag.id}_${drag.endpoint === "a" ? "W" : "E"}`];
-        if (n) onMoveSegmentEndpoint(drag.id, drag.endpoint, n.x + drag.dx, n.y + drag.dy);
+      } else if (drag.kind === "segEndpoint" && onMoveSegment) {
+        const a = NODES[`${drag.id}_W`];
+        const b = NODES[`${drag.id}_E`];
+        if (a && b) {
+          const ax = drag.endpoint === "a" ? a.x + drag.dx : a.x;
+          const ay = drag.endpoint === "a" ? a.y + drag.dy : a.y;
+          const bx = drag.endpoint === "b" ? b.x + drag.dx : b.x;
+          const by = drag.endpoint === "b" ? b.y + drag.dy : b.y;
+          onMoveSegment(drag.id, ax, ay, bx, by);
+        }
       }
     }
     setDrag(null);
