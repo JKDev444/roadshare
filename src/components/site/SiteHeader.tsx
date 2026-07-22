@@ -37,7 +37,7 @@ export function SiteHeader() {
         <div className="hidden items-center gap-2 md:flex">
           {loading ? null : user ? (
             <Button size="sm" asChild>
-              <Link to="/my-road">Go to dashboard</Link>
+              <Link to="/my-road">Open my road</Link>
             </Button>
           ) : (
             <>
@@ -81,7 +81,7 @@ export function SiteHeader() {
           ))}
           {user ? (
             <Button className="mt-2" asChild onClick={() => setOpen(false)}>
-              <Link to="/my-road">Go to dashboard</Link>
+              <Link to="/my-road">Open my road</Link>
             </Button>
           ) : (
             <>
