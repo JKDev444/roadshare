@@ -104,6 +104,7 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
   const open = openOverride ?? shouldOpen;
 
   const [step, setStep] = useState<Step>("start");
+  const [nodocsMode, setNodocsMode] = useState<"menu" | "paste" | "manual">("menu");
   const [confirmClose, setConfirmClose] = useState(false);
   const [basicInfo, setBasicInfo] = useState<BasicInfo | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -185,8 +186,12 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
     setOpenOverride(false);
     if (markSkip && !completed) update({ wizard_skipped: true });
     if (completed) clearResumeState(userId);
+    // Strip the ?welcome=1 param so the dashboard behind the wizard is a
+    // clean landing instead of re-triggering forceOpen on refresh.
+    void navigate({ to: "/dashboard", search: {} as never, replace: true }).catch(() => {});
     setTimeout(() => {
       setStep("start");
+      setNodocsMode("menu");
       setBasicInfo(null);
       setJobId(null);
       setJobFilenames([]);
@@ -412,11 +417,13 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
                 } else if (choice === "address") setStep("basic");
                 else if (choice === "paste") {
                   setBasicInfo({ communityName: "", city: "", state: "", startingAddress: "" });
+                  setNodocsMode("paste");
                   setStep("nodocs");
                 }
                 else {
                   // "manual" — we still need a stub basicInfo for handleNoDocs.
                   setBasicInfo({ communityName: "", city: "", state: "", startingAddress: "" });
+                  setNodocsMode("manual");
                   setStep("nodocs");
                 }
               }}
@@ -491,8 +498,12 @@ export function WelcomeWizard({ forceOpen }: { forceOpen?: boolean } = {}) {
               basicInfo={basicInfo}
               onSubmit={handleNoDocs}
               onUploadInstead={() => setStep("upload")}
-              onBack={() => setStep("start")}
+              onBack={() => {
+                setNodocsMode("menu");
+                setStep("start");
+              }}
               submitting={applying}
+              initialMode={nodocsMode}
             />
           )}
 
