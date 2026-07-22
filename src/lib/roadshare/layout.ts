@@ -185,3 +185,34 @@ export function makeManualHomes(count: number, startingAddress?: string | null):
     address: i === 0 && startingAddress ? startingAddress : null,
   }));
 }
+
+// Adapter so the Cedar Hollow sample uses the same Layout shape.
+export function cedarHollowLayout(): Layout {
+  // Lazy require avoids circular type surface.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const data = require("./data") as typeof import("./data");
+  const nodes: NodeMap = {};
+  for (const key of Object.keys(data.NODES) as (keyof typeof data.NODES)[]) {
+    const n = data.NODES[key];
+    nodes[n.id] = { id: n.id, x: n.x, y: n.y };
+  }
+  return {
+    view: data.VIEW,
+    ftPerUnit: data.FT_PER_UNIT,
+    nodes,
+    edges: data.EDGES.map((e) => ({ id: e.id, a: e.a, b: e.b, length: e.length, road: e.road })),
+    entrances: data.ENTRANCES.map((e) => ({ id: e.id, node: e.node, label: e.label, meets: e.meets, x: e.x, y: e.y })),
+    parcels: data.PARCELS.map((p) => ({
+      id: p.id,
+      address: p.address,
+      poly: p.poly,
+      label: p.label,
+      frontage: p.frontage,
+      frontageLine: p.frontageLine,
+      note: p.note,
+    })),
+    totalRoadFt: data.TOTAL_ROAD_FT,
+    roadName: "Cedar Hollow",
+    entryDirs: ["west", "north"],
+  };
+}
