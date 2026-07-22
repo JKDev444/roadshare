@@ -653,3 +653,95 @@ function SliderControl({
     </div>
   );
 }
+
+function PlatToolbar({
+  onAddHome,
+  onRotate,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+}: {
+  onAddHome?: () => void;
+  onRotate?: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+}) {
+  if (!onAddHome && !onRotate && !onUndo && !onRedo) return null;
+  return (
+    <div className="absolute left-6 top-6 z-10 flex items-center gap-1 rounded-full bg-background/95 p-1 shadow-md ring-1 ring-border backdrop-blur">
+      {onAddHome && (
+        <Button size="sm" variant="ghost" onClick={onAddHome} className="h-8 rounded-full px-3">
+          <Plus className="h-4 w-4" /> Add home
+        </Button>
+      )}
+      {onRotate && (
+        <Button size="sm" variant="ghost" onClick={onRotate} className="h-8 rounded-full px-3">
+          <RotateCw className="h-4 w-4" /> Rotate
+        </Button>
+      )}
+      {onUndo && (
+        <Button size="sm" variant="ghost" onClick={onUndo} disabled={!canUndo} className="h-8 rounded-full px-2">
+          <Undo2 className="h-4 w-4" />
+        </Button>
+      )}
+      {onRedo && (
+        <Button size="sm" variant="ghost" onClick={onRedo} disabled={!canRedo} className="h-8 rounded-full px-2">
+          <Redo2 className="h-4 w-4" />
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function HomesPanel({
+  homes,
+  parcels,
+  onAddHome,
+  onRenameHome,
+  onDeleteHome,
+}: {
+  homes: RoadHome[];
+  parcels: LayoutParcel[];
+  onAddHome?: () => void;
+  onRenameHome?: (id: string) => void;
+  onDeleteHome?: (id: string) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="font-display text-sm font-bold">Homes on this road</h3>
+        {onAddHome && (
+          <Button size="sm" variant="outline" onClick={onAddHome} className="h-7 px-2 text-xs">
+            <Plus className="h-3.5 w-3.5" /> Add
+          </Button>
+        )}
+      </div>
+      <ul className="space-y-1.5 max-h-72 overflow-auto pr-1">
+        {homes.map((h, i) => {
+          const parcel = parcels[i];
+          const label = parcel?.address ?? h.label;
+          const pid = parcel?.id ?? h.id;
+          return (
+            <li key={h.id} className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-2 py-1.5 text-xs">
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-muted font-mono text-[10px] font-bold">{i + 1}</span>
+              <span className="min-w-0 flex-1 truncate">{label}</span>
+              {onRenameHome && (
+                <button type="button" aria-label="Rename" onClick={() => onRenameHome(pid)} className="rounded p-1 text-muted-foreground hover:bg-accent">
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {onDeleteHome && homes.length > 1 && (
+                <button type="button" aria-label="Remove" onClick={() => onDeleteHome(pid)} className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
