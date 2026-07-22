@@ -67,11 +67,13 @@ export function Planner({
   roadName,
   initialState,
   onStateChange,
+  variant = "demo",
 }: {
   homes?: RoadHome[];
   roadName?: string;
   initialState?: Partial<PlannerSnapshot> | null;
   onStateChange?: (snapshot: PlannerSnapshot) => void;
+  variant?: "demo" | "app";
 } = {}) {
   const layout = useMemo<Layout>(() => {
     if (homes && homes.length > 0) return buildLayout(homes, roadName || "My road");
@@ -188,6 +190,147 @@ export function Planner({
     setSurfaces(SURFACE_TYPES.map((s) => ({ pct: s.defaultPct, cost: s.defaultCost })));
   }
 
+  const isApp = variant === "app";
+
+  const platBlock = (
+    <PlatMap
+      layout={layout}
+      selected={selected}
+      you={you}
+      entrances={entrances}
+      hovered={hovered}
+      activeStep={step}
+      onToggleParcel={toggleParcel}
+      onHoverParcel={setHovered}
+      onToggleEntrance={toggleEntrance}
+    />
+  );
+
+  const stepStrip = (
+    <div className="grid gap-2 rounded-2xl border border-border bg-card/90 p-3 text-xs shadow-sm sm:grid-cols-4">
+      {(Object.keys(STEP_META) as WalkStep[]).map((key) => {
+        const meta = STEP_META[key];
+        const done =
+          (key === "home" && !!you) ||
+          (key === "neighbors" && selected.length > 1) ||
+          (key === "entrances" && entrances.length > 0) ||
+          (key === "review" && canReview);
+        const active = step === key;
+        const Icon = meta.icon;
+        return (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setStep(key)}
+            className={cn(
+              "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-xl border p-2 text-left transition-colors",
+              active ? "border-primary bg-primary/10" : "border-border bg-background/60 hover:bg-accent",
+            )}
+          >
+            <span
+              className={cn(
+                "grid h-7 w-7 shrink-0 place-items-center rounded-lg",
+                done ? "bg-selected text-selected-foreground" : active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+              )}
+            >
+              {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate font-semibold">{meta.short}</span>
+              <span className="block truncate text-muted-foreground">Step {meta.n}</span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const rightRail = (
+    <>
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
+        <StepPanel
+          parcels={PARCELS}
+          entrancesList={ENTRANCES}
+          step={step}
+          query={query}
+          setQuery={setQuery}
+          matches={matches}
+          pickedHome={pickedHome}
+          selected={selected}
+          suggested={suggested}
+          entrances={entrances}
+          methodology={methodology}
+          setMethodology={setMethodology}
+          onPickHome={pickYou}
+          onUseSuggestions={useSuggestions}
+          onClearNeighbors={() => setSelected(you ? [you] : [])}
+          onToggleEntrance={toggleEntrance}
+          onUseBothEntrances={useBothEntrances}
+          onGoToReview={() => setStep("review")}
+          canReview={canReview}
+        />
+      </div>
+
+      {step === "review" && (
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
+          <ResultsPanel result={result} methodology={methodology} />
+        </div>
+      )}
+
+      <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+        <button
+          type="button"
+          onClick={() => setAssumptionsOpen((v) => !v)}
+          className="flex w-full items-center justify-between gap-3 text-left"
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
+              <SlidersHorizontal className="h-4 w-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="block font-display text-sm font-semibold">Change the details</span>
+              <span className="block truncate text-xs text-muted-foreground">What the road is made of, how wide, and how many years</span>
+            </span>
+          </span>
+          <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", assumptionsOpen && "rotate-180")} />
+        </button>
+
+        {assumptionsOpen && (
+          <div className="mt-4 space-y-4 border-t border-border pt-4">
+            <SurfaceControls surfaces={surfaces} setSurfaces={setSurfaces} pctTotal={pctTotal} pctValid={pctValid} />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+              <SliderControl label="How wide is the road?" value={roadWidth} suffix="ft" min={8} max={40} onChange={setRoadWidth} />
+              <SliderControl label="Plan over how many years?" value={fundingPeriod} suffix="yr" min={1} max={40} onChange={setFundingPeriod} />
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+
+  if (isApp) {
+    // Full-bleed: plat fills the viewport, right rail is a fixed 380px column.
+    return (
+      <main className="grid h-[calc(100dvh-57px)] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <section className="relative min-w-0 overflow-hidden bg-muted/20">
+          <div className="absolute inset-0 flex flex-col">
+            <div className="flex-1 min-h-0 p-3 sm:p-4">
+              <div className="h-full [&>div]:h-full [&_svg]:h-full [&_svg]:w-full">
+                {platBlock}
+              </div>
+            </div>
+            <div className="border-t border-border bg-background/95 p-3 backdrop-blur">
+              {stepStrip}
+            </div>
+          </div>
+        </section>
+        <aside className="min-w-0 overflow-y-auto border-l border-border bg-background p-4 space-y-3">
+          {rightRail}
+        </aside>
+      </main>
+    );
+  }
+
   return (
     <main className="surface-glow">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
@@ -208,115 +351,12 @@ export function Planner({
               </Button>
             </div>
 
-            <PlatMap
-              layout={layout}
-              selected={selected}
-              you={you}
-              entrances={entrances}
-              hovered={hovered}
-              activeStep={step}
-              onToggleParcel={toggleParcel}
-              onHoverParcel={setHovered}
-              onToggleEntrance={toggleEntrance}
-            />
-
-            <div className="grid gap-2 rounded-2xl border border-border bg-card/90 p-3 text-xs shadow-sm sm:grid-cols-4">
-              {(Object.keys(STEP_META) as WalkStep[]).map((key) => {
-                const meta = STEP_META[key];
-                const done =
-                  (key === "home" && !!you) ||
-                  (key === "neighbors" && selected.length > 1) ||
-                  (key === "entrances" && entrances.length > 0) ||
-                  (key === "review" && canReview);
-                const active = step === key;
-                const Icon = meta.icon;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setStep(key)}
-                    className={cn(
-                      "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-xl border p-2 text-left transition-colors",
-                      active ? "border-primary bg-primary/10" : "border-border bg-background/60 hover:bg-accent",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "grid h-7 w-7 shrink-0 place-items-center rounded-lg",
-                        done ? "bg-selected text-selected-foreground" : active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate font-semibold">{meta.short}</span>
-                      <span className="block truncate text-muted-foreground">Step {meta.n}</span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            {platBlock}
+            {stepStrip}
           </section>
 
           <aside className="min-w-0 space-y-3 lg:sticky lg:top-20 lg:h-fit">
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
-              <StepPanel
-                parcels={PARCELS}
-                entrancesList={ENTRANCES}
-                step={step}
-                query={query}
-                setQuery={setQuery}
-                matches={matches}
-                pickedHome={pickedHome}
-                selected={selected}
-                suggested={suggested}
-                entrances={entrances}
-                methodology={methodology}
-                setMethodology={setMethodology}
-                onPickHome={pickYou}
-                onUseSuggestions={useSuggestions}
-                onClearNeighbors={() => setSelected(you ? [you] : [])}
-                onToggleEntrance={toggleEntrance}
-                onUseBothEntrances={useBothEntrances}
-                onGoToReview={() => setStep("review")}
-                canReview={canReview}
-              />
-            </div>
-
-            {step === "review" && (
-              <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
-                <ResultsPanel result={result} methodology={methodology} />
-              </div>
-            )}
-
-            <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
-              <button
-                type="button"
-                onClick={() => setAssumptionsOpen((v) => !v)}
-                className="flex w-full items-center justify-between gap-3 text-left"
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
-                    <SlidersHorizontal className="h-4 w-4" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block font-display text-sm font-semibold">Change the details</span>
-                    <span className="block truncate text-xs text-muted-foreground">What the road is made of, how wide, and how many years</span>
-                  </span>
-                </span>
-                <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", assumptionsOpen && "rotate-180")} />
-              </button>
-
-              {assumptionsOpen && (
-                <div className="mt-4 space-y-4 border-t border-border pt-4">
-                  <SurfaceControls surfaces={surfaces} setSurfaces={setSurfaces} pctTotal={pctTotal} pctValid={pctValid} />
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-                    <SliderControl label="How wide is the road?" value={roadWidth} suffix="ft" min={8} max={40} onChange={setRoadWidth} />
-                    <SliderControl label="Plan over how many years?" value={fundingPeriod} suffix="yr" min={1} max={40} onChange={setFundingPeriod} />
-                  </div>
-                </div>
-              )}
-            </div>
+            {rightRail}
           </aside>
         </div>
       </div>
