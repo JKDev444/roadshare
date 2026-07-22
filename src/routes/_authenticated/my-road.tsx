@@ -120,7 +120,7 @@ function MyRoadPage() {
           </div>
         </div>
       </header>
-      <Planner homes={homes} roadName={roadName} initialState={initialSnapshot} onStateChange={handleStateChange} />
+      <Planner variant="app" homes={homes} roadName={roadName} initialState={initialSnapshot} onStateChange={handleStateChange} />
     </div>
   );
 }
