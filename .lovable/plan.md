@@ -1,175 +1,62 @@
-# RoadShare v2 — Kid-Simple Rebuild
+# Make `/my-road` show *your* road
 
-**One reason this app exists:** neighbors on a shared private road need to know what each household owes for repairs — and feel it's fair. Everything else is noise. The whole app collapses to one page that looks like `/tools/cedar-hollow`, with the shortest possible on-ramp to get there.
+Right now `/welcome` only asks for a road name, and `/my-road` renders the Cedar Hollow sample homes for everyone. This phase makes the planner render the signed-in user's actual road.
 
----
+## What we're building
 
-## The mental model I'm optimizing for
+### 1. New onboarding at `/welcome` (2 screens)
 
-Picture a parent who has never used a "SaaS." They got a letter about a road repair. A neighbor sent them RoadShare. They should be able to:
+**Screen 1 — Name your road**
+- Single input: "What's your road called?" (e.g. "Five Peaks Dr")
+- Big "Next" button. That's it.
 
-1. Type or paste their neighbors' addresses.
-2. See a friendly map of their road with everyone's house on it.
-3. See "You: $412/year" in big type.
+**Screen 2 — Who's on your road?**
+Three big playful choice tiles (same style as `/tools/cedar-hollow`):
 
-Three screens. No jargon. No decisions unless there's a decision worth making.
+1. **Use my address** — user types their address, we auto-find nearby homes (reuse the existing `parcelsPointLookup` + widening-radius logic). Result is a list of home addresses the user can check/uncheck.
+2. **Paste a list** — textarea, one address or house number per line. We parse into homes.
+3. **Enter by hand** — pick a number (2–40) with a +/− stepper. Generates "Home 1, Home 2, …" placeholders the user can rename later.
 
----
+Every tile ends the same way: a saved `roads.state` with `{ roadName, homes: [{ id, label, address? }] }` and a redirect to `/my-road`.
 
-## Onboarding: 2 screens, 3 ways in
+No modals, no wizard steps beyond these two screens, no "save & exit" trap. A single "Back" arrow returns to screen 1.
 
-### Screen 1 — "Who's on your road?"
+### 2. Generalize `Planner` for real user data
 
-One card, one heading, **three big playful tiles** (same visual language as the existing `StartChoiceStep`):
+- Remove hardcoded Cedar Hollow `PARCELS` import from `/my-road`.
+- `Planner` accepts `homes` + `roadName` as props and lays them out on the SVG road automatically (two rows either side of the road, sized to fit any count from 2 to ~40; anything larger collapses to a compact grid like today's fallback).
+- The interactive walkthrough (pick your home → pick neighbors → assign shares → done) works against the user's homes.
+- `/tools/cedar-hollow` keeps using the hardcoded sample — it stays as the marketing demo, unchanged.
 
-| Tile | What it does |
-|---|---|
-| 🏠 **Just my address** | Type one address. We auto-find neighbors within a widening radius. |
-| 📋 **Paste a list** | Big textarea, one address per line. Great for people who already have the HOA roster. |
-| ✍️ **Add them by hand** | Skip typing addresses — just say "6 homes on my road" and we drop 6 unnamed tiles you can label later. |
+### 3. Persistence & reset
 
-Always visible under the tiles:
-- One text input: **"Name your road"** (e.g. "Maple Lane") — placeholder, not required
-- One dropdown pre-filled: **"You're home #___ on the road"** (we ask this on screen 2 instead if they don't know yet)
+- `saveMyRoadState` already exists — extend the JSON shape to include `homes` and `roadName`.
+- The `roadshare` easter egg already wipes `roads` rows; confirm it still lands the user back on `/welcome` with a clean slate.
+- If a signed-in user hits `/my-road` with no saved homes, redirect to `/welcome`.
 
-Bottom link: *"Just show me how it works"* → seeds the Cedar Hollow demo data into their account so they can play, then delete.
+### 4. Non-technical QA pass (with screenshots)
 
-### Screen 2 — "Here's your road. Look right?"
+Playwright run through every path, saving screenshots to `/tmp/browser/phase-real-road/`:
 
-Regardless of which tile they picked, screen 2 is **the same page**: the Cedar Hollow-style map, pre-populated with their homes on a straight road. A single yes/no question at the top:
+- Path A: address lookup with `787 Five Peaks Dr, Kalama, WA 98625`
+- Path B: paste list of 8 addresses
+- Path C: manual count of 6 homes
+- Refresh mid-walkthrough → resumes on same step
+- Sign out / sign back in → homes still there
+- Type `roadshare` → back to empty `/welcome`
 
-> **"This look about right?"** &nbsp; [ ✅ Yes, open my road ] &nbsp; [ ✏️ Let me fix it ]
+For each path I answer the three questions:
+1. Was the flow easy enough for a non-technical user?
+2. Was anything confusing?
+3. Did you get the result you wanted?
 
-If they hit "fix it," inline controls appear directly on the map:
-- Click a tile → rename or delete
-- Click "+" at either end of the road → add a home
-- Drag a tile to reorder
-- One toggle: **"My home is on the ___ side"** (left/right/either) — cosmetic, purely to make the gold "you" tile land where they expect
+## Technical notes
 
-No modal, no separate editor screen. What they see IS the app they'll use.
+- Files touched: `src/routes/welcome.tsx` (rebuild), `src/components/onboarding/*` (new choice tiles), `src/components/planner/Planner.tsx` (props-driven), `src/routes/my-road.tsx` (feed real state), `src/lib/road.functions.ts` (extend state shape).
+- No DB migration needed — `roads.state` is already `jsonb`.
+- Reuse existing address search + `parcelsPointLookup` server functions; no new external APIs.
+- Auth-gated pages stay under `_authenticated/`; `/welcome` stays public-until-signed-in per current setup.
 
-**Nothing else is asked.** No surface picker, no methodology picker, no funding period, no CC&R upload, no entrance pins. Those all live inside `/my-road` with smart defaults already applied (2" asphalt, distance-based split, 15-year funding, both entrances active if the shape has them).
+## Out of scope for this phase
 
----
-
-## Road layouts — decided FOR the user, tweakable later
-
-**Do NOT ask about road shape up front.** A non-tech user can't answer "T-junction or cul-de-sac?" and shouldn't have to. Instead:
-
-- **Default road:** a straight horizontal line with homes evenly spaced along both sides. This works for 95% of real private roads and matches the "keep it straight" direction from earlier.
-- **Optional (advanced, hidden behind a "Change road shape" link inside `/my-road`):** three templates rendered as picture-book thumbnails:
-  1. **Straight road** (default) — one line, homes on both sides
-  2. **T-junction** — like Cedar Hollow, two roads meeting
-  3. **Cul-de-sac** — one road ending in a loop
-  
-  Picking a template rearranges tiles automatically. No drawing tools. No vertices. No lasso. If someone needs more than these three shapes, they're not the target user for v2.
-
-**Why this beats asking:** the answer to "which shape?" doesn't change what a non-tech user needs (their fair share). It only changes the picture. So we give them a picture that's usually right, and let them swap it if it's wrong.
-
----
-
-## `/my-road` — the whole app
-
-Identical layout to `/tools/cedar-hollow`, powered by the same `PlatMap` + `ResultsPanel` + `engine.ts`.
-
-- **Left 60%:** animated dashed road, home tiles in the neighborhood palette, gold "you" tile. Click a tile to see its share. Tiny toolbar: `+ Add home` · `Change road shape` · `Rename road`.
-- **Right 40%:** the four progressive step cards from Cedar Hollow, **but pre-answered with sensible defaults so the results are visible immediately**:
-  1. **Your home** — pre-picked from onboarding, editable by clicking a tile
-  2. **Who's chipping in** — everyone checked by default; uncheck to exclude
-  3. **What's the project?** — one slider "How much road are we fixing?" (0–100%), one surface picker with picture thumbnails (Gravel / Chip seal / Asphalt / Concrete), one input "Years to pay it off" (default 15)
-  4. **Your share** — big number, per-year and one-time, plus a "share this with neighbors" copy-link button
-- **Top bar:** road name, avatar menu (Sign out, Start over). No sidebar.
-
-Every change autosaves (500ms debounce) to the user's single `roads` row.
-
----
-
-## What "start over" does
-
-Typing `roadshare` anywhere on an authenticated page, or clicking "Start over" in the avatar menu, deletes the `roads` row and returns to `/welcome`. Confirmation dialog: "This clears your road. You'll start fresh." One button.
-
----
-
-## Data model (unchanged from previous plan)
-
-Single table:
-
-```sql
-CREATE TABLE public.roads (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
-  name text,
-  state jsonb NOT NULL DEFAULT '{}'::jsonb,  -- entire planner state
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-```
-
-`UNIQUE(user_id)` enforces one road per user in v2 — simpler UI, no "which road?" picker. RLS scoped to `auth.uid()`. Wipe every other domain table (see previous plan for the delete list).
-
-`state` shape:
-```
-{
-  layout: "straight" | "t" | "cul-de-sac",
-  homes: [{ id, label, address?, side, order, isYou }],
-  project: { surfaceId, pct, costPerSqFt, years, roadWidth },
-  split: { method, entrances }
-}
-```
-
----
-
-## Routes after the rebuild
-
-```
-src/routes/
-  index.tsx, about, pricing, product*, tools*, ...    (marketing, unchanged)
-  auth.tsx, auth.callback.tsx                          (unchanged)
-  _authenticated/
-    route.tsx                                          (managed gate)
-    index.tsx                                          NEW → redirects to /welcome or /my-road
-    welcome.tsx                                        NEW → 2-screen onboarding
-    my-road.tsx                                        NEW → the planner
-```
-
-Deleted routes and components as listed in the previous plan (Ask, Pulse, Portfolio, Reports, Clauses, Decisions, Documents, Map, Community, Dashboard, Vote, all wizard sub-steps, AppShell sidebar, etc.).
-
----
-
-## Copy rules (kid-simple, enforced everywhere)
-
-- "Home," never "parcel," "lot," "property," or "unit"
-- "Your road," never "community," "network," "segment," or "geometry"
-- "Chipping in," never "cost-share group," "assessment," or "allocation"
-- "Your share," never "responsibility," "basis," or "apportionment"
-- Every dollar figure gets a plain-English footnote: *"That's about $34/month over 15 years."*
-- No progress percentages, no verification badges, no "0 of 4 confirmed" statuses anywhere
-
----
-
-## Build order & QA
-
-1. **Migration** — drop obsolete tables, create `roads`, keep `profiles`
-2. **Delete** obsolete routes/components/libs
-3. **Refactor** `Planner.tsx` into `<CedarHollowPlanner />` (demo) + `<RoadPlanner state onChange />` (app)
-4. **Build** `/welcome` (2 screens, 3 tiles) and `/my-road`
-5. **Playwright pass — non-tech persona, screenshots at every step:**
-   - Path A: address → auto-find → confirm → my-road → results visible
-   - Path B: paste 8 addresses → confirm → my-road → results visible
-   - Path C: "6 homes by hand" → rename inline → my-road → results visible
-   - Path D: change surface to gravel → number updates
-   - Path E: swap to T-junction template → homes rearrange, math still works
-   - Path F: type `roadshare` → confirm → back at welcome, road gone
-6. **Answer the three questions on the record** with screenshots as evidence:
-   - Was the flow easy enough? — YES
-   - Was it confusing? — NO
-   - Did you get the result you wanted? — YES (a dollar figure they can show a neighbor)
-
----
-
-## My honest recommendation on the open questions
-
-- **Ask about road layout up front?** No. Default to straight, put a "Change road shape" affordance on the main page for the rare user who cares.
-- **Templates with roads?** Yes, but only three, hidden behind a link, presented as picture thumbnails not names.
-- **Ask about roads at all during onboarding?** No. The onboarding's only job is "get their neighbors on the screen." The road picture is a rendering detail, not a data collection step.
-- **Anything else worth simplifying?** Kill the "Name your road" requirement — auto-name it from the first address (e.g. "Maple Lane"). One less field.
+Neighbors/voting, documents, decisions, cost-share math — the walkthrough still surfaces them, but this phase only guarantees the homes shown are the user's own. Those flows already work against `roads.state` and inherit the new data automatically.
