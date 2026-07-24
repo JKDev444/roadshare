@@ -279,6 +279,7 @@ export function Planner({
       onToggleEntrance={toggleEntrance}
       onRenameParcel={onRenameHome}
       onDeleteParcel={onDeleteHome}
+      onDeleteSegment={onDeleteSegment}
       onMoveHome={onMoveHome}
       onEditHome={onEditHome}
       onAssignHomeSegment={onAssignHomeSegment}
