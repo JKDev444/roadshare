@@ -602,19 +602,46 @@ export function PlatMap({
                 />
               )}
               <title>{p.name && p.name !== p.address ? `${p.name} · ${p.address}` : p.address}</title>
-              <text
-                x={p.label[0] + hd.dx}
-                y={p.label[1] + hd.dy}
-                fill={labelFill}
-                fontSize={parcelDisplaySize(parcelDisplayLabel(p, idx))}
-                fontWeight={isYou || isSel ? 700 : 600}
-                fontFamily="var(--font-sans)"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                pointerEvents="none"
-              >
-                {parcelDisplayLabel(p, idx)}
-              </text>
+              {(() => {
+                const mainLabel = parcelDisplayLabel(p, idx);
+                const mainSize = parcelDisplaySize(mainLabel);
+                const showSub = !!p.name?.trim() && !!p.address?.trim() && p.name.trim() !== p.address.trim();
+                const subLabel = showSub ? (p.address!.length > 20 ? p.address!.slice(0, 18) + "…" : p.address!) : null;
+                const subSize = subLabel ? Math.max(8, mainSize - 2) : 0;
+                return (
+                  <>
+                    <text
+                      x={p.label[0] + hd.dx}
+                      y={p.label[1] + hd.dy - (subLabel ? 4 : 0)}
+                      fill={labelFill}
+                      fontSize={mainSize}
+                      fontWeight={isYou || isSel ? 700 : 600}
+                      fontFamily="var(--font-sans)"
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      pointerEvents="none"
+                    >
+                      {mainLabel}
+                    </text>
+                    {subLabel && (
+                      <text
+                        x={p.label[0] + hd.dx}
+                        y={p.label[1] + hd.dy + 6}
+                        fill={labelFill}
+                        fontSize={subSize}
+                        fontFamily="var(--font-sans)"
+                        fontWeight={500}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        opacity="0.85"
+                        pointerEvents="none"
+                      >
+                        {subLabel}
+                      </text>
+                    )}
+                  </>
+                );
+              })()}
             </g>
           );
         })}
