@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, useNavigate, useRouter, redirect } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
@@ -44,7 +44,6 @@ export const Route = createFileRoute("/_authenticated/my-road")({
 function MyRoadPage() {
   const road = Route.useLoaderData();
   const navigate = useNavigate();
-  const router = useRouter();
   const reset = useServerFn(resetMyRoad);
   const save = useServerFn(saveMyRoadState);
   const share = useServerFn(createShare);
@@ -347,8 +346,8 @@ function MyRoadPage() {
     try {
       await reset();
       toast.success("Reset. Start fresh below.");
-      await router.invalidate();
-      navigate({ to: "/welcome" });
+      // Hard navigate to avoid race conditions with the autosave effect.
+      window.location.href = "/welcome";
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Reset failed.");
       setBusy(false);
