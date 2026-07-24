@@ -26,12 +26,13 @@ export const getMyRoad = createServerFn({ method: "GET" })
 
 export const createMyRoad = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { name: string; homes?: unknown }) => ({
+  .inputValidator((input: { name: string; homes?: unknown; segments?: unknown }) => ({
     name: (input?.name ?? "").trim().slice(0, 80) || "My road",
     homes: Array.isArray(input?.homes) ? input!.homes : [],
+    segments: Array.isArray(input?.segments) ? input!.segments : [],
   }))
   .handler(async ({ data, context }) => {
-    const state = { homes: data.homes, roadName: data.name } as unknown as Json;
+    const state = { homes: data.homes, segments: data.segments, roadName: data.name } as unknown as Json;
     const { data: row, error } = await context.supabase
       .from("roads")
       .upsert(
