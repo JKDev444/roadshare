@@ -222,7 +222,7 @@ export function PlatMap({
   }
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
       {/* Map title bar */}
       <div className="flex shrink-0 items-center justify-between border-b border-border/70 bg-card/80 px-4 py-2.5 backdrop-blur">
         <div className="flex items-center gap-2">
@@ -257,10 +257,13 @@ export function PlatMap({
         </div>
       </div>
 
+      <div className="relative flex-1 min-h-0">
+      {/* Friendly topo-paper backdrop (matches the homepage hero demo). */}
+      <div className="topo-grid pointer-events-none absolute inset-0 opacity-50" aria-hidden />
       <svg
         viewBox={`0 0 ${VIEW.w} ${VIEW.h}`}
         preserveAspectRatio="xMidYMid meet"
-        className={"block h-full max-h-full w-full min-h-0 flex-1 select-none " + (placing || pendingPlacement ? "cursor-crosshair" : "")}
+        className={"relative block h-full max-h-full w-full select-none " + (placing || pendingPlacement ? "cursor-crosshair" : "")}
         role="img"
         aria-label={`${title ?? layout.roadName} plat map`}
         onPointerMove={handleMove}
@@ -326,27 +329,10 @@ export function PlatMap({
           style={{ transition: "transform 300ms ease" }}
         >
         <defs>
-          <linearGradient id="land" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-map-land-top)" />
-            <stop offset="100%" stopColor="var(--color-map-land-bottom)" />
-          </linearGradient>
-          <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
-            <path
-              d="M 36 0 L 0 0 0 36"
-              fill="none"
-              stroke="var(--color-map-ink)"
-              strokeWidth="0.5"
-              opacity="0.08"
-            />
-          </pattern>
           <filter id="parcelShadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="1.4" stdDeviation="1.6" floodOpacity="0.16" />
+            <feDropShadow dx="0" dy="1.2" stdDeviation="1.4" floodOpacity="0.18" />
           </filter>
         </defs>
-
-        {/* Land */}
-        <rect width={VIEW.w} height={VIEW.h} fill="url(#land)" />
-        <rect width={VIEW.w} height={VIEW.h} fill="url(#grid)" />
 
         {/* Public road stubs at each entrance */}
         {ENTRANCES.map((e) => (
@@ -371,7 +357,7 @@ export function PlatMap({
           const b = node(e.b);
           const d = segDelta(e.id);
           return (
-            <line key={`c-${e.id}`} x1={a.x + d.dax} y1={a.y + d.day} x2={b.x + d.dbx} y2={b.y + d.dby} stroke="var(--color-map-asphalt-edge)" strokeWidth="24" strokeLinecap="round" />
+            <line key={`c-${e.id}`} x1={a.x + d.dax} y1={a.y + d.day} x2={b.x + d.dbx} y2={b.y + d.dby} stroke="var(--color-map-asphalt-edge)" strokeWidth="22" strokeLinecap="round" strokeLinejoin="round" />
           );
         })}
         {isCedar && NODES.E && (
@@ -392,8 +378,9 @@ export function PlatMap({
               x2={b.x + d.dbx}
               y2={b.y + d.dby}
               stroke="var(--color-map-asphalt)"
-              strokeWidth="19"
+              strokeWidth="16"
               strokeLinecap="round"
+              strokeLinejoin="round"
               style={{ cursor: onMoveSegment ? "grab" : "pointer" }}
               onPointerDown={(ev) => {
                 if (onMoveSegment) {
@@ -417,10 +404,11 @@ export function PlatMap({
               x2={b.x + d.dbx}
               y2={b.y + d.dby}
               stroke="var(--color-map-lane)"
-              strokeWidth="1.6"
-              strokeDasharray="9 8"
-              opacity="0.7"
-              style={{ animation: "rs-dash 1.4s linear infinite", pointerEvents: "none" }}
+              strokeWidth="2"
+              strokeDasharray="10 10"
+              strokeLinecap="round"
+              opacity="0.85"
+              style={{ animation: "rs-dash 2s linear infinite", pointerEvents: "none" }}
             />
           );
         })}
