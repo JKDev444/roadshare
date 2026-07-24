@@ -7,6 +7,7 @@ import { AppHeader, MapToolbar } from "@/components/roadshare/AppHeader";
 import { Planner, type PlannerSnapshot } from "@/components/roadshare/Planner";
 import { HomeDetailsDrawer } from "@/components/roadshare/HomeDetailsDrawer";
 import { TemplatePicker } from "@/components/roadshare/TemplatePicker";
+import { BulkAddDialog } from "@/components/roadshare/BulkAddDialog";
 import {
   makeHomeId,
   makeSegmentId,
@@ -72,6 +73,7 @@ function MyRoadPage() {
     !initialSegments[0].geometry &&
     !initialHomes.some((h) => h.position);
   const [showTemplates, setShowTemplates] = useState(initialShowTemplates);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const historyRef = useRef<RoadHome[][]>([initialHomes]);
   const futureRef = useRef<RoadHome[][]>([]);
   const [historyTick, setHistoryTick] = useState(0);
@@ -89,8 +91,31 @@ function MyRoadPage() {
   function handleAddHome() {
     const next = [
       ...homes,
-      { id: makeHomeId(), label: `Home ${homes.length + 1}`, address: null, segmentId: segments[0]?.id },
+      // New homes land in the tray so they never float loose on the map.
+      { id: makeHomeId(), label: `Home ${homes.length + 1}`, address: null, segmentId: segments[0]?.id, position: null },
     ];
+    pushHistory(next);
+  }
+  function handleBulkAdd(drafts: { address: string; owner?: string; frontageFt?: number }[]) {
+    if (drafts.length === 0) return;
+    const startIdx = homes.length;
+    const additions: RoadHome[] = drafts.map((d, i) => ({
+      id: makeHomeId(),
+      label: d.address || `Home ${startIdx + i + 1}`,
+      address: d.address || null,
+      ownerLabel: d.owner ?? null,
+      frontageFtOverride: d.frontageFt ?? null,
+      segmentId: segments[0]?.id,
+      position: null,
+    }));
+    pushHistory([...homes, ...additions]);
+  }
+  function handleReturnHomeToTray(id: string) {
+    const next = homes.map((h) => (h.id === id ? { ...h, position: null } : h));
+    pushHistory(next);
+  }
+  function handleDropHomeAt(homeId: string, x: number, y: number, segmentId: string) {
+    const next = homes.map((h) => (h.id === homeId ? { ...h, position: { x, y }, segmentId } : h));
     pushHistory(next);
   }
   function handleDeleteHome(id: string) {
@@ -327,16 +352,20 @@ function MyRoadPage() {
         onPlaceRoad={handlePlaceRoad}
         onCancelPlaceRoad={handleCancelPlaceRoad}
         onEditHome={handleEditHome}
+        onDropHomeAt={handleDropHomeAt}
+        onBulkAdd={() => setBulkOpen(true)}
       />
       {showTemplates && (
         <TemplatePicker onPick={handlePickTemplate} onSkip={() => setShowTemplates(false)} />
       )}
+      <BulkAddDialog open={bulkOpen} onClose={() => setBulkOpen(false)} onAdd={handleBulkAdd} />
       <HomeDetailsDrawer
         home={editingHomeId ? homes.find((h) => h.id === editingHomeId) ?? null : null}
         segments={segments}
         onClose={() => setEditingHomeId(null)}
         onSave={handleSaveHome}
         onDelete={homes.length > 1 ? handleDeleteHome : undefined}
+        onReturnToTray={handleReturnHomeToTray}
       />
     </div>
   );

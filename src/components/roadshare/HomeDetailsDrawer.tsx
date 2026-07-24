@@ -12,12 +12,14 @@ export function HomeDetailsDrawer({
   onClose,
   onSave,
   onDelete,
+  onReturnToTray,
 }: {
   home: RoadHome | null;
   segments: Segment[];
   onClose: () => void;
   onSave: (id: string, patch: Partial<RoadHome>) => void;
   onDelete?: (id: string) => void;
+  onReturnToTray?: (id: string) => void;
 }) {
   const [address, setAddress] = useState("");
   const [owner, setOwner] = useState("");
@@ -139,6 +141,18 @@ export function HomeDetailsDrawer({
             </Button>
           ) : <span />}
           <div className="flex items-center gap-2">
+            {onReturnToTray && home.position !== null && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onReturnToTray(home.id);
+                  onClose();
+                }}
+              >
+                Move to tray
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
             <Button size="sm" onClick={save}>Save</Button>
           </div>
