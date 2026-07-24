@@ -462,23 +462,29 @@ export function PlatMap({
           const y = bb.y + hd.dy;
           const w = bb.w;
           const h = bb.h;
-          let fill = "var(--color-map-parcel)";
-          let stroke = "var(--color-map-parcel-edge)";
-          let sw = 1;
+          // Homepage-hero pill styling: solid fills, no visible border.
+          let fill = "color-mix(in oklab, var(--color-selected) 30%, transparent)";
+          let labelFill = "var(--color-muted-foreground)";
+          let fillOpacity = 0.9;
           if (isSel) {
-            fill = "color-mix(in oklch, var(--color-selected) 22%, var(--color-map-parcel))";
-            stroke = "var(--color-selected)";
-            sw = 1.75;
+            fill = "var(--color-selected)";
+            labelFill = "var(--color-selected-foreground)";
+            fillOpacity = 0.85;
           }
           if (isYou) {
-            fill = "color-mix(in oklch, var(--color-gold) 34%, var(--color-map-parcel))";
-            stroke = "var(--color-gold)";
-            sw = 2;
+            fill = "var(--color-gold)";
+            labelFill = "var(--color-gold-foreground)";
+            fillOpacity = 0.95;
           }
           return (
             <g
               key={p.id}
-              style={{ cursor: onMoveHome ? "grab" : "pointer" }}
+              style={{
+                cursor: onMoveHome ? "grab" : "pointer",
+                transformOrigin: `${x + w / 2}px ${y + h / 2}px`,
+                animation: `rs-parcel-in 380ms ease-out both`,
+                animationDelay: `${Math.min(idx * 40, 800)}ms`,
+              }}
               onPointerDown={(e) => {
                 if (placing) return;
                 if (onMoveHome) startDrag("home", p.id, undefined, e);
@@ -501,10 +507,12 @@ export function PlatMap({
                 y={y}
                 width={w}
                 height={h}
-                rx="4"
+                rx="6"
                 fill={fill}
-                stroke={stroke}
-                strokeWidth={isHover ? sw + 1 : sw}
+                fillOpacity={fillOpacity}
+                stroke={isHover ? "var(--color-foreground)" : "none"}
+                strokeOpacity={isHover ? 0.25 : 0}
+                strokeWidth={isHover ? 1 : 0}
                 filter="url(#parcelShadow)"
               />
               {isSel && (
@@ -513,17 +521,18 @@ export function PlatMap({
                   y1={p.frontageLine[0][1] + hd.dy}
                   x2={p.frontageLine[1][0] + hd.dx}
                   y2={p.frontageLine[1][1] + hd.dy}
-                  stroke={isYou ? "var(--color-gold)" : "var(--color-selected)"}
+                  stroke={isYou ? "var(--color-gold-foreground)" : "var(--color-selected-foreground)"}
                   strokeWidth="4.5"
                   strokeLinecap="round"
+                  opacity="0.9"
                 />
               )}
               <text
                 x={p.label[0] + hd.dx}
                 y={p.label[1] + hd.dy}
-                fill="var(--color-map-ink)"
-                fontSize="9"
-                fontWeight={isYou || isSel ? 700 : 500}
+                fill={labelFill}
+                fontSize="10"
+                fontWeight={isYou || isSel ? 700 : 600}
                 fontFamily="var(--font-mono)"
                 textAnchor="middle"
                 dominantBaseline="middle"
