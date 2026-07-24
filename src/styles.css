@@ -71,6 +71,7 @@
   --color-map-asphalt: var(--map-asphalt);
   --color-map-asphalt-edge: var(--map-asphalt-edge);
   --color-map-lane: var(--map-lane);
+  --color-map-road-label: var(--map-road-label);
   --color-map-parcel-edge: var(--map-parcel-edge);
   --color-fun-1: var(--fun-1);
   --color-fun-2: var(--fun-2);
@@ -128,6 +129,7 @@
   --map-land-bottom: oklch(0.93 0.04 145);
   --map-asphalt: oklch(0.36 0.012 220);
   --map-asphalt-edge: oklch(0.28 0.012 220);
+  --map-road-label: oklch(0.95 0.01 100);
   --map-lane: oklch(0.88 0.09 92);
   --map-parcel-edge: oklch(0.82 0.02 150);
   --fun-1: oklch(0.68 0.22 142);
@@ -182,6 +184,7 @@
   --map-land-bottom: oklch(0.2 0.03 210);
   --map-asphalt: oklch(0.42 0.015 220);
   --map-asphalt-edge: oklch(0.32 0.015 220);
+  --map-road-label: oklch(0.94 0.01 100);
   --map-lane: oklch(0.78 0.09 92);
   --map-parcel-edge: oklch(0.4 0.02 190);
   --fun-1: oklch(0.72 0.2 142);

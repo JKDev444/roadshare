@@ -1,7 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { Layout } from "@/lib/roadshare/layout";
+import type { Layout, LayoutParcel } from "@/lib/roadshare/layout";
 import { nearestPointOnSegments, snapHomeTileToRoad } from "@/lib/roadshare/layout";
+
+function parcelDisplayLabel(p: LayoutParcel, index: number): string {
+  const raw = p.name?.trim() || p.address?.trim() || "";
+  if (!raw) return String(index + 1);
+  // Show custom names like "Home 1" or "The Johnsons" as-is.
+  if (/^(Home|Neighbor)\s+\d+/i.test(raw)) return raw;
+  if (raw.length <= 14) return raw;
+  // For long addresses, fall back to the first token (usually the street number).
+  const first = raw.split(/\s+/)[0];
+  if (first && first.length <= 8) return first;
+  return raw.slice(0, 12);
+}
+
+function parcelDisplaySize(label: string) {
+  if (label.length <= 8) return 10;
+  if (label.length <= 12) return 9;
+  return 8;
+}
 
 interface PlatMapProps {
   layout: Layout;
@@ -463,17 +481,47 @@ export function PlatMap({
           );
         })}
 
-        {/* Road name label per edge */}
-        {!isCedar && EDGES.map((e) => {
+        {/* Road name label per edge — follows the road so it works on curves and angles. */}
+        {EDGES.map((e) => {
           const a = node(e.a);
           const b = node(e.b);
           const d = segDelta(e.id);
-          const midX = (a.x + d.dax + b.x + d.dbx) / 2;
-          const midY = (a.y + d.day + b.y + d.dby) / 2 - 6;
+          let sx = a.x + d.dax;
+          let sy = a.y + d.day;
+          let ex = b.x + d.dbx;
+          let ey = b.y + d.dby;
+          // Keep text reading left-to-right by flipping segments that point backwards.
+          const angle = Math.atan2(ey - sy, ex - sx) * (180 / Math.PI);
+          if (Math.abs(angle) > 90) {
+            [sx, ex] = [ex, sx];
+            [sy, ey] = [ey, sy];
+          }
+          const segLen = Math.hypot(ex - sx, ey - sy);
+          // Don't crowd tiny segments with a road name.
+          if (segLen < 60) return null;
+          const pathId = `roadLabel-${e.id}`;
           return (
-            <text key={`rl-${e.id}`} x={midX} y={midY} fill="var(--color-map-lane)" fontSize="10" fontWeight="600" fontFamily="var(--font-mono)" textAnchor="middle" letterSpacing="1.5" opacity="0.95" pointerEvents="none">
-              {(e.road || layout.roadName).toUpperCase()}
-            </text>
+            <g key={`rlg-${e.id}`} pointerEvents="none">
+              <defs>
+                <path id={pathId} d={`M ${sx} ${sy} L ${ex} ${ey}`} />
+              </defs>
+              <text
+                fontSize="12"
+                fontWeight="700"
+                fontFamily="var(--font-sans)"
+                fill="var(--color-map-road-label)"
+                paintOrder="stroke"
+                stroke="var(--color-map-asphalt-edge)"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                letterSpacing="0.3"
+              >
+                <textPath href={`#${pathId}`} startOffset="50%" textAnchor="middle" dominantBaseline="middle">
+                  {e.road || layout.roadName}
+                </textPath>
+              </text>
+            </g>
           );
         })}
 
@@ -553,19 +601,47 @@ export function PlatMap({
                   opacity="0.9"
                 />
               )}
-              <text
-                x={p.label[0] + hd.dx}
-                y={p.label[1] + hd.dy}
-                fill={labelFill}
-                fontSize="10"
-                fontWeight={isYou || isSel ? 700 : 600}
-                fontFamily="var(--font-mono)"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                pointerEvents="none"
-              >
-                {(p.address.match(/\d+/)?.[0]) ?? String(idx + 1)}
-              </text>
+              <title>{p.name && p.name !== p.address ? `${p.name} · ${p.address}` : p.address}</title>
+              {(() => {
+                const mainLabel = parcelDisplayLabel(p, idx);
+                const mainSize = parcelDisplaySize(mainLabel);
+                const showSub = !!p.name?.trim() && !!p.address?.trim() && p.name.trim() !== p.address.trim();
+                const subLabel = showSub ? (p.address!.length > 20 ? p.address!.slice(0, 18) + "…" : p.address!) : null;
+                const subSize = subLabel ? Math.max(8, mainSize - 2) : 0;
+                return (
+                  <>
+                    <text
+                      x={p.label[0] + hd.dx}
+                      y={p.label[1] + hd.dy - (subLabel ? 4 : 0)}
+                      fill={labelFill}
+                      fontSize={mainSize}
+                      fontWeight={isYou || isSel ? 700 : 600}
+                      fontFamily="var(--font-sans)"
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      pointerEvents="none"
+                    >
+                      {mainLabel}
+                    </text>
+                    {subLabel && (
+                      <text
+                        x={p.label[0] + hd.dx}
+                        y={p.label[1] + hd.dy + 6}
+                        fill={labelFill}
+                        fontSize={subSize}
+                        fontFamily="var(--font-sans)"
+                        fontWeight={500}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        opacity="0.85"
+                        pointerEvents="none"
+                      >
+                        {subLabel}
+                      </text>
+                    )}
+                  </>
+                );
+              })()}
             </g>
           );
         })}
@@ -652,29 +728,49 @@ export function PlatMap({
         )}
 
         {/* Hover tooltip */}
-        {hoveredParcel && (
-          <g pointerEvents="none">
-            <rect
-              x={hoveredParcel.label[0] - 62}
-              y={bbox(hoveredParcel.poly).y - 26}
-              width="124"
-              height="19"
-              rx="5"
-              fill="var(--color-primary)"
-            />
-            <text
-              x={hoveredParcel.label[0]}
-              y={bbox(hoveredParcel.poly).y - 13}
-              fill="var(--color-primary-foreground)"
-              fontSize="9.5"
-              fontFamily="var(--font-sans)"
-              fontWeight="600"
-              textAnchor="middle"
-            >
-              {hoveredParcel.address}
-            </text>
-          </g>
-        )}
+        {hoveredParcel && (() => {
+          const name = hoveredParcel.name || null;
+          const addr = hoveredParcel.address || null;
+          const hasBoth = !!(name && addr && name !== addr);
+          const main = name || addr || "Home";
+          const sub = hasBoth ? addr : null;
+          return (
+            <g pointerEvents="none">
+              <rect
+                x={hoveredParcel.label[0] - 70}
+                y={bbox(hoveredParcel.poly).y - (sub ? 36 : 26)}
+                width="140"
+                height={sub ? 32 : 19}
+                rx="5"
+                fill="var(--color-primary)"
+              />
+              <text
+                x={hoveredParcel.label[0]}
+                y={bbox(hoveredParcel.poly).y - (sub ? 23 : 13)}
+                fill="var(--color-primary-foreground)"
+                fontSize="9.5"
+                fontFamily="var(--font-sans)"
+                fontWeight="700"
+                textAnchor="middle"
+              >
+                {main}
+              </text>
+              {sub && (
+                <text
+                  x={hoveredParcel.label[0]}
+                  y={bbox(hoveredParcel.poly).y - 12}
+                  fill="var(--color-primary-foreground)"
+                  fontSize="9.5"
+                  fontFamily="var(--font-sans)"
+                  fontWeight="600"
+                  textAnchor="middle"
+                >
+                  {sub}
+                </text>
+              )}
+            </g>
+          );
+        })()}
 
         {/* In-map remove button on the hovered home */}
         {hoveredParcel && onDeleteParcel && !placing && !pendingPlacement && (() => {

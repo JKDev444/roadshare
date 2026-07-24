@@ -948,7 +948,7 @@ function HomesPanel({
       <ul className="space-y-1.5 max-h-72 overflow-auto pr-1">
         {homes.map((h, i) => {
           const parcel = parcels.find((p) => p.id === h.id.replace(/[^a-z0-9_-]/gi, "")) ?? parcels[i];
-          const label = parcel?.address ?? h.label;
+          const label = h.ownerLabel || parcel?.name || parcel?.address || h.label;
           const pid = parcel?.id ?? h.id;
           return (
             <li key={h.id} className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-2 py-1.5 text-xs">

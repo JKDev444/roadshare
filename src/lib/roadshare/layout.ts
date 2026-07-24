@@ -25,6 +25,8 @@ export interface LayoutEntrance {
 export interface LayoutParcel {
   id: string;
   address: string;
+  /** User-facing name (owner label, custom name, or address fallback). */
+  name?: string;
   poly: [number, number][];
   label: [number, number];
   frontage: [RoadPos, RoadPos];
@@ -268,6 +270,7 @@ export function buildLayout(
         parcels.push({
           id: slug(h.id),
           address: h.address?.trim() || h.label,
+          name: h.ownerLabel?.trim() || h.label,
           poly: [[x1, y1], [x2, y1], [x2, y2], [x1, y2]],
           label: [cx, cy],
           frontage: [
@@ -298,6 +301,7 @@ export function buildLayout(
       parcels.push({
         id: slug(h.id),
         address: h.address?.trim() || h.label,
+        name: h.ownerLabel?.trim() || h.label,
         poly,
         label,
         frontage: [
@@ -505,6 +509,7 @@ export function cedarHollowLayout(): Layout {
     parcels: cedar.PARCELS.map((p) => ({
       id: p.id,
       address: p.address,
+      name: p.address,
       poly: p.poly,
       label: p.label,
       frontage: p.frontage,
