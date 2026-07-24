@@ -412,6 +412,8 @@ export function PlatMap({
                   startDrag("segMove", e.id, undefined, ev);
                 }
               }}
+              onPointerEnter={() => setHoveredEdge(e.id)}
+              onPointerLeave={() => setHoveredEdge((cur) => (cur === e.id ? null : cur))}
             />
           );
         })}
