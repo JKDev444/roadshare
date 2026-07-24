@@ -141,21 +141,6 @@ export function PlatMap({
   }
 
   function handleUp(e: React.PointerEvent) {
-    if (placing) {
-      const pt = toSvg(e.clientX, e.clientY);
-      if (!pt) return;
-      if (!placeFirst) {
-        setPlaceFirst(pt);
-        setPlaceHover(pt);
-      } else {
-        if (placingRoadId && onPlaceRoad) {
-          onPlaceRoad(placingRoadId, placeFirst.x, placeFirst.y, pt.x, pt.y);
-        }
-        setPlaceFirst(null);
-        setPlaceHover(null);
-      }
-      return;
-    }
     if (!drag) return;
     if (drag.moved) {
       if (drag.kind === "home" && onMoveHome) {
@@ -292,7 +277,22 @@ export function PlatMap({
         aria-label={`${title ?? layout.roadName} plat map`}
         onPointerMove={handleMove}
         onPointerUp={handleUp}
-        onClickCapture={(e) => {
+        onClick={(e) => {
+          if (placing) {
+            const pt = toSvg(e.clientX, e.clientY);
+            if (!pt) return;
+            if (!placeFirst) {
+              setPlaceFirst(pt);
+              setPlaceHover(pt);
+            } else {
+              if (placingRoadId && onPlaceRoad) {
+                onPlaceRoad(placingRoadId, placeFirst.x, placeFirst.y, pt.x, pt.y);
+              }
+              setPlaceFirst(null);
+              setPlaceHover(null);
+            }
+            return;
+          }
           if (!pendingPlacement || !onDropHomeAt || !pendingTrayHomeId) return;
           const pt = toSvg(e.clientX, e.clientY);
           if (!pt) return;

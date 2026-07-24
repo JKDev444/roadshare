@@ -419,8 +419,10 @@ export function Planner({
 
   if (isApp) {
     const unplacedCount = (homes ?? []).filter((h) => !h.position).length;
+    const placedCount = (homes ?? []).length - unplacedCount;
     const roadsNeedingWork = (segments ?? []).filter((s) => !s.geometry).length;
     const showProgressChip = unplacedCount > 0 || roadsNeedingWork > 0;
+    const showTray = step === "home" && unplacedCount > 0;
     // Full-bleed: plat fills the viewport, right rail is a fixed 380px column.
     return (
       <main className="grid h-[calc(100dvh-var(--rs-header-h,113px))] grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -446,6 +448,11 @@ export function Planner({
                   {roadsNeedingWork} road{roadsNeedingWork === 1 ? "" : "s"} to draw
                 </button>
               )}
+              {unplacedCount === 0 && roadsNeedingWork === 0 && (
+                <span className="text-muted-foreground">
+                  {placedCount} home{placedCount === 1 ? "" : "s"} on the map
+                </span>
+              )}
             </div>
           )}
           <div className="relative flex flex-1 min-h-0 items-stretch justify-center p-3 sm:p-4">
@@ -460,10 +467,10 @@ export function Planner({
                 : "Drag to move · Double-click to rename · Hover then click × (or press Delete) to remove"}
             </div>
           </div>
-          {homes && homes.length > 0 && unplacedCount > 0 && step !== "review" && step !== "entrances" && step !== "neighbors" && (
+          {showTray && (
             <div className="px-3 pb-3 sm:px-4">
               <HomesTray
-                homes={homes}
+                homes={homes ?? []}
                 onAddHome={onAddHome}
                 onBulkAdd={onBulkAdd}
                 onOpenHome={onEditHome}
@@ -488,7 +495,7 @@ export function Planner({
               onSetSegmentWidth={onSetSegmentWidth}
             />
           )}
-          {step !== "review" && (onAddHome || onRenameHome || onDeleteHome) && homes && homes.length > 0 && (
+          {step !== "home" && step !== "review" && (onAddHome || onRenameHome || onDeleteHome) && homes && homes.length > 0 && (
             <HomesPanel
               homes={homes}
               parcels={PARCELS}
@@ -609,10 +616,10 @@ function StepPanel({
 
       {step === "home" && (
         <div className="space-y-3">
-          <p className="text-sm text-muted-foreground">Search the sample addresses or tap a home on the map. Your home turns gold.</p>
+          <p className="text-sm text-muted-foreground">Tap your home on the map, or search the list below. Your home turns gold.</p>
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Try 101 Cedar Hollow Lane" className="h-11 pl-9" />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your homes..." className="h-11 pl-9" />
           </div>
           <div className="space-y-2">
             {(matches.length > 0 ? matches : parcels.slice(0, 4)).map((p) => (
@@ -623,7 +630,7 @@ function StepPanel({
                 className="flex w-full items-center justify-between gap-2 rounded-xl border border-border bg-background p-3 text-left text-sm transition-colors hover:border-primary/50 hover:bg-primary/5"
               >
                 <span className="min-w-0">
-                  <span className="block truncate font-semibold">{p.address}</span>
+                  <span className="block truncate font-semibold">{p.address || `Home ${parcels.indexOf(p) + 1}`}</span>
                   <span className="block text-xs text-muted-foreground">Tap to make this your home</span>
                 </span>
                 <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
