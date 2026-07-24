@@ -160,7 +160,9 @@ export function buildLayout(
   const segIds = new Set(segs.map((s) => s.id));
   const bySeg = new Map<string, Home[]>();
   segs.forEach((s) => bySeg.set(s.id, []));
-  homes.forEach((h) => {
+  // Homes with position === null are "in the tray" — do not render on the map.
+  const placed = homes.filter((h) => h.position !== null);
+  placed.forEach((h) => {
     const sid = h.segmentId && segIds.has(h.segmentId) ? h.segmentId : segs[0].id;
     bySeg.get(sid)!.push(h);
   });

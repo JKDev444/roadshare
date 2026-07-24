@@ -23,6 +23,8 @@ interface PlatMapProps {
   onAssignHomeSegment?: (homeId: string, segmentId: string) => void;
   /** Called when the user double-clicks a home to edit its details. */
   onEditHome?: (id: string) => void;
+  /** Called when a tray card is dropped onto the map. Snaps to nearest segment. */
+  onDropHomeAt?: (homeId: string, x: number, y: number, segmentId: string) => void;
   /** Called when a whole road segment is translated. */
   onMoveSegment?: (id: string, ax: number, ay: number, bx: number, by: number) => void;
   /** Called when a single endpoint of a road is moved. */
@@ -66,6 +68,7 @@ export function PlatMap({
   onMoveHome,
   onAssignHomeSegment,
   onEditHome,
+  onDropHomeAt,
   onMoveSegment,
   onMoveSegmentEndpoint,
   placingRoadId = null,
@@ -252,6 +255,31 @@ export function PlatMap({
         aria-label={`${title ?? layout.roadName} plat map`}
         onPointerMove={handleMove}
         onPointerUp={handleUp}
+        onDragOver={(e) => {
+          if (!onDropHomeAt) return;
+          if (Array.from(e.dataTransfer.types).includes("application/x-roadshare-home")) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+          }
+        }}
+        onDrop={(e) => {
+          if (!onDropHomeAt) return;
+          const id = e.dataTransfer.getData("application/x-roadshare-home") || e.dataTransfer.getData("text/plain");
+          if (!id) return;
+          e.preventDefault();
+          const pt = toSvg(e.clientX, e.clientY);
+          if (!pt) return;
+          const segs = EDGES.map((edge) => {
+            const na = NODES[edge.a];
+            const nb = NODES[edge.b];
+            return { id: edge.id, ax: na.x, ay: na.y, bx: nb.x, by: nb.y };
+          });
+          const snap = nearestPointOnSegments(pt.x, pt.y, segs);
+          if (!snap) return;
+          const seg = segs.find((s) => s.id === snap.segmentId)!;
+          const pos = snapHomeTileToRoad(seg.ax, seg.ay, seg.bx, seg.by, snap.x, snap.y, snap.side);
+          onDropHomeAt(id, pos.x, pos.y, snap.segmentId);
+        }}
         onContextMenu={(e) => {
           if (placing) {
             e.preventDefault();

@@ -20,6 +20,7 @@ import {
 
 import { PlatMap } from "@/components/roadshare/PlatMap";
 import { ResultsPanel } from "@/components/roadshare/ResultsPanel";
+import { HomesTray } from "@/components/roadshare/HomesTray";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -98,6 +99,8 @@ export function Planner({
   placingRoadId = null,
   onPlaceRoad,
   onCancelPlaceRoad,
+  onDropHomeAt,
+  onBulkAdd,
 }: {
   homes?: RoadHome[];
   roadName?: string;
@@ -127,6 +130,8 @@ export function Planner({
   placingRoadId?: string | null;
   onPlaceRoad?: (segmentId: string, ax: number, ay: number, bx: number, by: number) => void;
   onCancelPlaceRoad?: () => void;
+  onDropHomeAt?: (homeId: string, x: number, y: number, segmentId: string) => void;
+  onBulkAdd?: () => void;
 } = {}) {
   const layout = useMemo<Layout>(() => {
     if (homes && homes.length > 0) return buildLayout(homes, roadName || "My road", segments);
@@ -272,6 +277,7 @@ export function Planner({
       placingRoadId={placingRoadId}
       onPlaceRoad={onPlaceRoad}
       onCancelPlaceRoad={onCancelPlaceRoad}
+      onDropHomeAt={onDropHomeAt}
     />
   );
 
@@ -409,6 +415,16 @@ export function Planner({
                 : "Drag homes or roads to reposition · Double-click to rename · Shift-click to remove"}
             </div>
           </div>
+          {homes && homes.length > 0 && step !== "review" && (
+            <div className="px-3 pb-3 sm:px-4">
+              <HomesTray
+                homes={homes}
+                onAddHome={onAddHome}
+                onBulkAdd={onBulkAdd}
+                onOpenHome={onEditHome}
+              />
+            </div>
+          )}
           <div className="border-t border-border bg-background/95 p-3 backdrop-blur">
             {stepStrip}
           </div>
