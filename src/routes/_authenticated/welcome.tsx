@@ -9,7 +9,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { makeHomeId, makeManualHomes, parseHomesFromList, type Home as RoadHome } from "@/lib/roadshare/layout";
+import {
+  autoArrangeHomes,
+  makeHomeId,
+  makeManualHomes,
+  makeSegmentId,
+  parseHomesFromList,
+  type Home as RoadHome,
+  type Segment as RoadSegment,
+} from "@/lib/roadshare/layout";
 import { createMyRoad } from "@/lib/roadshare/road.functions";
 
 export const Route = createFileRoute("/_authenticated/welcome")({
