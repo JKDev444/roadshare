@@ -482,7 +482,24 @@ export function PlatMap({
         })}
 
         {/* Road name label per edge — follows the road so it works on curves and angles. */}
-        {EDGES.map((e) => {
+        {(() => {
+          // Only render one label per unique road name — pick the longest segment
+          // so labels stay on the most legible stretch of each road.
+          const bestByName = new Map<string, { id: string; len: number }>();
+          for (const e of EDGES) {
+            const a = node(e.a);
+            const b = node(e.b);
+            const d = segDelta(e.id);
+            const sx = a.x + d.dax, sy = a.y + d.day;
+            const ex = b.x + d.dbx, ey = b.y + d.dby;
+            const len = Math.hypot(ex - sx, ey - sy);
+            const name = e.road || layout.roadName;
+            const cur = bestByName.get(name);
+            if (!cur || len > cur.len) bestByName.set(name, { id: e.id, len });
+          }
+          const allowed = new Set(Array.from(bestByName.values()).map((v) => v.id));
+          return EDGES.map((e) => {
+          if (!allowed.has(e.id)) return null;
           const a = node(e.a);
           const b = node(e.b);
           const d = segDelta(e.id);
@@ -523,7 +540,8 @@ export function PlatMap({
               </text>
             </g>
           );
-        })}
+          });
+        })()}
 
         {/* Parcels */}
         {PARCELS.map((p, idx) => {
