@@ -361,6 +361,7 @@ export function Planner({
         </div>
       )}
 
+      {step !== "home" && step !== "road" && (
       <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
         <button
           type="button"
@@ -372,8 +373,8 @@ export function Planner({
               <SlidersHorizontal className="h-4 w-4" />
             </span>
             <span className="min-w-0">
-              <span className="block font-display text-sm font-semibold">Change the details</span>
-              <span className="block truncate text-xs text-muted-foreground">What the road is made of, how wide, and how many years</span>
+              <span className="block font-display text-sm font-semibold">Fine-tune the math</span>
+              <span className="block truncate text-xs text-muted-foreground">Only if you want to — surface mix, width, and planning years</span>
             </span>
           </span>
           <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", assumptionsOpen && "rotate-180")} />
@@ -389,6 +390,7 @@ export function Planner({
           </div>
         )}
       </div>
+      )}
     </>
   );
 
