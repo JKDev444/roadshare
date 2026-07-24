@@ -100,6 +100,63 @@ export function makeSegmentId() {
   return `seg_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/**
+ * Evenly distribute every placed home across its assigned segment. Homes in
+ * the tray (`position === null`) are left in the tray. Alternates north/south
+ * of the segment so both sides fill up.
+ */
+export function autoArrangeHomes(homes: Home[], segments: Segment[]): Home[] {
+  if (segments.length === 0) return homes;
+  const bySeg = new Map<string, Home[]>();
+  segments.forEach((s) => bySeg.set(s.id, []));
+  homes.forEach((h) => {
+    if (h.position === null) return; // stay in tray
+    const sid = h.segmentId && bySeg.has(h.segmentId) ? h.segmentId : segments[0].id;
+    bySeg.get(sid)!.push(h);
+  });
+  const positioned = new Map<string, { x: number; y: number }>();
+  segments.forEach((seg) => {
+    const list = bySeg.get(seg.id) ?? [];
+    if (list.length === 0) return;
+    const g = seg.geometry ?? {
+      ax: ROAD_MARGIN,
+      ay: 60 + rowIndex(segments, seg) * 200 + 100,
+      bx: BASE_VIEW_W - ROAD_MARGIN,
+      by: 60 + rowIndex(segments, seg) * 200 + 100,
+    };
+    const dx = g.bx - g.ax;
+    const dy = g.by - g.ay;
+    const L = Math.hypot(dx, dy) || 1;
+    const ux = dx / L;
+    const uy = dy / L;
+    const nx = -uy; // normal
+    const ny = ux;
+    const OFFSET = 55; // px from centerline to lot top-left origin
+    // Space slots along the segment with a small edge inset so nothing sits on top of an endpoint.
+    const slots = list.length;
+    const inset = 60;
+    const usable = Math.max(1, L - inset * 2);
+    list.forEach((h, i) => {
+      const t = slots === 1 ? 0.5 : inset / L + (i / (slots - 1)) * (usable / L);
+      const cx = g.ax + ux * (t * L);
+      const cy = g.ay + uy * (t * L);
+      const side = i % 2 === 0 ? 1 : -1;
+      const x = cx + nx * OFFSET * side - LOT_W / 2;
+      const y = cy + ny * OFFSET * side - LOT_H / 2;
+      positioned.set(h.id, { x, y });
+    });
+  });
+  return homes.map((h) =>
+    positioned.has(h.id) ? { ...h, position: positioned.get(h.id)!, segmentId: h.segmentId ?? segments[0].id } : h,
+  );
+}
+
+function rowIndex(segments: Segment[], target: Segment) {
+  const autoSegs = segments.filter((s) => !s.geometry);
+  const idx = autoSegs.findIndex((s) => s.id === target.id);
+  return idx < 0 ? 0 : idx;
+}
+
 export function buildLayout(
   homes: Home[],
   roadName: string,
