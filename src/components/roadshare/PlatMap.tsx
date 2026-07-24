@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { Layout } from "@/lib/roadshare/layout";
+import { nearestPointOnSegments, snapHomeTileToRoad } from "@/lib/roadshare/layout";
 
 interface PlatMapProps {
   layout: Layout;
@@ -18,6 +19,10 @@ interface PlatMapProps {
   onDeleteParcel?: (id: string) => void;
   /** Called when a home is dragged to a new SVG position (top-left of bbox). */
   onMoveHome?: (id: string, x: number, y: number) => void;
+  /** Called when a home should be re-assigned to a different road segment. */
+  onAssignHomeSegment?: (homeId: string, segmentId: string) => void;
+  /** Called when the user double-clicks a home to edit its details. */
+  onEditHome?: (id: string) => void;
   /** Called when a whole road segment is translated. */
   onMoveSegment?: (id: string, ax: number, ay: number, bx: number, by: number) => void;
   /** Called when a single endpoint of a road is moved. */
@@ -59,6 +64,8 @@ export function PlatMap({
   onRenameParcel,
   onDeleteParcel,
   onMoveHome,
+  onAssignHomeSegment,
+  onEditHome,
   onMoveSegment,
   onMoveSegmentEndpoint,
   placingRoadId = null,
@@ -139,7 +146,23 @@ export function PlatMap({
         const parcel = PARCELS.find((p) => p.id === drag.id);
         if (parcel) {
           const { x, y } = bbox(parcel.poly);
-          onMoveHome(drag.id, x + drag.dx, y + drag.dy);
+          // Snap the tile so it stays attached to the nearest road segment.
+          const cx = x + drag.dx + bbox(parcel.poly).w / 2;
+          const cy = y + drag.dy + bbox(parcel.poly).h / 2;
+          const segs = EDGES.map((edge) => {
+            const na = NODES[edge.a];
+            const nb = NODES[edge.b];
+            return { id: edge.id, ax: na.x, ay: na.y, bx: nb.x, by: nb.y };
+          });
+          const snap = nearestPointOnSegments(cx, cy, segs);
+          if (snap) {
+            const seg = segs.find((s) => s.id === snap.segmentId)!;
+            const pos = snapHomeTileToRoad(seg.ax, seg.ay, seg.bx, seg.by, snap.x, snap.y, snap.side);
+            onMoveHome(drag.id, pos.x, pos.y);
+            if (onAssignHomeSegment) onAssignHomeSegment(drag.id, snap.segmentId);
+          } else {
+            onMoveHome(drag.id, x + drag.dx, y + drag.dy);
+          }
         }
       } else if (drag.kind === "segMove" && onMoveSegment) {
         const a = NODES[`${drag.id}_W`];
