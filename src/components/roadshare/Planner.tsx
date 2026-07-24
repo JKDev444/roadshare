@@ -81,6 +81,7 @@ export function Planner({
   onRenameHome,
   onDeleteHome,
   onAssignHomeSegment,
+  onEditHome,
   onAddSegment,
   onRenameSegment,
   onDeleteSegment,
@@ -109,6 +110,7 @@ export function Planner({
   onRenameHome?: (id: string) => void;
   onDeleteHome?: (id: string) => void;
   onAssignHomeSegment?: (homeId: string, segmentId: string) => void;
+  onEditHome?: (id: string) => void;
   onAddSegment?: () => void;
   onRenameSegment?: (id: string) => void;
   onDeleteSegment?: (id: string) => void;
@@ -263,6 +265,8 @@ export function Planner({
       onRenameParcel={onRenameHome}
       onDeleteParcel={onDeleteHome}
       onMoveHome={onMoveHome}
+      onEditHome={onEditHome}
+      onAssignHomeSegment={onAssignHomeSegment}
       onMoveSegment={onMoveSegment}
       onMoveSegmentEndpoint={onMoveSegmentEndpoint}
       placingRoadId={placingRoadId}
