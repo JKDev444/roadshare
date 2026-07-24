@@ -671,6 +671,7 @@ export function PlatMap({
         </g>
         </g>
       </svg>
+      </div>
     </div>
   );
 }
