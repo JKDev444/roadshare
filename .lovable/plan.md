@@ -1,132 +1,76 @@
 
-# `/my-road` full-flow rebuild: layout, editing, and sharing
+## Short answer
 
-Combines the earlier plan (templates, home tray, snap-safe layout, walkthrough consolidation) with the new decisions on per-home editing, bulk entry, and share output.
+Yes — 100%. The hero demo already uses your best visual language (`topo-grid` backdrop, thick rounded asphalt, marching-ants dashed lane, pill-shaped parcels in `--color-selected` / `--color-gold`, pulsing entrance pings). The `/my-road` map should adopt that exact look. Right now the interactive map is more "CAD blueprint" than "friendly plat" — this brings the two experiences into one visual family.
 
-## 1. Start with a template, not a blank canvas
+Two things stay non-negotiable during the reskin:
+1. Every parcel keeps its label (address or `Home N`).
+2. Every existing interaction keeps working — drag homes, drag road, endpoint handles, midpoint "+ corner" split, drop-from-tray, tap-to-place, double-click to edit.
 
-First landing on `/my-road` (no custom segments yet) shows a full-screen picker: **"Which shape looks most like your road?"** with 6 illustrated cards:
+## What changes
 
-Straight · L-shape · T-intersection · Cross · Cul-de-sac · Loop
+**Canvas & backdrop**
+- Add the `topo-grid` layer (same class as the hero) behind the SVG at ~40–50% opacity so the map reads like a friendly plat, not a whiteboard.
+- Rounded outer container, softer shadow, same border treatment as the hero card.
 
-Footer link: "None of these — I'll draw it myself."
+**Roads**
+- Asphalt stroke: `--color-map-asphalt`, `stroke-width: 14`, `stroke-linecap: round`, `stroke-linejoin: round` — matches the hero exactly.
+- Centerline: dashed `--color-map-lane` at `strokeDasharray="10 10"` with a slow marching-ants animation (`strokeDashoffset` 0 → -40, 2s linear, infinite). This is the single biggest "wow" moment from the hero and it costs nothing.
+- Segment name label rendered on a small pill above the midpoint (readable, doesn't fight the animation).
 
-Picking one drops the multi-segment geometry in, pre-named ("Main St", "Side St"), and pushes homes into the tray. Also reachable from the toolbar any time as a **Templates** button.
+**Parcels (homes)**
+- Rounded pills: `width: 44, height: 28, rx: 5` — same shape as the hero.
+- Fills use semantic tokens, not the current outlined boxes:
+  - Your home → `--color-gold` at 0.9
+  - Selected neighbors → `--color-selected` at 0.7
+  - Unselected → `--color-selected` at 0.35 (still visible, clearly de-emphasized)
+  - Tray / unplaced → stays in the tray as today
+- Fade-and-scale entrance on first render (matches hero's staggered `0.3 + i*0.06`).
+- Label sits under the pill in the current font, 11px, `--color-foreground` / muted for unselected.
+- Interactivity preserved: drag, double-click, shift-click, click-to-select in the walkthrough — the pill is just the visual shell around the same hit target.
 
-## 2. Homes tray — nothing can float loose
+**Entrances**
+- Replace the current pin with the hero's pulsing dot: solid `--color-primary` circle + expanding ring (`r: 7 → 16`, opacity `0.7 → 0`, 1.8s infinite). Still draggable in the same spots.
 
-Bottom-docked **"Homes to place"** tray. Every home is a card ("Home 1", "123 Oak St", …).
+**Handles (kept, restyled)**
+- Gold endpoint handles → smaller circles with a subtle ring, matching the entrance pulse family.
+- Midpoint "+" split handle → same soft primary pill, only visible on segment hover to reduce noise.
 
-- Drag a card onto the map → nearest segment highlights, ghost lot previews landing spot (perpendicular, on the cursor's side). Drop → snaps to that spot on that segment.
-- Drag a placed home off all roads → returns to the tray instead of orphaning.
-- **Auto-arrange** per segment: one-click even spacing.
-- Tray counter: "3 of 8 homes placed."
+**Placing mode (new road, tap-to-place home)**
+- Cursor overlay uses the same topo backdrop tint so it feels continuous with the hero, not modal.
 
-Data change: `Home.position` becomes `{ segmentId, along: 0..1, side: "left" | "right" } | null`. `null` = in the tray. Legacy `{x, y}` rows are projected onto their nearest segment on first read and rewritten on next save.
+## What stays exactly the same
 
-## 3. Home details drawer (new)
-
-Clicking any home tile on the map opens a right-side drawer. Same drawer for "your home" and neighbors.
-
-Fields, saved on blur:
-
-- Address (single-line, geocode suggestions optional later)
-- Owner / label ("The Johnsons")
-- Frontage in feet — pre-filled from tile width, editable to override
-- Segment (dropdown of roads on the map)
-- Corner lot toggle — when on, adds a second segment picker so this home fronts two roads
-- Skip from the math toggle — for vacant lots, common areas, HOA-owned
-
-Drawer footer: "Move back to tray" and "Delete home."
-
-## 4. Bulk entry into the tray
-
-Two entry points on the tray:
-
-- **Paste addresses** — textarea, one address per line, each becomes a card in the tray.
-- **Upload CSV** — columns: `address, owner_name, frontage_ft, segment_name` (all optional except address). Rows without a matching segment name land in the tray unassigned. Show a preview table before import.
-
-Both live behind a small "+ Add many at once" button on the tray so we don't overwhelm the default view.
-
-## 5. Road-shape editing (custom, when templates don't fit)
-
-Polyline drawing, made effortless:
-
-- "Draw a road" → crosshair cursor + banner: "Click to add a corner. Double-click or Enter to finish. Esc to cancel."
-- **Angle snap to 45° / 90°**, **endpoint snap** to existing roads (creates real intersections).
-- Each straight run between corners is its own segment (per-leg length/width editable).
-- **Midpoint "+ corner" handle** on any segment turns a straight road into an L without redraw.
-- Segment click → small floating toolbar: rename, length, width, cost/ft override, delete.
-
-## 6. Fold "Change the details" into the walkthrough
-
-The mystery panel goes away. Its four settings move into the step where they make sense:
-
-| Setting | New home |
-|---|---|
-| Split method (distance / frontage / equal) | Step 3 — "How should everyone chip in?" as three big cards with plain-English helpers |
-| Road width | Already Step 2 — keep |
-| Surface mix (% gravel vs asphalt + cost/ft) | New Step 4.5 — "What's the road made of?" with two sliders |
-| Funding period (years) | Step 5 — inline "Spread over ___ years" next to the yearly dollar figure |
-
-## 7. Share the finished plan
-
-Two exports from the Review step:
-
-- **Share link** — public read-only URL renders the map, home list with each share, and totals. No sign-in to view. Backed by a new `shares` row (`road_id`, `share_token`, `expires_at nullable`, `revoked_at`) with a `TO anon` SELECT policy scoped by token. Server function generates the token, revokes, and lists a road's active shares. Public loader fetches by token via a server publishable client.
-- **Download PDF** — printable one-pager: header (road name + date), the plat map as SVG, split table (home · segment · frontage · yearly share · lifetime share), totals footer. Generated client-side to keep it simple (no server rendering needed).
-
-## 8. Broader audit items included in this plan
-
-- **Progress chip** on re-entry: "6 of 8 homes have addresses · 2 segments need a length" with click-to-jump.
-- **Frontage label** on each home tile ("42 ft") so the math is visible.
-- **Validation warnings** surfaced in the rail: homes not on a road, segments with 0 length, frontage exceeding segment length, no split method chosen.
-- **Undo/redo widened** to cover segment edits, address changes, template application, tray moves — not just home drags.
-- **Empty state on return** — small "Welcome back. Pick up where you left off?" banner linking to the first unresolved step.
-
-## Deferred (explicitly out of scope for this cycle)
-
-- Neighbor self-edit / collaboration — single-owner model per your call.
-- Curved (bezier) roads — templates cover common shapes.
-- Auto-detecting streets and parcels from an address.
-- Napkin-stroke drawing.
-- Mobile touch gesture pass (works on desktop first).
+- Data model, all `layout.ts` math, `engine.ts` cost calc, tray drag/drop, autosave, share link, print view.
+- Walkthrough sidebar and its 5 steps.
+- The share page (`/s/$slug`) — it renders the same Planner, so it inherits the new look automatically.
 
 ## Files touched
 
-- `src/lib/roadshare/layout.ts` — new `Home.position` shape, `snapHomeToSegment` helper, `ROAD_TEMPLATES` data, per-home `ownerLabel`, `frontageFtOverride`, `secondSegmentId`, `skipFromMath` fields.
-- `src/components/roadshare/PlatMap.tsx` — home tray, drag/ghost preview, midpoint corner handles, angle + endpoint snap, segment mini-toolbar, per-tile frontage label.
-- `src/components/roadshare/TemplatePicker.tsx` (new) — full-screen picker + toolbar popover.
-- `src/components/roadshare/HomeDetailsDrawer.tsx` (new) — right-side drawer with all per-home fields.
-- `src/components/roadshare/BulkAddDialog.tsx` (new) — paste + CSV import.
-- `src/components/roadshare/Planner.tsx` — remove "Change the details" panel, move split method into Step 3 as cards, insert Surface-mix mini-step, add funding-period input to Step 5, progress chip, validation surface.
-- `src/components/roadshare/SharePanel.tsx` (new) — link + PDF actions in Step 5.
-- `src/lib/roadshare/pdf.ts` (new) — client-side PDF export (jsPDF + SVG serialization).
-- `src/lib/roadshare/share.functions.ts` (new) — `createShare`, `revokeShare`, `listShares` server functions.
-- `src/routes/share.$token.tsx` (new) — public read-only view.
-- `src/routes/_authenticated/my-road.tsx` — first-visit template gate, new handlers (`handleApplyTemplate`, `handleReturnHomeToTray`, `handleAutoArrangeSegment`, `handleEditHome`, `handleBulkAdd`, `handleCreateShare`).
-- One migration for the new `road_shares` table (with GRANT + RLS: owner full access, anon SELECT scoped by token).
+- `src/components/roadshare/PlatMap.tsx` — the reskin lives almost entirely here: backdrop layer, road stroke tokens, marching-ants motion path, pill parcels, entrance pulse, handle restyle.
+- `src/routes/s.$slug.tsx` — no code change; visual inherits from Planner/PlatMap.
+- `src/styles.css` — verify `--color-map-asphalt`, `--color-map-lane`, `--color-selected`, `--color-gold`, and `.topo-grid` are defined (the hero already uses them, so they should be); if any is hero-only inline, promote it to a shared token.
+- No changes to `layout.ts`, `engine.ts`, `Planner.tsx`, `HomeDetailsDrawer.tsx`, tray, share fn, or DB.
 
-## Migration sketch
+## QA after the reskin
 
-```sql
-CREATE TABLE public.road_shares (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  road_id uuid NOT NULL REFERENCES public.roads(id) ON DELETE CASCADE,
-  owner_id uuid NOT NULL,
-  token text NOT NULL UNIQUE,
-  revoked_at timestamptz,
-  expires_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-GRANT SELECT ON public.road_shares TO anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.road_shares TO authenticated;
-GRANT ALL ON public.road_shares TO service_role;
-ALTER TABLE public.road_shares ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Owner manages shares" ON public.road_shares FOR ALL
-  TO authenticated USING (auth.uid() = owner_id) WITH CHECK (auth.uid() = owner_id);
-CREATE POLICY "Anon can look up by token" ON public.road_shares FOR SELECT
-  TO anon USING (revoked_at IS NULL AND (expires_at IS NULL OR expires_at > now()));
-```
+Playwright pass at 1440×900:
+1. `/` hero renders as today (regression check on shared tokens).
+2. `/welcome` → address → land on `/my-road`.
+3. Confirm: topo grid visible, asphalt is rounded, lane dashes march, "your home" pill is gold, neighbors are teal, entrances pulse.
+4. Drag a home, drag a road endpoint, split a segment with "+", drop a tray home — every interaction still works.
+5. Click "Share", open `/s/<slug>` in a fresh tab — same look, print button works, no interactive chrome.
+6. Screenshot every step and attach to the reply.
 
-The public `roads` read for the share view is done server-side via `supabaseAdmin` after verifying an active `road_shares.token` — no `TO anon` grant needed on `roads`.
+Then answer the three questions in the same reply:
+1. Did the map feel modern and friendly to a non-tech user?
+2. Was anything confusing after the reskin?
+3. Did you get the result you wanted?
+
+## Open question
+
+The hero's rounded pills don't show the parcel label *inside* them — the label sits under the pill. On the hero that's fine (8 tiles). On `/my-road` with 20–40 homes, under-pill labels can crowd. Do you want:
+- (a) Labels under the pill (closest to hero), accepting some crowding on dense roads, or
+- (b) Labels inside a slightly taller pill (48×32) so every home reads at a glance?
+
+Default I'll ship if you don't specify: **(b)**, because labeled parcels was a hard requirement earlier.
