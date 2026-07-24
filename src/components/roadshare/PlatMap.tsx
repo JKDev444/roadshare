@@ -29,6 +29,11 @@ interface PlatMapProps {
   onMoveSegment?: (id: string, ax: number, ay: number, bx: number, by: number) => void;
   /** Called when a single endpoint of a road is moved. */
   onMoveSegmentEndpoint?: (id: string, endpoint: "a" | "b", x: number, y: number) => void;
+  /** Called when the user clicks the midpoint "+ corner" handle to add a bend. */
+  onSplitSegment?: (id: string, x: number, y: number) => void;
+  /** When set, the map is in tap-to-place mode for this tray home id. */
+  pendingTrayHomeId?: string | null;
+  onCancelPendingHome?: () => void;
   /** When set, the map is in place-a-road mode for this segment id. */
   placingRoadId?: string | null;
   onPlaceRoad?: (segmentId: string, ax: number, ay: number, bx: number, by: number) => void;
@@ -71,6 +76,9 @@ export function PlatMap({
   onDropHomeAt,
   onMoveSegment,
   onMoveSegmentEndpoint,
+  onSplitSegment,
+  pendingTrayHomeId = null,
+  onCancelPendingHome,
   placingRoadId = null,
   onPlaceRoad,
   onCancelPlaceRoad,
@@ -86,6 +94,7 @@ export function PlatMap({
   const [placeFirst, setPlaceFirst] = useState<{ x: number; y: number } | null>(null);
   const [placeHover, setPlaceHover] = useState<{ x: number; y: number } | null>(null);
   const placing = !!placingRoadId;
+  const pendingPlacement = !!pendingTrayHomeId;
 
   function toSvg(clientX: number, clientY: number): { x: number; y: number } | null {
     const g = gRef.current;
@@ -188,17 +197,18 @@ export function PlatMap({
 
   // Escape or right-click cancels placement.
   useEffect(() => {
-    if (!placing) return;
+    if (!placing && !pendingPlacement) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
         setPlaceFirst(null);
         setPlaceHover(null);
         onCancelPlaceRoad?.();
+        onCancelPendingHome?.();
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [placing, onCancelPlaceRoad]);
+  }, [placing, pendingPlacement, onCancelPlaceRoad, onCancelPendingHome]);
 
   function segDelta(id: string): { dax: number; day: number; dbx: number; dby: number } {
     if (!drag) return { dax: 0, day: 0, dbx: 0, dby: 0 };
@@ -250,11 +260,28 @@ export function PlatMap({
       <svg
         viewBox={`0 0 ${VIEW.w} ${VIEW.h}`}
         preserveAspectRatio="xMidYMid meet"
-        className={"block h-full max-h-full w-full min-h-0 flex-1 select-none " + (placing ? "cursor-crosshair" : "")}
+        className={"block h-full max-h-full w-full min-h-0 flex-1 select-none " + (placing || pendingPlacement ? "cursor-crosshair" : "")}
         role="img"
         aria-label={`${title ?? layout.roadName} plat map`}
         onPointerMove={handleMove}
         onPointerUp={handleUp}
+        onClickCapture={(e) => {
+          if (!pendingPlacement || !onDropHomeAt || !pendingTrayHomeId) return;
+          const pt = toSvg(e.clientX, e.clientY);
+          if (!pt) return;
+          const segs = EDGES.map((edge) => {
+            const na = NODES[edge.a];
+            const nb = NODES[edge.b];
+            return { id: edge.id, ax: na.x, ay: na.y, bx: nb.x, by: nb.y };
+          });
+          const snap = nearestPointOnSegments(pt.x, pt.y, segs);
+          if (!snap) return;
+          const seg = segs.find((s) => s.id === snap.segmentId)!;
+          const pos = snapHomeTileToRoad(seg.ax, seg.ay, seg.bx, seg.by, snap.x, snap.y, snap.side);
+          onDropHomeAt(pendingTrayHomeId, pos.x, pos.y, snap.segmentId);
+          e.stopPropagation();
+          e.preventDefault();
+        }}
         onDragOver={(e) => {
           if (!onDropHomeAt) return;
           if (Array.from(e.dataTransfer.types).includes("application/x-roadshare-home")) {
