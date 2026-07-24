@@ -36,14 +36,13 @@ export function HomesTray({
             <Layers className="h-4 w-4" />
           </span>
           <div>
-            <p className="font-display text-sm font-bold leading-tight">Homes to place</p>
+            <p className="font-display text-sm font-bold leading-tight">Drop these homes onto the road</p>
             <p className="text-[11px] text-muted-foreground">
-              {placedCount} of {homes.length} placed
               {tray.length > 0
                 ? pendingHomeId
-                  ? " — tap anywhere on a road to drop it"
-                  : " — tap a card, then tap the road (or drag it)"
-                : " — nice, everyone's on the map"}
+                  ? "Tap anywhere on the road to drop this home"
+                  : `${tray.length} home${tray.length === 1 ? "" : "s"} left · tap a card, then tap the road (or drag it there)`
+                : "Nice — every home is on the map."}
             </p>
           </div>
         </div>

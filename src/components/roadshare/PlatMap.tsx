@@ -17,6 +17,8 @@ interface PlatMapProps {
   onToggleEntrance: (id: string) => void;
   onRenameParcel?: (id: string) => void;
   onDeleteParcel?: (id: string) => void;
+  /** Called when the user removes a road segment from the map. */
+  onDeleteSegment?: (id: string) => void;
   /** Called when a home is dragged to a new SVG position (top-left of bbox). */
   onMoveHome?: (id: string, x: number, y: number) => void;
   /** Called when a home should be re-assigned to a different road segment. */
@@ -70,6 +72,7 @@ export function PlatMap({
   onToggleEntrance,
   onRenameParcel,
   onDeleteParcel,
+  onDeleteSegment,
   onMoveHome,
   onAssignHomeSegment,
   onEditHome,
@@ -93,6 +96,7 @@ export function PlatMap({
   const [drag, setDrag] = useState<DragState | null>(null);
   const [placeFirst, setPlaceFirst] = useState<{ x: number; y: number } | null>(null);
   const [placeHover, setPlaceHover] = useState<{ x: number; y: number } | null>(null);
+  const [hoveredEdge, setHoveredEdge] = useState<string | null>(null);
   const placing = !!placingRoadId;
   const pendingPlacement = !!pendingTrayHomeId;
 
@@ -209,6 +213,26 @@ export function PlatMap({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [placing, pendingPlacement, onCancelPlaceRoad, onCancelPendingHome]);
+
+  // Keyboard delete: if the user is hovering a home or a road, Delete/Backspace
+  // removes it. Ignore when a text input is focused so it doesn't wipe typing.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== "Delete" && e.key !== "Backspace") return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+      if (hovered && onDeleteParcel) {
+        e.preventDefault();
+        onDeleteParcel(hovered);
+      } else if (hoveredEdge && onDeleteSegment && EDGES.length > 1) {
+        e.preventDefault();
+        onDeleteSegment(hoveredEdge);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [hovered, hoveredEdge, onDeleteParcel, onDeleteSegment, EDGES.length]);
 
   function segDelta(id: string): { dax: number; day: number; dbx: number; dby: number } {
     if (!drag) return { dax: 0, day: 0, dbx: 0, dby: 0 };
@@ -388,6 +412,8 @@ export function PlatMap({
                   startDrag("segMove", e.id, undefined, ev);
                 }
               }}
+              onPointerEnter={() => setHoveredEdge(e.id)}
+              onPointerLeave={() => setHoveredEdge((cur) => (cur === e.id ? null : cur))}
             />
           );
         })}
@@ -649,6 +675,72 @@ export function PlatMap({
             </text>
           </g>
         )}
+
+        {/* In-map remove button on the hovered home */}
+        {hoveredParcel && onDeleteParcel && !placing && !pendingPlacement && (() => {
+          const bb = bbox(hoveredParcel.poly);
+          const hd = drag && drag.kind === "home" && drag.id === hoveredParcel.id ? { dx: drag.dx, dy: drag.dy } : { dx: 0, dy: 0 };
+          const cx = bb.x + bb.w + hd.dx - 4;
+          const cy = bb.y + hd.dy + 4;
+          return (
+            <g
+              style={{ cursor: "pointer" }}
+              onPointerDown={(ev) => ev.stopPropagation()}
+              onClick={(ev) => {
+                ev.stopPropagation();
+                onDeleteParcel(hoveredParcel.id);
+              }}
+            >
+              <title>Remove this home (or press Delete)</title>
+              <circle cx={cx} cy={cy} r="9" fill="var(--color-card)" stroke="var(--color-destructive, #dc2626)" strokeWidth="1.5" />
+              <path
+                d={`M ${cx - 3.5} ${cy - 3.5} L ${cx + 3.5} ${cy + 3.5} M ${cx + 3.5} ${cy - 3.5} L ${cx - 3.5} ${cy + 3.5}`}
+                stroke="var(--color-destructive, #dc2626)"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+              />
+            </g>
+          );
+        })()}
+
+        {/* In-map remove button on the hovered road (only when 2+ roads exist) */}
+        {hoveredEdge && onDeleteSegment && EDGES.length > 1 && !placing && !pendingPlacement && (() => {
+          const edge = EDGES.find((e) => e.id === hoveredEdge);
+          if (!edge) return null;
+          const a = node(edge.a);
+          const b = node(edge.b);
+          const d = segDelta(edge.id);
+          // Offset off the road's perpendicular so it doesn't clash with the "+ corner" pip.
+          const mx = (a.x + d.dax + b.x + d.dbx) / 2;
+          const my = (a.y + d.day + b.y + d.dby) / 2;
+          const dx = (b.x + d.dbx) - (a.x + d.dax);
+          const dy = (b.y + d.dby) - (a.y + d.day);
+          const len = Math.max(1, Math.hypot(dx, dy));
+          const nx = -dy / len;
+          const ny = dx / len;
+          const cx = mx + nx * 22;
+          const cy = my + ny * 22;
+          return (
+            <g
+              style={{ cursor: "pointer" }}
+              onPointerDown={(ev) => ev.stopPropagation()}
+              onClick={(ev) => {
+                ev.stopPropagation();
+                onDeleteSegment(edge.id);
+                setHoveredEdge(null);
+              }}
+            >
+              <title>Remove this road (or press Delete)</title>
+              <circle cx={cx} cy={cy} r="11" fill="var(--color-card)" stroke="var(--color-destructive, #dc2626)" strokeWidth="1.5" />
+              <path
+                d={`M ${cx - 4} ${cy - 4} L ${cx + 4} ${cy + 4} M ${cx + 4} ${cy - 4} L ${cx - 4} ${cy + 4}`}
+                stroke="var(--color-destructive, #dc2626)"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+              />
+            </g>
+          );
+        })()}
 
         {/* North arrow */}
         <g transform={`translate(${VIEW.w - 44}, ${VIEW.h - 56})`}>
