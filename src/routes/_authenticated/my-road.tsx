@@ -5,7 +5,15 @@ import { toast } from "sonner";
 
 import { AppHeader, MapToolbar } from "@/components/roadshare/AppHeader";
 import { Planner, type PlannerSnapshot } from "@/components/roadshare/Planner";
-import { makeHomeId, makeSegmentId, type Home as RoadHome, type Segment as RoadSegment } from "@/lib/roadshare/layout";
+import { HomeDetailsDrawer } from "@/components/roadshare/HomeDetailsDrawer";
+import { TemplatePicker } from "@/components/roadshare/TemplatePicker";
+import {
+  makeHomeId,
+  makeSegmentId,
+  type Home as RoadHome,
+  type Segment as RoadSegment,
+  type RoadTemplate,
+} from "@/lib/roadshare/layout";
 import { getMyRoad, resetMyRoad, saveMyRoadState } from "@/lib/roadshare/road.functions";
 
 export const Route = createFileRoute("/_authenticated/my-road")({
@@ -56,6 +64,14 @@ function MyRoadPage() {
   const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(initialRotation);
   const [segments, setSegments] = useState<RoadSegment[]>(initialSegments);
   const [placingRoadId, setPlacingRoadId] = useState<string | null>(null);
+  const [editingHomeId, setEditingHomeId] = useState<string | null>(null);
+  // Show the template picker the first time the user lands with no geometry
+  // and only the default single auto-segment.
+  const initialShowTemplates =
+    initialSegments.length === 1 &&
+    !initialSegments[0].geometry &&
+    !initialHomes.some((h) => h.position);
+  const [showTemplates, setShowTemplates] = useState(initialShowTemplates);
   const historyRef = useRef<RoadHome[][]>([initialHomes]);
   const futureRef = useRef<RoadHome[][]>([]);
   const [historyTick, setHistoryTick] = useState(0);
@@ -158,6 +174,19 @@ function MyRoadPage() {
   function handleAssignHomeSegment(homeId: string, segmentId: string) {
     const next = homes.map((h) => (h.id === homeId ? { ...h, segmentId } : h));
     pushHistory(next);
+  }
+  function handleEditHome(id: string) {
+    setEditingHomeId(id);
+  }
+  function handleSaveHome(id: string, patch: Partial<RoadHome>) {
+    const next = homes.map((h) => (h.id === id ? { ...h, ...patch } : h));
+    pushHistory(next);
+  }
+  function handlePickTemplate(t: RoadTemplate) {
+    setSegments(t.segments.map((s) => ({ ...s })));
+    // Reassign every home to the first segment so nothing goes orphaned.
+    setHomes((prev) => prev.map((h) => ({ ...h, segmentId: t.segments[0].id, position: null })));
+    setShowTemplates(false);
   }
 
   function handleUndo() {
@@ -297,6 +326,17 @@ function MyRoadPage() {
         placingRoadId={placingRoadId}
         onPlaceRoad={handlePlaceRoad}
         onCancelPlaceRoad={handleCancelPlaceRoad}
+        onEditHome={handleEditHome}
+      />
+      {showTemplates && (
+        <TemplatePicker onPick={handlePickTemplate} onSkip={() => setShowTemplates(false)} />
+      )}
+      <HomeDetailsDrawer
+        home={editingHomeId ? homes.find((h) => h.id === editingHomeId) ?? null : null}
+        segments={segments}
+        onClose={() => setEditingHomeId(null)}
+        onSave={handleSaveHome}
+        onDelete={homes.length > 1 ? handleDeleteHome : undefined}
       />
     </div>
   );
