@@ -425,6 +425,30 @@ export function PlatMap({
           );
         })}
 
+        {/* Midpoint "+ corner" handle — click to add a bend / split the segment */}
+        {onSplitSegment && !placing && !pendingPlacement && !drag && EDGES.map((e) => {
+          const a = node(e.a);
+          const b = node(e.b);
+          const d = segDelta(e.id);
+          const mx = (a.x + d.dax + b.x + d.dbx) / 2;
+          const my = (a.y + d.day + b.y + d.dby) / 2;
+          return (
+            <g
+              key={`split-${e.id}`}
+              style={{ cursor: "pointer" }}
+              onPointerDown={(ev) => ev.stopPropagation()}
+              onClick={(ev) => {
+                ev.stopPropagation();
+                onSplitSegment(e.id, mx, my);
+              }}
+            >
+              <title>Add a corner here</title>
+              <circle cx={mx} cy={my} r="9" fill="var(--color-card)" stroke="var(--color-primary)" strokeWidth="1.5" opacity="0.95" />
+              <path d={`M ${mx - 4} ${my} L ${mx + 4} ${my} M ${mx} ${my - 4} L ${mx} ${my + 4}`} stroke="var(--color-primary)" strokeWidth="1.75" strokeLinecap="round" />
+            </g>
+          );
+        })}
+
         {/* Road name label per edge */}
         {!isCedar && EDGES.map((e) => {
           const a = node(e.a);
