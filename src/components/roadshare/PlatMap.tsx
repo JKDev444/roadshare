@@ -425,7 +425,7 @@ export function PlatMap({
                 }
                 onToggleParcel(p.id);
               }}
-              onDoubleClick={() => onRenameParcel?.(p.id)}
+              onDoubleClick={() => (onEditHome ?? onRenameParcel)?.(p.id)}
               onMouseEnter={() => onHoverParcel(p.id)}
               onMouseLeave={() => onHoverParcel(null)}
             >
