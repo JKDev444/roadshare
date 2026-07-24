@@ -16,6 +16,8 @@ import {
   type RoadTemplate,
 } from "@/lib/roadshare/layout";
 import { getMyRoad, resetMyRoad, saveMyRoadState } from "@/lib/roadshare/road.functions";
+import { createShare } from "@/lib/roadshare/share.functions";
+import { autoArrangeHomes } from "@/lib/roadshare/layout";
 
 export const Route = createFileRoute("/_authenticated/my-road")({
   ssr: false,
@@ -45,7 +47,10 @@ function MyRoadPage() {
   const router = useRouter();
   const reset = useServerFn(resetMyRoad);
   const save = useServerFn(saveMyRoadState);
+  const share = useServerFn(createShare);
   const [busy, setBusy] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const lastSnapshotRef = useRef<PlannerSnapshot | null>(null);
 
   const state = (road.state ?? {}) as Partial<PlannerSnapshot> & {
     homes?: RoadHome[];
@@ -276,6 +281,7 @@ function MyRoadPage() {
 
   const handleStateChange = useCallback(
     (snapshot: PlannerSnapshot) => {
+      lastSnapshotRef.current = snapshot;
       const merged = { ...snapshot, homes, roadName, rotation, segments } as unknown as import("@/integrations/supabase/types").Json;
       void save({ data: { state: merged } }).catch(() => {
         /* silent — next change retries */
@@ -283,6 +289,34 @@ function MyRoadPage() {
     },
     [save, homes, roadName, rotation, segments],
   );
+
+  function handleAutoArrange() {
+    const next = autoArrangeHomes(homes, segments);
+    pushHistory(next);
+    toast.success("Homes spaced evenly along your roads.");
+  }
+
+  async function handleShare() {
+    setSharing(true);
+    try {
+      const snap = lastSnapshotRef.current;
+      const merged = { ...(snap ?? {}), homes, roadName, rotation, segments } as unknown as import("@/integrations/supabase/types").Json;
+      // Ensure the latest state is persisted before we snapshot the share.
+      await save({ data: { state: merged } }).catch(() => {});
+      const { slug } = await share({ data: { snapshot: merged } });
+      const url = `${window.location.origin}/s/${slug}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success("Share link copied to clipboard.", { description: url });
+      } catch {
+        toast.success("Share link ready.", { description: url });
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not create share link.");
+    } finally {
+      setSharing(false);
+    }
+  }
 
   // Persist homes/rotation changes even without planner snapshot changes.
   useEffect(() => {
@@ -339,6 +373,9 @@ function MyRoadPage() {
             canRedo={canRedo}
             placingRoadId={placingRoadId}
             onCancelPlaceRoad={handleCancelPlaceRoad}
+            onAutoArrange={handleAutoArrange}
+            onShare={handleShare}
+            sharing={sharing}
           />
         }
       />

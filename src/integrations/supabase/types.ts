@@ -41,6 +41,44 @@ export type Database = {
         }
         Relationships: []
       }
+      road_shares: {
+        Row: {
+          created_at: string
+          id: string
+          road_id: string
+          slug: string
+          snapshot: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          road_id: string
+          slug: string
+          snapshot?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          road_id?: string
+          slug?: string
+          snapshot?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "road_shares_road_id_fkey"
+            columns: ["road_id"]
+            isOneToOne: false
+            referencedRelation: "roads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       roads: {
         Row: {
           created_at: string

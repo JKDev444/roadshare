@@ -26,6 +26,7 @@ import { Route as ToolsIndexRouteImport } from './routes/tools.index'
 import { Route as ProductIndexRouteImport } from './routes/product.index'
 import { Route as ToolsCedarHollowRouteImport } from './routes/tools.cedar-hollow'
 import { Route as SolutionsAudienceRouteImport } from './routes/solutions.$audience'
+import { Route as SSlugRouteImport } from './routes/s.$slug'
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedWelcomeRouteImport } from './routes/_authenticated/welcome'
@@ -116,6 +117,11 @@ const SolutionsAudienceRoute = SolutionsAudienceRouteImport.update({
   path: '/solutions/$audience',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SSlugRoute = SSlugRouteImport.update({
+  id: '/s/$slug',
+  path: '/s/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProductSlugRoute = ProductSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/welcome': typeof AuthenticatedWelcomeRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$slug': typeof ProductSlugRoute
+  '/s/$slug': typeof SSlugRoute
   '/solutions/$audience': typeof SolutionsAudienceRoute
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
   '/product/': typeof ProductIndexRoute
@@ -181,6 +188,7 @@ export interface FileRoutesByTo {
   '/welcome': typeof AuthenticatedWelcomeRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$slug': typeof ProductSlugRoute
+  '/s/$slug': typeof SSlugRoute
   '/solutions/$audience': typeof SolutionsAudienceRoute
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
   '/product': typeof ProductIndexRoute
@@ -206,6 +214,7 @@ export interface FileRoutesById {
   '/_authenticated/welcome': typeof AuthenticatedWelcomeRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/product/$slug': typeof ProductSlugRoute
+  '/s/$slug': typeof SSlugRoute
   '/solutions/$audience': typeof SolutionsAudienceRoute
   '/tools/cedar-hollow': typeof ToolsCedarHollowRoute
   '/product/': typeof ProductIndexRoute
@@ -231,6 +240,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/auth/callback'
     | '/product/$slug'
+    | '/s/$slug'
     | '/solutions/$audience'
     | '/tools/cedar-hollow'
     | '/product/'
@@ -252,6 +262,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/auth/callback'
     | '/product/$slug'
+    | '/s/$slug'
     | '/solutions/$audience'
     | '/tools/cedar-hollow'
     | '/product'
@@ -276,6 +287,7 @@ export interface FileRouteTypes {
     | '/_authenticated/welcome'
     | '/auth/callback'
     | '/product/$slug'
+    | '/s/$slug'
     | '/solutions/$audience'
     | '/tools/cedar-hollow'
     | '/product/'
@@ -296,6 +308,7 @@ export interface RootRouteChildren {
   SecurityRoute: typeof SecurityRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ToolsRoute: typeof ToolsRouteWithChildren
+  SSlugRoute: typeof SSlugRoute
   SolutionsAudienceRoute: typeof SolutionsAudienceRoute
 }
 
@@ -420,6 +433,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SolutionsAudienceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/s/$slug': {
+      id: '/s/$slug'
+      path: '/s/$slug'
+      fullPath: '/s/$slug'
+      preLoaderRoute: typeof SSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/product/$slug': {
       id: '/product/$slug'
       path: '/$slug'
@@ -522,6 +542,7 @@ const rootRouteChildren: RootRouteChildren = {
   SecurityRoute: SecurityRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ToolsRoute: ToolsRouteWithChildren,
+  SSlugRoute: SSlugRoute,
   SolutionsAudienceRoute: SolutionsAudienceRoute,
 }
 export const routeTree = rootRouteImport
