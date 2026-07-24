@@ -44,7 +44,6 @@ export const Route = createFileRoute("/_authenticated/my-road")({
 function MyRoadPage() {
   const road = Route.useLoaderData();
   const navigate = useNavigate();
-  const router = useRouter();
   const reset = useServerFn(resetMyRoad);
   const save = useServerFn(saveMyRoadState);
   const share = useServerFn(createShare);
