@@ -96,6 +96,7 @@ export function Planner({
   onMoveHome,
   onMoveSegment,
   onMoveSegmentEndpoint,
+  onSplitSegment,
   placingRoadId = null,
   onPlaceRoad,
   onCancelPlaceRoad,
@@ -127,6 +128,7 @@ export function Planner({
   onMoveHome?: (id: string, x: number, y: number) => void;
   onMoveSegment?: (id: string, ax: number, ay: number, bx: number, by: number) => void;
   onMoveSegmentEndpoint?: (id: string, endpoint: "a" | "b", x: number, y: number) => void;
+  onSplitSegment?: (id: string, x: number, y: number) => void;
   placingRoadId?: string | null;
   onPlaceRoad?: (segmentId: string, ax: number, ay: number, bx: number, by: number) => void;
   onCancelPlaceRoad?: () => void;
@@ -163,6 +165,14 @@ export function Planner({
   const [surfaces, setSurfaces] = useState(
     initialState?.surfaces ?? SURFACE_TYPES.map((s) => ({ pct: s.defaultPct, cost: s.defaultCost })),
   );
+  const [pendingTrayHomeId, setPendingTrayHomeId] = useState<string | null>(null);
+
+  // Auto-cancel pending home if it becomes placed (via drag) or removed.
+  useEffect(() => {
+    if (!pendingTrayHomeId) return;
+    const still = homes?.find((h) => h.id === pendingTrayHomeId);
+    if (!still || still.position) setPendingTrayHomeId(null);
+  }, [homes, pendingTrayHomeId]);
 
   // Debounced snapshot emit
   const firstRun = useRef(true);
@@ -274,10 +284,16 @@ export function Planner({
       onAssignHomeSegment={onAssignHomeSegment}
       onMoveSegment={onMoveSegment}
       onMoveSegmentEndpoint={onMoveSegmentEndpoint}
+      onSplitSegment={onSplitSegment}
+      pendingTrayHomeId={pendingTrayHomeId}
+      onCancelPendingHome={() => setPendingTrayHomeId(null)}
       placingRoadId={placingRoadId}
       onPlaceRoad={onPlaceRoad}
       onCancelPlaceRoad={onCancelPlaceRoad}
-      onDropHomeAt={onDropHomeAt}
+      onDropHomeAt={(homeId, x, y, segmentId) => {
+        onDropHomeAt?.(homeId, x, y, segmentId);
+        setPendingTrayHomeId(null);
+      }}
     />
   );
 
