@@ -496,6 +496,9 @@ export function PlatMap({
             [sx, ex] = [ex, sx];
             [sy, ey] = [ey, sy];
           }
+          const segLen = Math.hypot(ex - sx, ey - sy);
+          // Don't crowd tiny segments with a road name.
+          if (segLen < 60) return null;
           const pathId = `roadLabel-${e.id}`;
           return (
             <g key={`rlg-${e.id}`} pointerEvents="none">
@@ -503,15 +506,16 @@ export function PlatMap({
                 <path id={pathId} d={`M ${sx} ${sy} L ${ex} ${ey}`} />
               </defs>
               <text
-                fontSize="10"
-                fontWeight="600"
+                fontSize="12"
+                fontWeight="700"
                 fontFamily="var(--font-sans)"
-                fill="var(--color-map-ink)"
+                fill="var(--color-map-road-label)"
                 paintOrder="stroke"
-                stroke="var(--color-map-asphalt)"
-                strokeWidth="3"
+                stroke="var(--color-map-asphalt-edge)"
+                strokeWidth="4"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                letterSpacing="0.3"
               >
                 <textPath href={`#${pathId}`} startOffset="50%" textAnchor="middle" dominantBaseline="middle">
                   {e.road || layout.roadName}
