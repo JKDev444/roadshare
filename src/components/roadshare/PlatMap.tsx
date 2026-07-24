@@ -702,41 +702,45 @@ export function PlatMap({
 
         {/* Hover tooltip */}
         {hoveredParcel && (() => {
-          const hoverName = hoveredParcel.name && hoveredParcel.name !== hoveredParcel.address ? hoveredParcel.name : null;
+          const name = hoveredParcel.name || null;
+          const addr = hoveredParcel.address || null;
+          const hasBoth = !!(name && addr && name !== addr);
+          const main = name || addr || "Home";
+          const sub = hasBoth ? addr : null;
           return (
             <g pointerEvents="none">
               <rect
                 x={hoveredParcel.label[0] - 70}
-                y={bbox(hoveredParcel.poly).y - (hoverName ? 36 : 26)}
+                y={bbox(hoveredParcel.poly).y - (sub ? 36 : 26)}
                 width="140"
-                height={hoverName ? 32 : 19}
+                height={sub ? 32 : 19}
                 rx="5"
                 fill="var(--color-primary)"
               />
-              {hoverName && (
-                <text
-                  x={hoveredParcel.label[0]}
-                  y={bbox(hoveredParcel.poly).y - 23}
-                  fill="var(--color-primary-foreground)"
-                  fontSize="9.5"
-                  fontFamily="var(--font-sans)"
-                  fontWeight="700"
-                  textAnchor="middle"
-                >
-                  {hoverName}
-                </text>
-              )}
               <text
                 x={hoveredParcel.label[0]}
-                y={bbox(hoveredParcel.poly).y - (hoverName ? 12 : 13)}
+                y={bbox(hoveredParcel.poly).y - (sub ? 23 : 13)}
                 fill="var(--color-primary-foreground)"
                 fontSize="9.5"
                 fontFamily="var(--font-sans)"
-                fontWeight="600"
+                fontWeight="700"
                 textAnchor="middle"
               >
-                {hoveredParcel.address}
+                {main}
               </text>
+              {sub && (
+                <text
+                  x={hoveredParcel.label[0]}
+                  y={bbox(hoveredParcel.poly).y - 12}
+                  fill="var(--color-primary-foreground)"
+                  fontSize="9.5"
+                  fontFamily="var(--font-sans)"
+                  fontWeight="600"
+                  textAnchor="middle"
+                >
+                  {sub}
+                </text>
+              )}
             </g>
           );
         })()}
