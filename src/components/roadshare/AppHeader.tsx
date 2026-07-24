@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { FileText, LogOut, Map as MapIcon, MoreHorizontal, Plus, Redo2, RotateCcw, RotateCw, Route as RouteIcon, Undo2 } from "lucide-react";
+import { FileText, LogOut, Map as MapIcon, MoreHorizontal, Plus, Redo2, RotateCcw, RotateCw, Route as RouteIcon, Share2, Sparkles, Undo2 } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -105,6 +105,9 @@ export function MapToolbar({
   canRedo,
   placingRoadId,
   onCancelPlaceRoad,
+  onAutoArrange,
+  onShare,
+  sharing = false,
 }: {
   onAddHome?: () => void;
   onAddSegment?: () => void;
@@ -115,6 +118,9 @@ export function MapToolbar({
   canRedo: boolean;
   placingRoadId: string | null;
   onCancelPlaceRoad?: () => void;
+  onAutoArrange?: () => void;
+  onShare?: () => void;
+  sharing?: boolean;
 }) {
   if (placingRoadId) {
     return (
@@ -144,7 +150,17 @@ export function MapToolbar({
           <RotateCw className="h-4 w-4" />
         </Button>
       )}
+      {onAutoArrange && (
+        <Button size="sm" variant="ghost" className="h-8" onClick={onAutoArrange} title="Space homes evenly along their roads">
+          <Sparkles className="mr-1 h-3.5 w-3.5" /> Space evenly
+        </Button>
+      )}
       <div className="ml-auto flex items-center gap-1">
+        {onShare && (
+          <Button size="sm" variant="default" className="h-8" onClick={onShare} disabled={sharing}>
+            <Share2 className="mr-1 h-3.5 w-3.5" /> {sharing ? "Copying…" : "Share"}
+          </Button>
+        )}
         {onUndo && (
           <Button size="sm" variant="ghost" className="h-8" onClick={onUndo} disabled={!canUndo} aria-label="Undo">
             <Undo2 className="h-4 w-4" />
