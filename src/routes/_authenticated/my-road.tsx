@@ -347,8 +347,8 @@ function MyRoadPage() {
     try {
       await reset();
       toast.success("Reset. Start fresh below.");
-      await router.invalidate();
-      navigate({ to: "/welcome" });
+      // Hard navigate to avoid race conditions with the autosave effect.
+      window.location.href = "/welcome";
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Reset failed.");
       setBusy(false);
