@@ -96,6 +96,7 @@ export function Planner({
   onMoveHome,
   onMoveSegment,
   onMoveSegmentEndpoint,
+  onSplitSegment,
   placingRoadId = null,
   onPlaceRoad,
   onCancelPlaceRoad,
@@ -127,6 +128,7 @@ export function Planner({
   onMoveHome?: (id: string, x: number, y: number) => void;
   onMoveSegment?: (id: string, ax: number, ay: number, bx: number, by: number) => void;
   onMoveSegmentEndpoint?: (id: string, endpoint: "a" | "b", x: number, y: number) => void;
+  onSplitSegment?: (id: string, x: number, y: number) => void;
   placingRoadId?: string | null;
   onPlaceRoad?: (segmentId: string, ax: number, ay: number, bx: number, by: number) => void;
   onCancelPlaceRoad?: () => void;
@@ -163,6 +165,14 @@ export function Planner({
   const [surfaces, setSurfaces] = useState(
     initialState?.surfaces ?? SURFACE_TYPES.map((s) => ({ pct: s.defaultPct, cost: s.defaultCost })),
   );
+  const [pendingTrayHomeId, setPendingTrayHomeId] = useState<string | null>(null);
+
+  // Auto-cancel pending home if it becomes placed (via drag) or removed.
+  useEffect(() => {
+    if (!pendingTrayHomeId) return;
+    const still = homes?.find((h) => h.id === pendingTrayHomeId);
+    if (!still || still.position) setPendingTrayHomeId(null);
+  }, [homes, pendingTrayHomeId]);
 
   // Debounced snapshot emit
   const firstRun = useRef(true);
@@ -274,10 +284,16 @@ export function Planner({
       onAssignHomeSegment={onAssignHomeSegment}
       onMoveSegment={onMoveSegment}
       onMoveSegmentEndpoint={onMoveSegmentEndpoint}
+      onSplitSegment={onSplitSegment}
+      pendingTrayHomeId={pendingTrayHomeId}
+      onCancelPendingHome={() => setPendingTrayHomeId(null)}
       placingRoadId={placingRoadId}
       onPlaceRoad={onPlaceRoad}
       onCancelPlaceRoad={onCancelPlaceRoad}
-      onDropHomeAt={onDropHomeAt}
+      onDropHomeAt={(homeId, x, y, segmentId) => {
+        onDropHomeAt?.(homeId, x, y, segmentId);
+        setPendingTrayHomeId(null);
+      }}
     />
   );
 
@@ -401,6 +417,9 @@ export function Planner({
   );
 
   if (isApp) {
+    const unplacedCount = (homes ?? []).filter((h) => !h.position).length;
+    const roadsNeedingWork = (segments ?? []).filter((s) => !s.geometry).length;
+    const showProgressChip = unplacedCount > 0 || roadsNeedingWork > 0;
     // Full-bleed: plat fills the viewport, right rail is a fixed 380px column.
     return (
       <main className="grid h-[calc(100dvh-var(--rs-header-h,113px))] grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -409,9 +428,34 @@ export function Planner({
             <div className="relative flex w-full flex-1 min-h-0 items-stretch">
               <div className="flex w-full min-w-0 flex-1 flex-col">{platBlock}</div>
             </div>
+            {showProgressChip && (
+              <div className="pointer-events-auto absolute top-5 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-background/95 px-3 py-1.5 text-[11px] font-medium shadow-md ring-1 ring-border">
+                {unplacedCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setStep("home")}
+                    className="rounded-full bg-primary/10 px-2 py-0.5 text-primary hover:bg-primary/20"
+                  >
+                    {unplacedCount} home{unplacedCount === 1 ? "" : "s"} to place
+                  </button>
+                )}
+                {unplacedCount > 0 && roadsNeedingWork > 0 && <span className="text-muted-foreground">·</span>}
+                {roadsNeedingWork > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setStep("road")}
+                    className="rounded-full bg-gold/20 px-2 py-0.5 text-foreground hover:bg-gold/30"
+                  >
+                    {roadsNeedingWork} road{roadsNeedingWork === 1 ? "" : "s"} need placing
+                  </button>
+                )}
+              </div>
+            )}
             <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-background/90 px-3 py-1 text-[11px] text-muted-foreground shadow-sm ring-1 ring-border">
               {placingRoadId
                 ? "Click twice on the map to place the road · Esc to cancel"
+                : pendingTrayHomeId
+                ? "Tap the road where this home should sit · Esc to cancel"
                 : "Drag homes or roads to reposition · Double-click to rename · Shift-click to remove"}
             </div>
           </div>
@@ -422,6 +466,8 @@ export function Planner({
                 onAddHome={onAddHome}
                 onBulkAdd={onBulkAdd}
                 onOpenHome={onEditHome}
+                pendingHomeId={pendingTrayHomeId}
+                onSelectHome={setPendingTrayHomeId}
               />
             </div>
           )}

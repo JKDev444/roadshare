@@ -13,11 +13,15 @@ export function HomesTray({
   onAddHome,
   onBulkAdd,
   onOpenHome,
+  pendingHomeId,
+  onSelectHome,
 }: {
   homes: RoadHome[];
   onAddHome?: () => void;
   onBulkAdd?: () => void;
   onOpenHome?: (id: string) => void;
+  pendingHomeId?: string | null;
+  onSelectHome?: (id: string | null) => void;
 }) {
   const tray = useMemo(() => homes.filter((h) => !h.position), [homes]);
   const placedCount = homes.length - tray.length;
@@ -35,11 +39,20 @@ export function HomesTray({
             <p className="font-display text-sm font-bold leading-tight">Homes to place</p>
             <p className="text-[11px] text-muted-foreground">
               {placedCount} of {homes.length} placed
-              {tray.length > 0 ? " — drag a card onto a road" : " — nice, everyone's on the map"}
+              {tray.length > 0
+                ? pendingHomeId
+                  ? " — tap anywhere on a road to drop it"
+                  : " — tap a card, then tap the road (or drag it)"
+                : " — nice, everyone's on the map"}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-1.5">
+          {pendingHomeId && onSelectHome && (
+            <Button size="sm" variant="ghost" className="h-7 rounded-full px-2 text-xs" onClick={() => onSelectHome(null)}>
+              Cancel
+            </Button>
+          )}
           {onBulkAdd && (
             <Button size="sm" variant="ghost" className="h-7 rounded-full px-2 text-xs" onClick={onBulkAdd}>
               + Add many
@@ -65,16 +78,24 @@ export function HomesTray({
                   e.dataTransfer.setData("application/x-roadshare-home", h.id);
                   e.dataTransfer.setData("text/plain", h.id);
                 }}
+                onClick={() => onSelectHome?.(pendingHomeId === h.id ? null : h.id)}
                 onDoubleClick={() => onOpenHome?.(h.id)}
-                className="flex min-w-[168px] cursor-grab items-center gap-2 rounded-xl border border-dashed border-primary/50 bg-background px-3 py-2 text-left text-xs shadow-sm transition-transform hover:-translate-y-0.5 hover:border-primary hover:shadow-md active:cursor-grabbing"
-                title="Drag onto a road, or double-click to edit"
+                className={
+                  "flex min-w-[168px] cursor-grab items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing " +
+                  (pendingHomeId === h.id
+                    ? "border-primary bg-primary/10 ring-2 ring-primary/40"
+                    : "border-dashed border-primary/50 bg-background hover:border-primary")
+                }
+                title="Tap to select then tap the road, or drag onto the map. Double-click to edit."
               >
                 <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-muted font-mono text-[10px] font-bold">
                   {i + 1}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{h.address ?? h.label}</span>
-                  <span className="block text-[10px] text-muted-foreground">Drag onto a road</span>
+                  <span className="block text-[10px] text-muted-foreground">
+                    {pendingHomeId === h.id ? "Now tap the road to drop it" : "Tap, then tap the road"}
+                  </span>
                 </span>
               </button>
             </li>

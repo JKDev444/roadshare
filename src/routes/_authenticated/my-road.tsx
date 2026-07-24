@@ -174,6 +174,25 @@ function MyRoadPage() {
       }),
     );
   }
+  function handleSplitSegment(id: string, x: number, y: number) {
+    const src = segments.find((s) => s.id === id);
+    if (!src?.geometry) return;
+    const g = src.geometry;
+    const newId = makeSegmentId();
+    const newSeg: RoadSegment = {
+      id: newId,
+      name: `${src.name} (cont.)`,
+      widthFt: src.widthFt,
+      geometry: { ax: x, ay: y, bx: g.bx, by: g.by },
+    };
+    setSegments((prev) =>
+      prev.flatMap((s) =>
+        s.id === id
+          ? [{ ...s, geometry: { ax: g.ax, ay: g.ay, bx: x, by: y }, lengthFt: undefined }, newSeg]
+          : [s],
+      ),
+    );
+  }
   function handleRenameSegment(id: string) {
     const cur = segments.find((s) => s.id === id);
     if (!cur) return;
@@ -348,6 +367,7 @@ function MyRoadPage() {
         onMoveHome={handleMoveHome}
         onMoveSegment={handleMoveSegment}
         onMoveSegmentEndpoint={handleMoveSegmentEndpoint}
+        onSplitSegment={handleSplitSegment}
         placingRoadId={placingRoadId}
         onPlaceRoad={handlePlaceRoad}
         onCancelPlaceRoad={handleCancelPlaceRoad}
