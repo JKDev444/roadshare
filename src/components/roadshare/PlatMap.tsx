@@ -23,6 +23,8 @@ interface PlatMapProps {
   onAssignHomeSegment?: (homeId: string, segmentId: string) => void;
   /** Called when the user double-clicks a home to edit its details. */
   onEditHome?: (id: string) => void;
+  /** Called when a tray card is dropped onto the map. Snaps to nearest segment. */
+  onDropHomeAt?: (homeId: string, x: number, y: number, segmentId: string) => void;
   /** Called when a whole road segment is translated. */
   onMoveSegment?: (id: string, ax: number, ay: number, bx: number, by: number) => void;
   /** Called when a single endpoint of a road is moved. */
@@ -66,6 +68,7 @@ export function PlatMap({
   onMoveHome,
   onAssignHomeSegment,
   onEditHome,
+  onDropHomeAt,
   onMoveSegment,
   onMoveSegmentEndpoint,
   placingRoadId = null,
