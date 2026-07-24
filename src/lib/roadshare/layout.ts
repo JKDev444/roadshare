@@ -38,6 +38,12 @@ export type Home = {
   id: string;
   label: string;
   address?: string | null;
+  /** Optional owner / family label ("The Johnsons"). */
+  ownerLabel?: string | null;
+  /** Overrides the auto-computed frontage in feet when set. */
+  frontageFtOverride?: number | null;
+  /** True when this parcel should not be included in the cost math. */
+  skipFromMath?: boolean;
   segmentId?: string;
   /** Optional pixel position (top-left of bbox) inside the plat SVG. When
    * set, this parcel is drawn at this position instead of the auto row. */
@@ -282,6 +288,125 @@ export function buildLayout(
 export function makeHomeId() {
   return `h_${Math.random().toString(36).slice(2, 9)}`;
 }
+
+/** Squared distance from a point to a line segment plus the projection point.
+ *  Used to snap a dragged home to its nearest road. */
+export function nearestPointOnSegments(
+  px: number,
+  py: number,
+  segs: { id: string; ax: number; ay: number; bx: number; by: number }[],
+): { segmentId: string; x: number; y: number; side: "left" | "right"; distance: number } | null {
+  let best: { segmentId: string; x: number; y: number; side: "left" | "right"; distance: number } | null = null;
+  for (const s of segs) {
+    const dx = s.bx - s.ax;
+    const dy = s.by - s.ay;
+    const L2 = dx * dx + dy * dy;
+    if (L2 === 0) continue;
+    let t = ((px - s.ax) * dx + (py - s.ay) * dy) / L2;
+    t = Math.max(0.02, Math.min(0.98, t));
+    const cx = s.ax + t * dx;
+    const cy = s.ay + t * dy;
+    const d = Math.hypot(px - cx, py - cy);
+    // Cross product z tells us which side of the line the cursor sits on.
+    const cross = dx * (py - s.ay) - dy * (px - s.ax);
+    const side: "left" | "right" = cross > 0 ? "right" : "left";
+    if (!best || d < best.distance) {
+      best = { segmentId: s.id, x: cx, y: cy, side, distance: d };
+    }
+  }
+  return best;
+}
+
+/** Given a segment's endpoints and a landing point on that segment, return
+ *  the top-left position (x, y) for a LOT_W×LOT_H home tile sitting on the
+ *  chosen side of the road (perpendicular offset). */
+export function snapHomeTileToRoad(
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  landX: number,
+  landY: number,
+  side: "left" | "right",
+): { x: number; y: number } {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const L = Math.hypot(dx, dy) || 1;
+  // Unit normal, pointing to the road's LEFT side (perpendicular).
+  const nx = -dy / L;
+  const ny = dx / L;
+  const OFFSET = 50; // pixels from road centerline to tile center
+  const sign = side === "left" ? 1 : -1;
+  const cx = landX + nx * OFFSET * sign;
+  const cy = landY + ny * OFFSET * sign;
+  return { x: cx - LOT_W / 2, y: cy - LOT_H / 2 };
+}
+
+/** Road-shape templates. Each defines a set of segments with geometry so the
+ *  planner can drop a full multi-road neighborhood in one click. Coordinates
+ *  are SVG units in the default 900×620 canvas. */
+export type RoadTemplate = {
+  id: string;
+  name: string;
+  short: string;
+  segments: Segment[];
+};
+
+export const ROAD_TEMPLATES: RoadTemplate[] = [
+  {
+    id: "straight",
+    name: "Straight road",
+    short: "One road, everyone on it",
+    segments: [{ id: "s1", name: "Main Road", widthFt: 20, geometry: { ax: 90, ay: 310, bx: 810, by: 310 } }],
+  },
+  {
+    id: "l-shape",
+    name: "L-shape",
+    short: "One corner",
+    segments: [
+      { id: "s1", name: "Main Road", widthFt: 20, geometry: { ax: 90, ay: 480, bx: 500, by: 480 } },
+      { id: "s2", name: "Side Road", widthFt: 18, geometry: { ax: 500, ay: 480, bx: 500, by: 140 } },
+    ],
+  },
+  {
+    id: "t-intersection",
+    name: "T intersection",
+    short: "Two roads meet",
+    segments: [
+      { id: "s1", name: "Main Road", widthFt: 20, geometry: { ax: 90, ay: 310, bx: 810, by: 310 } },
+      { id: "s2", name: "Side Road", widthFt: 18, geometry: { ax: 450, ay: 310, bx: 450, by: 560 } },
+    ],
+  },
+  {
+    id: "cross",
+    name: "Cross / four-way",
+    short: "Two roads cross",
+    segments: [
+      { id: "s1", name: "Main Road", widthFt: 20, geometry: { ax: 90, ay: 310, bx: 810, by: 310 } },
+      { id: "s2", name: "Cross Road", widthFt: 18, geometry: { ax: 450, ay: 90, bx: 450, by: 560 } },
+    ],
+  },
+  {
+    id: "cul-de-sac",
+    name: "Cul-de-sac",
+    short: "Straight in, bulb at the end",
+    segments: [
+      { id: "s1", name: "Entry", widthFt: 20, geometry: { ax: 90, ay: 310, bx: 620, by: 310 } },
+      { id: "s2", name: "Bulb", widthFt: 20, geometry: { ax: 620, ay: 310, bx: 780, by: 310 } },
+    ],
+  },
+  {
+    id: "loop",
+    name: "Loop road",
+    short: "Road that loops back",
+    segments: [
+      { id: "s1", name: "North Loop", widthFt: 18, geometry: { ax: 150, ay: 200, bx: 750, by: 200 } },
+      { id: "s2", name: "East Loop", widthFt: 18, geometry: { ax: 750, ay: 200, bx: 750, by: 460 } },
+      { id: "s3", name: "South Loop", widthFt: 18, geometry: { ax: 750, ay: 460, bx: 150, by: 460 } },
+      { id: "s4", name: "West Loop", widthFt: 18, geometry: { ax: 150, ay: 460, bx: 150, by: 200 } },
+    ],
+  },
+];
 
 export function parseHomesFromList(text: string): Home[] {
   return text
