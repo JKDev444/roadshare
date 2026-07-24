@@ -61,8 +61,24 @@ function WelcomePage() {
       return;
     }
     setBusy(true);
+    // Create a default straight road and evenly space the homes on it so the
+    // user lands on a map that already looks like a neighborhood, not an empty
+    // canvas with a confusing "homes to place" tray.
+    const roadName = name || "My road";
+    const defaultSegment: RoadSegment = {
+      id: makeSegmentId(),
+      name: roadName,
+      widthFt: 20,
+      geometry: { ax: 90, ay: 310, bx: 810, by: 310 },
+    };
+    const seeded = homes.map((h) => ({
+      ...h,
+      segmentId: defaultSegment.id,
+      position: { x: 0, y: 0 } as { x: number; y: number },
+    }));
+    const arranged = autoArrangeHomes(seeded, [defaultSegment]);
     try {
-      await create({ data: { name: name || "My road", homes } });
+      await create({ data: { name: roadName, homes: arranged, segments: [defaultSegment] } });
       await router.invalidate();
       navigate({ to: "/my-road" });
     } catch (err) {
