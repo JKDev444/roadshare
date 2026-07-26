@@ -417,6 +417,7 @@ function MyRoadPage() {
     roadWidth: state.roadWidth,
     fundingPeriod: state.fundingPeriod,
     surfaces: state.surfaces,
+    fixedTotal: state.fixedTotal,
   };
 
   const handleStateChange = useCallback(
@@ -462,6 +463,7 @@ function MyRoadPage() {
         fundingPeriod: snap?.fundingPeriod ?? DEFAULTS.fundingPeriod,
         you: snap?.you ?? null,
         layout,
+        fixedTotal: snap?.fixedTotal,
       });
       const row = result.rows.find((r) => r.id === homeId);
       const ready = result.pctValid && result.hasEntrance && !!row;
