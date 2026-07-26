@@ -18,6 +18,7 @@ import {
   makeManualHomes,
   makeSegmentId,
   parseHomesFromList,
+  ROAD_TEMPLATES,
   type Home as RoadHome,
   type Segment as RoadSegment,
 } from "@/lib/roadshare/layout";
@@ -35,7 +36,7 @@ export const Route = createFileRoute("/_authenticated/welcome")({
   component: WelcomePage,
 });
 
-type Screen = "name" | "docs" | "homes";
+type Screen = "name" | "docs" | "shape" | "homes";
 type Tile = "address" | "paste" | "manual" | null;
 
 const DOC_BUCKET = "documents";
@@ -52,6 +53,7 @@ function WelcomePage() {
   const [name, setName] = useState("");
   const [tile, setTile] = useState<Tile>(null);
   const [busy, setBusy] = useState(false);
+  const [shapeId, setShapeId] = useState<string>("straight");
 
   const [address, setAddress] = useState("");
   const [addressCount, setAddressCount] = useState(6);
@@ -73,28 +75,26 @@ function WelcomePage() {
       return;
     }
     setBusy(true);
-    // Create a default straight road and evenly space the homes on it so the
-    // user lands on a map that already looks like a neighborhood, not an empty
-    // canvas with a confusing "homes to place" tray.
     const roadName = name || "My road";
-    const defaultSegment: RoadSegment = {
+    // Clone the chosen road-shape template with fresh IDs so multiple users
+    // don't collide on shared "s1/s2" ids.
+    const template = ROAD_TEMPLATES.find((t) => t.id === shapeId) ?? ROAD_TEMPLATES[0];
+    const segments: RoadSegment[] = template.segments.map((s, i) => ({
+      ...s,
       id: makeSegmentId(),
-      name: roadName,
-      widthFt: 20,
-      geometry: { ax: 90, ay: 310, bx: 810, by: 310 },
-    };
-    // Smart default frontage so the map + cost split are meaningful from the
-    // first render — users can still tune per home in the details drawer.
-    const defaultFrontage = defaultFrontageFor([defaultSegment], homes.length);
+      name: i === 0 ? roadName : s.name,
+    }));
+    const primarySegmentId = segments[0].id;
+    const defaultFrontage = defaultFrontageFor(segments, homes.length);
     const seeded = homes.map((h) => ({
       ...h,
-      segmentId: defaultSegment.id,
+      segmentId: primarySegmentId,
       position: { x: 0, y: 0 } as { x: number; y: number },
       frontageFtOverride: h.frontageFtOverride ?? defaultFrontage,
     }));
-    const arranged = autoArrangeHomes(seeded, [defaultSegment]);
+    const arranged = autoArrangeHomes(seeded, segments);
     try {
-      await create({ data: { name: roadName, homes: arranged, segments: [defaultSegment] } });
+      await create({ data: { name: roadName, homes: arranged, segments } });
       await router.invalidate();
       navigate({ to: "/my-road" });
     } catch (err) {
@@ -225,7 +225,7 @@ function WelcomePage() {
                 <ArrowLeft className="h-4 w-4" />
               </button>
               <div className="flex-1">
-                <p className="text-xs font-bold uppercase tracking-wider text-primary">Step 2 of 3</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">Step 2 of 4</p>
                 <h1 className="font-display text-2xl font-bold tracking-tight">Got any documents?</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
                   CC&amp;Rs, a road-maintenance agreement, or a plat map — anything that helps you and your neighbors trust the plan. Totally optional.
@@ -295,7 +295,7 @@ function WelcomePage() {
                 variant="outline"
                 className="flex-1"
                 size="lg"
-                onClick={() => setScreen("homes")}
+                onClick={() => setScreen("shape")}
               >
                 <X className="h-4 w-4" /> I don't have any
               </Button>
@@ -303,7 +303,7 @@ function WelcomePage() {
                 type="button"
                 className="flex-1"
                 size="lg"
-                onClick={() => setScreen("homes")}
+                onClick={() => setScreen("shape")}
               >
                 {uploadedDocs.length > 0 ? "Continue" : "I'll add them later"} <ArrowRight className="h-4 w-4" />
               </Button>
@@ -314,7 +314,7 @@ function WelcomePage() {
           </section>
         )}
 
-        {screen === "homes" && (
+        {screen === "shape" && (
           <section className="rounded-3xl border border-border/70 bg-card p-8 shadow-xl">
             <div className="mb-6 flex items-start gap-3">
               <button
@@ -326,7 +326,55 @@ function WelcomePage() {
                 <ArrowLeft className="h-4 w-4" />
               </button>
               <div className="flex-1">
-                <p className="text-xs font-bold uppercase tracking-wider text-primary">Step 3 of 3</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">Step 3 of 4</p>
+                <h1 className="font-display text-2xl font-bold tracking-tight">Pick a road shape</h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Pick whichever looks closest to your road. You can drag, add, or tweak roads later — this is just a starting shape.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {ROAD_TEMPLATES.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setShapeId(t.id)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors",
+                    shapeId === t.id
+                      ? "border-primary bg-primary/10 shadow-md"
+                      : "border-border bg-background hover:border-primary/50 hover:bg-primary/5",
+                  )}
+                >
+                  <TemplateThumb segments={t.segments} active={shapeId === t.id} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-display text-sm font-bold tracking-tight">{t.name}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{t.short}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <Button className="mt-6 w-full" size="lg" onClick={() => setScreen("homes")}>
+              Next: who's on your road? <ArrowRight className="h-4 w-4" />
+            </Button>
+          </section>
+        )}
+
+        {screen === "homes" && (
+          <section className="rounded-3xl border border-border/70 bg-card p-8 shadow-xl">
+            <div className="mb-6 flex items-start gap-3">
+              <button
+                type="button"
+                onClick={() => setScreen("shape")}
+                className="mt-1 grid h-8 w-8 place-items-center rounded-xl border border-border bg-background text-muted-foreground hover:bg-accent"
+                aria-label="Back"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <div className="flex-1">
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">Step 4 of 4</p>
                 <h1 className="font-display text-2xl font-bold tracking-tight">Who's on your road?</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Pick the easiest way. Don't stress — you can rename or edit every home later.
@@ -427,6 +475,38 @@ function WelcomePage() {
         )}
       </div>
     </main>
+  );
+}
+
+function TemplateThumb({ segments, active }: { segments: RoadSegment[]; active: boolean }) {
+  // Fit the template's SVG-unit geometry into a 72x54 thumbnail.
+  const pts = segments.flatMap((s) => (s.geometry ? [[s.geometry.ax, s.geometry.ay], [s.geometry.bx, s.geometry.by]] : []));
+  if (pts.length === 0) return <span className="h-14 w-[72px] rounded-lg bg-muted" />;
+  const xs = pts.map((p) => p[0]);
+  const ys = pts.map((p) => p[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const pad = 40;
+  return (
+    <span className={cn("grid h-14 w-[72px] place-items-center rounded-lg", active ? "bg-primary/15" : "bg-muted/60")}>
+      <svg viewBox={`${minX - pad} ${minY - pad} ${maxX - minX + pad * 2} ${maxY - minY + pad * 2}`} className="h-full w-full">
+        {segments.map((s) =>
+          s.geometry ? (
+            <line
+              key={s.id}
+              x1={s.geometry.ax}
+              y1={s.geometry.ay}
+              x2={s.geometry.bx}
+              y2={s.geometry.by}
+              stroke="currentColor"
+              strokeWidth={36}
+              strokeLinecap="round"
+              className={active ? "text-primary" : "text-foreground/70"}
+            />
+          ) : null,
+        )}
+      </svg>
+    </span>
   );
 }
 
