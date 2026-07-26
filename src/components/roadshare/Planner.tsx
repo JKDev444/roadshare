@@ -1,13 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ComponentType, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import {
   ArrowRight,
   Check,
-  ChevronDown,
   Home,
   MapPin,
   Route as RouteIcon,
   Search,
-  SlidersHorizontal,
   Sparkles,
   Plus,
   RotateCw,
@@ -173,6 +171,8 @@ export function Planner({
   );
   const [fixedTotal, setFixedTotal] = useState<number | undefined>(initialState?.fixedTotal);
   const hasQuote = typeof fixedTotal === "number" && fixedTotal > 0;
+  // Silence unused-var warning until we bring assumptions back.
+  void assumptionsOpen; void setAssumptionsOpen; void hasQuote;
   const [pendingTrayHomeId, setPendingTrayHomeId] = useState<string | null>(null);
 
   // Auto-cancel pending home if it becomes placed (via drag) or removed.
@@ -356,6 +356,16 @@ export function Planner({
 
   const rightRail = (
     <>
+      {/* Pinned "your estimated share" hero — stays visible as the user tweaks
+          anything below so they can watch the number change in real time. */}
+      {step !== "home" && step !== "road" && (
+        <div className={cn(
+          "z-10 rounded-2xl border border-gold/50 bg-background/95 p-1 shadow-sm backdrop-blur",
+          isApp ? "sticky top-0 -mx-4 -mt-4 mb-1 rounded-none border-x-0 border-t-0 border-b border-border p-4" : "sticky top-20",
+        )}>
+          <ResultsPanel result={result} methodology={methodology} compact />
+        </div>
+      )}
       <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
         <StepPanel
           parcels={PARCELS}
@@ -387,56 +397,27 @@ export function Planner({
         />
       </div>
 
+      {/* Breakdown table on the review step (hero is pinned above the rail). */}
       {step === "review" && (
         <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
-          <ResultsPanel result={result} methodology={methodology} />
+          <ResultsPanel result={result} methodology={methodology} hideHero />
         </div>
       )}
 
-      {/* App variant: keep a compact "your share" summary pinned in the rail
-          for steps 3+ so the user can watch the number change as they nudge
-          sliders, without needing to advance to the review step. */}
-      {isApp && step !== "review" && step !== "home" && step !== "road" && (
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
-          <ResultsPanel result={result} methodology={methodology} compact />
-        </div>
-      )}
-
+      {/* Simple adjustments: total cost + width + years. Shown once the user
+          is past picking a home / drawing the road. */}
       {step !== "home" && step !== "road" && (
-      <QuoteControl fixedTotal={fixedTotal} setFixedTotal={setFixedTotal} />
-      )}
-
-      {step !== "home" && step !== "road" && (
-      <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
-        <button
-          type="button"
-          onClick={() => setAssumptionsOpen((v) => !v)}
-          className="flex w-full items-center justify-between gap-3 text-left"
-        >
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
-              <SlidersHorizontal className="h-4 w-4" />
-            </span>
-            <span className="min-w-0">
-              <span className="block font-display text-sm font-semibold">Fine-tune the math</span>
-              <span className="block truncate text-xs text-muted-foreground">Only if you want to — surface mix, width, and planning years</span>
-            </span>
-          </span>
-          <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", assumptionsOpen && "rotate-180")} />
-        </button>
-
-        {assumptionsOpen && (
-          <div className="mt-4 space-y-4 border-t border-border pt-4">
-            {!hasQuote && (
-              <SurfaceControls surfaces={surfaces} setSurfaces={setSurfaces} pctTotal={pctTotal} pctValid={pctValid} />
-            )}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-              <SliderControl label="How wide is the road?" value={roadWidth} suffix="ft" min={8} max={40} onChange={setRoadWidth} />
-              <SliderControl label="Plan over how many years?" value={fundingPeriod} suffix="yr" min={1} max={40} onChange={setFundingPeriod} />
-            </div>
+        <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <TotalCostControl
+            fixedTotal={fixedTotal}
+            estimatedTotal={result.totalCost}
+            setFixedTotal={setFixedTotal}
+          />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 border-t border-border pt-3">
+            <SliderControl label="How wide is the road?" value={roadWidth} suffix="ft" min={8} max={40} onChange={setRoadWidth} />
+            <SliderControl label="Plan over how many years?" value={fundingPeriod} suffix="yr" min={1} max={40} onChange={setFundingPeriod} />
           </div>
-        )}
-      </div>
+        </div>
       )}
     </>
   );
@@ -818,152 +799,61 @@ function StepPanel({
   );
 }
 
-function QuoteControl({
+function TotalCostControl({
   fixedTotal,
+  estimatedTotal,
   setFixedTotal,
 }: {
   fixedTotal: number | undefined;
+  estimatedTotal: number;
   setFixedTotal: (value: number | undefined) => void;
 }) {
-  const has = typeof fixedTotal === "number" && fixedTotal > 0;
-  const [draft, setDraft] = useState<string>(has ? String(fixedTotal) : "");
+  const hasQuote = typeof fixedTotal === "number" && fixedTotal > 0;
+  const displayed = hasQuote ? (fixedTotal as number) : Math.round(estimatedTotal);
+  const [draft, setDraft] = useState<string>(displayed > 0 ? String(displayed) : "");
+  // Keep the input synced when the estimate changes upstream (e.g. width slider).
+  useEffect(() => {
+    if (!hasQuote) setDraft(displayed > 0 ? String(displayed) : "");
+  }, [displayed, hasQuote]);
   return (
-    <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <Label className="block text-sm font-semibold">I already have a quote</Label>
-          <p className="text-[11px] text-muted-foreground">
-            Got a bid from a contractor? Enter the total project cost and we'll split it — no need to guess at material prices.
-          </p>
-        </div>
-        <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs font-semibold">
-          <input
-            type="checkbox"
-            checked={has}
-            onChange={(e) => {
-              if (e.target.checked) {
-                const n = Number(draft);
-                setFixedTotal(Number.isFinite(n) && n > 0 ? n : 10000);
-                if (!draft) setDraft("10000");
-              } else {
-                setFixedTotal(undefined);
-              }
-            }}
-            className="h-4 w-4"
-          />
-          Use quote
-        </label>
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <Label className="block text-sm font-semibold">Total project cost</Label>
+        {hasQuote ? (
+          <button
+            type="button"
+            onClick={() => setFixedTotal(undefined)}
+            className="text-[11px] font-semibold text-primary hover:underline"
+          >
+            Use estimate instead
+          </button>
+        ) : null}
       </div>
-      {has && (
-        <div className="mt-2 flex items-center gap-2">
-          <span className="font-mono text-lg font-bold text-primary">$</span>
-          <Input
-            type="number"
-            inputMode="decimal"
-            min={0}
-            step={100}
-            className="h-9"
-            value={draft}
-            onChange={(e) => {
-              const v = e.target.value;
-              setDraft(v);
-              const n = Number(v);
-              if (Number.isFinite(n) && n > 0) setFixedTotal(n);
-            }}
-            placeholder="e.g. 42000"
-          />
-          <span className="text-xs text-muted-foreground">total</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SurfaceControls({
-  surfaces,
-  setSurfaces,
-  pctTotal,
-  pctValid,
-}: {
-  surfaces: { pct: number; cost: number }[];
-  setSurfaces: Dispatch<SetStateAction<{ pct: number; cost: number }[]>>;
-  pctTotal: number;
-  pctValid: boolean;
-}) {
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  // Which preset (if any) is currently active? Matches if exactly one row is 100.
-  const activeIdx = surfaces.findIndex((s) => Math.round(s.pct) === 100);
-  const singleSurfaceActive = activeIdx >= 0 && surfaces.every((s, i) => (i === activeIdx ? true : Math.round(s.pct) === 0));
-
-  function applyPreset(i: number) {
-    setSurfaces((arr) => arr.map((x, j) => ({ ...x, pct: j === i ? 100 : 0 })));
-  }
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-xs">
-        <Label className="font-semibold">What is the road made of?</Label>
-        <span className={cn("font-mono font-bold", pctValid ? "text-selected" : "text-destructive")}>{pctTotal.toFixed(0)}%</span>
+      <p className="mt-0.5 text-[11px] text-muted-foreground">
+        {hasQuote
+          ? "Using your contractor quote — split updates live."
+          : "Change this anytime — the share updates live."}
+      </p>
+      <div className="mt-2 flex items-center gap-2">
+        <span className="font-mono text-lg font-bold text-primary">$</span>
+        <Input
+          type="number"
+          inputMode="decimal"
+          min={0}
+          step={100}
+          className="h-9"
+          value={draft}
+          onChange={(e) => {
+            const v = e.target.value;
+            setDraft(v);
+            const n = Number(v);
+            if (Number.isFinite(n) && n > 0) setFixedTotal(n);
+            else setFixedTotal(undefined);
+          }}
+          placeholder="e.g. 42000"
+        />
+        <span className="text-xs text-muted-foreground">total</span>
       </div>
-
-      {/* One-tap preset picker — 90% of users just want to pick a surface. */}
-      <div className="grid grid-cols-2 gap-1.5">
-        {SURFACE_TYPES.map((surface, i) => {
-          const active = singleSurfaceActive && activeIdx === i;
-          return (
-            <button
-              key={surface.id}
-              type="button"
-              onClick={() => applyPreset(i)}
-              className={cn(
-                "rounded-lg border p-2 text-left text-xs transition-colors",
-                active ? "border-primary bg-primary/10" : "border-border bg-background hover:bg-accent",
-              )}
-            >
-              <span className="block font-semibold">{surface.label}</span>
-              <span className="block text-[10px] text-muted-foreground">${surface.defaultCost.toFixed(2)}/sq ft</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <button
-        type="button"
-        onClick={() => setShowAdvanced((v) => !v)}
-        className="mt-1 text-[11px] font-semibold text-primary hover:underline"
-      >
-        {showAdvanced ? "Hide fine-tune" : "Mix multiple surfaces (advanced)"}
-      </button>
-
-      {showAdvanced && (
-        <div className="mt-2 space-y-1 border-t border-border pt-2">
-          <div className="grid grid-cols-[minmax(0,1fr)_60px_74px] gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            <span>Surface</span>
-            <span className="text-right">%</span>
-            <span className="text-right">$/sqft</span>
-          </div>
-          {SURFACE_TYPES.map((surface, i) => (
-        <div key={surface.id} className="grid grid-cols-[minmax(0,1fr)_68px_82px] items-center gap-2">
-          <Label className="truncate text-xs">{surface.label}</Label>
-          <Input
-            type="number"
-            min={0}
-            max={100}
-            value={surfaces[i].pct}
-            onChange={(e) => setSurfaces((arr) => arr.map((x, j) => (j === i ? { ...x, pct: Number(e.target.value) } : x)))}
-            className="h-8 text-sm"
-          />
-          <Input
-            type="number"
-            step="0.25"
-            value={surfaces[i].cost}
-            onChange={(e) => setSurfaces((arr) => arr.map((x, j) => (j === i ? { ...x, cost: Number(e.target.value) } : x)))}
-            className="h-8 text-sm"
-          />
-        </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
