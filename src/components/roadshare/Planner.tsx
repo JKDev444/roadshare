@@ -356,6 +356,13 @@ export function Planner({
 
   const rightRail = (
     <>
+      {/* Pinned "your estimated share" hero — stays visible as the user tweaks
+          anything below so they can watch the number change in real time. */}
+      {step !== "home" && step !== "road" && (
+        <div className="sticky top-0 z-10 -mx-4 -mt-4 mb-1 border-b border-border bg-background/95 p-4 backdrop-blur">
+          <ResultsPanel result={result} methodology={methodology} compact />
+        </div>
+      )}
       <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
         <StepPanel
           parcels={PARCELS}
