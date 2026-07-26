@@ -388,6 +388,15 @@ export function Planner({
         </div>
       )}
 
+      {/* App variant: keep a compact "your share" summary pinned in the rail
+          for steps 3+ so the user can watch the number change as they nudge
+          sliders, without needing to advance to the review step. */}
+      {isApp && step !== "review" && step !== "home" && step !== "road" && (
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
+          <ResultsPanel result={result} methodology={methodology} compact />
+        </div>
+      )}
+
       {step !== "home" && step !== "road" && (
       <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
         <button
