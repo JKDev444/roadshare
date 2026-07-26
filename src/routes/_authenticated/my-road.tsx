@@ -21,6 +21,10 @@ import {
 import { getMyRoad, resetMyRoad, saveMyRoadState } from "@/lib/roadshare/road.functions";
 import { createShare } from "@/lib/roadshare/share.functions";
 import { autoArrangeHomes } from "@/lib/roadshare/layout";
+import { buildLayout } from "@/lib/roadshare/layout";
+import { computeAllocation } from "@/lib/roadshare/engine";
+import { SURFACE_TYPES, DEFAULTS } from "@/lib/roadshare/data";
+import type { HomePatchPreview, HomeShareEstimate } from "@/components/roadshare/HomeDetailsDrawer";
 import { computeAllocation } from "@/lib/roadshare/engine";
 import { SURFACE_TYPES, DEFAULTS } from "@/lib/roadshare/data";
 
@@ -301,6 +305,31 @@ function MyRoadPage() {
     pushHistory(arranged);
   }
 
+  /**
+   * Move a home to a specific 1..N position among its road peers.
+   * We rebuild the full homes array so the target home lands at the right
+   * spot in the same-segment ordering, then let autoArrangeHomes re-space
+   * everyone so nothing overlaps.
+   */
+  function handleSetHomeOrderIndex(id: string, targetIndex1Based: number) {
+    const home = homes.find((h) => h.id === id);
+    if (!home) return;
+    const segId = home.segmentId ?? segments[0]?.id;
+    // Same-segment peers in current order.
+    const peers = homes.filter((h) => (h.segmentId ?? segments[0]?.id) === segId);
+    const others = homes.filter((h) => (h.segmentId ?? segments[0]?.id) !== segId);
+    const remaining = peers.filter((h) => h.id !== id);
+    const targetIdx0 = Math.max(0, Math.min(remaining.length, targetIndex1Based - 1));
+    const newPeers = [...remaining.slice(0, targetIdx0), home, ...remaining.slice(targetIdx0)];
+    // Splice new peer order back into `homes` in the original slots that
+    // belonged to peers, so unrelated ordering is preserved.
+    const peerIds = new Set(peers.map((h) => h.id));
+    let cursor = 0;
+    const rebuilt = homes.map((h) => (peerIds.has(h.id) ? newPeers[cursor++] : h));
+    const arranged = autoArrangeHomes(rebuilt, segments);
+    pushHistory(arranged);
+  }
+
   function handleDuplicateHome(id: string) {
     const src = homes.find((h) => h.id === id);
     if (!src) return;
@@ -453,6 +482,14 @@ function MyRoadPage() {
     [homes, roadName, segments],
   );
 
+  // Peer info for the drawer's position slider.
+  const editingHome = editingHomeId ? homes.find((h) => h.id === editingHomeId) ?? null : null;
+  const peerHomes = editingHome
+    ? homes.filter((h) => (h.segmentId ?? segments[0]?.id) === (editingHome.segmentId ?? segments[0]?.id))
+    : [];
+  const peerCount = peerHomes.length;
+  const peerIndex = editingHome ? peerHomes.findIndex((h) => h.id === editingHome.id) + 1 : 0;
+
   function handleAutoArrange() {
     const next = autoArrangeHomes(homes, segments);
     pushHistory(next);
@@ -590,7 +627,7 @@ function MyRoadPage() {
       )}
       <BulkAddDialog open={bulkOpen} onClose={() => setBulkOpen(false)} onAdd={handleBulkAdd} />
       <HomeDetailsDrawer
-        home={editingHomeId ? homes.find((h) => h.id === editingHomeId) ?? null : null}
+        home={editingHome}
         segments={segments}
         onClose={() => setEditingHomeId(null)}
         onSave={handleSaveHome}
@@ -598,6 +635,9 @@ function MyRoadPage() {
         onReturnToTray={handleReturnHomeToTray}
         onFlipSide={handleFlipHomeSide}
         onMoveInOrder={handleMoveHomeInOrder}
+        onSetOrderIndex={handleSetHomeOrderIndex}
+        peerCount={peerCount}
+        peerIndex={peerIndex}
         onDuplicate={handleDuplicateHome}
         livePreview={livePreview}
       />
