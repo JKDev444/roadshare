@@ -66,6 +66,7 @@ function SharedRoadPage() {
     roadWidth: snapshot.roadWidth,
     fundingPeriod: snapshot.fundingPeriod,
     surfaces: snapshot.surfaces,
+    fixedTotal: (snapshot as { fixedTotal?: number }).fixedTotal,
   };
 
   return (
