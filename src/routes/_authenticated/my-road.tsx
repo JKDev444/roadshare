@@ -556,6 +556,7 @@ function MyRoadPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {(() => null)()}
       <AppHeader
         roadName={road.name ?? "My road"}
         active="map"
