@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Trash2, FlipHorizontal2, ArrowUp, ArrowDown } from "lucide-react";
+import { X, Trash2, FlipHorizontal2, ArrowUp, ArrowDown, Copy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ export function HomeDetailsDrawer({
   onReturnToTray,
   onFlipSide,
   onMoveInOrder,
+  onDuplicate,
 }: {
   home: RoadHome | null;
   segments: Segment[];
@@ -26,6 +27,8 @@ export function HomeDetailsDrawer({
   onFlipSide?: (id: string) => void;
   /** Shift the home earlier/later in the ordering along its road (auto-spaces). */
   onMoveInOrder?: (id: string, dir: -1 | 1) => void;
+  /** Duplicate this home (copies name, address, frontage) into the tray. */
+  onDuplicate?: (id: string) => void;
 }) {
   const [address, setAddress] = useState("");
   const [owner, setOwner] = useState("");
@@ -173,6 +176,18 @@ export function HomeDetailsDrawer({
             </Button>
           ) : <span />}
           <div className="flex items-center gap-2">
+            {onDuplicate && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onDuplicate(home.id);
+                  onClose();
+                }}
+              >
+                <Copy className="h-4 w-4" /> Duplicate
+              </Button>
+            )}
             {onReturnToTray && home.position !== null && (
               <Button
                 variant="outline"
