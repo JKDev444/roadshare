@@ -21,10 +21,6 @@ import {
 import { getMyRoad, resetMyRoad, saveMyRoadState } from "@/lib/roadshare/road.functions";
 import { createShare } from "@/lib/roadshare/share.functions";
 import { autoArrangeHomes } from "@/lib/roadshare/layout";
-import { buildLayout } from "@/lib/roadshare/layout";
-import { computeAllocation } from "@/lib/roadshare/engine";
-import { SURFACE_TYPES, DEFAULTS } from "@/lib/roadshare/data";
-import type { HomePatchPreview, HomeShareEstimate } from "@/components/roadshare/HomeDetailsDrawer";
 import { computeAllocation } from "@/lib/roadshare/engine";
 import { SURFACE_TYPES, DEFAULTS } from "@/lib/roadshare/data";
 
