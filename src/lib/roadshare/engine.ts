@@ -181,7 +181,8 @@ export function computeAllocation(input: AllocationInput): AllocationResult {
     totalRoadFt: layout.totalRoadFt,
     pavementArea,
     pctTotal,
-    pctValid,
+    // With a fixed contractor quote, the surface-mix % gate is irrelevant.
+    pctValid: hasFixed ? true : pctValid,
     blendedRate,
     totalCost,
     totalPerYear: totalCost / period,
