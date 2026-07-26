@@ -1,13 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ComponentType, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import {
   ArrowRight,
   Check,
-  ChevronDown,
   Home,
   MapPin,
   Route as RouteIcon,
   Search,
-  SlidersHorizontal,
   Sparkles,
   Plus,
   RotateCw,
