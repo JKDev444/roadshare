@@ -41,6 +41,8 @@ export type PlannerSnapshot = {
   roadWidth: number;
   fundingPeriod: number;
   surfaces: { pct: number; cost: number }[];
+  /** Contractor quote (total $). When > 0 it overrides the material math. */
+  fixedTotal?: number;
 };
 
 const METHODS: { id: Methodology; label: string; helper: string }[] = [
