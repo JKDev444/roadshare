@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, ArrowRight, Home, Loader2, MapPin, Minus, Pencil, Plus, Route as RouteIcon, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileText, Home, Loader2, MapPin, Minus, Pencil, Plus, Route as RouteIcon, Sparkles, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/lib/auth/useSession";
 import {
   autoArrangeHomes,
+  defaultFrontageFor,
   makeHomeId,
   makeManualHomes,
   makeSegmentId,
@@ -32,13 +35,18 @@ export const Route = createFileRoute("/_authenticated/welcome")({
   component: WelcomePage,
 });
 
-type Screen = "name" | "homes";
+type Screen = "name" | "docs" | "homes";
 type Tile = "address" | "paste" | "manual" | null;
+
+const DOC_BUCKET = "documents";
+const DOC_MAX_MB = 20;
 
 function WelcomePage() {
   const create = useServerFn(createMyRoad);
   const navigate = useNavigate();
   const router = useRouter();
+  const { user } = useSession();
+  const userId = user?.id ?? null;
 
   const [screen, setScreen] = useState<Screen>("name");
   const [name, setName] = useState("");
@@ -49,6 +57,10 @@ function WelcomePage() {
   const [addressCount, setAddressCount] = useState(6);
   const [pasted, setPasted] = useState("");
   const [manualCount, setManualCount] = useState(8);
+
+  const [uploadedDocs, setUploadedDocs] = useState<{ name: string; path: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const docInputRef = useRef<HTMLInputElement>(null);
 
   const parsedPastedCount = useMemo(
     () => parseHomesFromList(pasted).length,
@@ -71,10 +83,14 @@ function WelcomePage() {
       widthFt: 20,
       geometry: { ax: 90, ay: 310, bx: 810, by: 310 },
     };
+    // Smart default frontage so the map + cost split are meaningful from the
+    // first render — users can still tune per home in the details drawer.
+    const defaultFrontage = defaultFrontageFor([defaultSegment], homes.length);
     const seeded = homes.map((h) => ({
       ...h,
       segmentId: defaultSegment.id,
       position: { x: 0, y: 0 } as { x: number; y: number },
+      frontageFtOverride: h.frontageFtOverride ?? defaultFrontage,
     }));
     const arranged = autoArrangeHomes(seeded, [defaultSegment]);
     try {
@@ -85,6 +101,41 @@ function WelcomePage() {
       toast.error(err instanceof Error ? err.message : "Could not save your road.");
       setBusy(false);
     }
+  }
+
+  async function handleDocFile(file: File) {
+    if (!userId) {
+      toast.error("Sign in required to upload.");
+      return;
+    }
+    if (file.size > DOC_MAX_MB * 1024 * 1024) {
+      toast.error(`File is too big (max ${DOC_MAX_MB} MB).`);
+      return;
+    }
+    setUploading(true);
+    const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120);
+    const path = `${userId}/${Date.now()}_${safe}`;
+    const { error } = await supabase.storage.from(DOC_BUCKET).upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: file.type || "application/octet-stream",
+    });
+    setUploading(false);
+    if (error) {
+      toast.error(error.message || "Upload failed.");
+      return;
+    }
+    setUploadedDocs((prev) => [...prev, { name: safe, path }]);
+    toast.success("Document saved.");
+  }
+
+  async function removeDoc(item: { name: string; path: string }) {
+    const { error } = await supabase.storage.from(DOC_BUCKET).remove([item.path]);
+    if (error) {
+      toast.error("Couldn't remove that file.");
+      return;
+    }
+    setUploadedDocs((prev) => prev.filter((d) => d.path !== item.path));
   }
 
   function submitTile() {
@@ -156,13 +207,13 @@ function WelcomePage() {
                 <p className="text-xs text-muted-foreground">Skip it and we'll call it "My road" for now.</p>
               </div>
               <Button type="submit" className="w-full" size="lg">
-                Next: who's on your road? <ArrowRight className="h-4 w-4" />
+              Next: any documents? <ArrowRight className="h-4 w-4" />
               </Button>
             </form>
           </section>
         )}
 
-        {screen === "homes" && (
+        {screen === "docs" && (
           <section className="rounded-3xl border border-border/70 bg-card p-8 shadow-xl">
             <div className="mb-6 flex items-start gap-3">
               <button
@@ -174,7 +225,108 @@ function WelcomePage() {
                 <ArrowLeft className="h-4 w-4" />
               </button>
               <div className="flex-1">
-                <p className="text-xs font-bold uppercase tracking-wider text-primary">Step 2 of 2</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">Step 2 of 3</p>
+                <h1 className="font-display text-2xl font-bold tracking-tight">Got any documents?</h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  CC&amp;Rs, a road-maintenance agreement, or a plat map — anything that helps you and your neighbors trust the plan. Totally optional.
+                </p>
+                <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+                  <Sparkles className="h-3 w-3" /> Coming soon: we'll read your CC&amp;Rs and suggest homes + frontage automatically
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border-2 border-dashed border-border bg-muted/20 p-6 text-center">
+              <span className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
+                <Upload className="h-6 w-6" />
+              </span>
+              <p className="font-display text-base font-semibold">Upload a document</p>
+              <p className="mt-1 text-xs text-muted-foreground">PDF, Word doc, or photo — up to {DOC_MAX_MB} MB each.</p>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-4"
+                onClick={() => docInputRef.current?.click()}
+                disabled={uploading || !userId}
+              >
+                {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                Choose file
+              </Button>
+              <input
+                ref={docInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.heic"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void handleDocFile(f);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+
+            {uploadedDocs.length > 0 && (
+              <ul className="mt-3 space-y-1.5">
+                {uploadedDocs.map((d) => (
+                  <li
+                    key={d.path}
+                    className="flex items-center gap-2 rounded-xl border border-border bg-background/70 px-3 py-2"
+                  >
+                    <FileText className="h-4 w-4 shrink-0 text-primary" />
+                    <span className="min-w-0 flex-1 truncate text-sm">{d.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive"
+                      onClick={() => void removeDoc(d)}
+                      aria-label="Remove"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                size="lg"
+                onClick={() => setScreen("homes")}
+              >
+                <X className="h-4 w-4" /> I don't have any
+              </Button>
+              <Button
+                type="button"
+                className="flex-1"
+                size="lg"
+                onClick={() => setScreen("homes")}
+              >
+                {uploadedDocs.length > 0 ? "Continue" : "I'll add them later"} <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="mt-3 text-center text-[11px] text-muted-foreground">
+              You can upload more from the Documents page anytime.
+            </p>
+          </section>
+        )}
+
+        {screen === "homes" && (
+          <section className="rounded-3xl border border-border/70 bg-card p-8 shadow-xl">
+            <div className="mb-6 flex items-start gap-3">
+              <button
+                type="button"
+                onClick={() => setScreen("docs")}
+                className="mt-1 grid h-8 w-8 place-items-center rounded-xl border border-border bg-background text-muted-foreground hover:bg-accent"
+                aria-label="Back"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <div className="flex-1">
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">Step 3 of 3</p>
                 <h1 className="font-display text-2xl font-bold tracking-tight">Who's on your road?</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Pick the easiest way. Don't stress — you can rename or edit every home later.
