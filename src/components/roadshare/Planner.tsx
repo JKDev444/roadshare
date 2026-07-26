@@ -552,29 +552,6 @@ export function Planner({
         </section>
         <aside className="min-w-0 overflow-y-auto border-l border-border bg-background p-4 space-y-3">
           {rightRail}
-          {segments && segments.length > 0 && step !== "home" && step !== "road" && step !== "review" && (
-            <RoadsPanel
-              segments={segments}
-              onAddSegment={onAddSegment}
-              onRenameSegment={onRenameSegment}
-              onDeleteSegment={onDeleteSegment}
-              onSetSegmentLength={onSetSegmentLength}
-              onSetSegmentWidth={onSetSegmentWidth}
-              onStraightenSegment={onStraightenSegment}
-              onExtendSegment={onExtendSegment}
-            />
-          )}
-          {step !== "home" && step !== "review" && (onAddHome || onRenameHome || onDeleteHome) && homes && homes.length > 0 && (
-            <HomesPanel
-              homes={homes}
-              parcels={PARCELS}
-              segments={segments}
-              onAddHome={onAddHome}
-              onRenameHome={onRenameHome}
-              onDeleteHome={onDeleteHome}
-              onAssignHomeSegment={onAssignHomeSegment}
-            />
-          )}
         </aside>
       </main>
     );
