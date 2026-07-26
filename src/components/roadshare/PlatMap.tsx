@@ -611,18 +611,6 @@ export function PlatMap({
                 strokeWidth={isHover ? 1 : 0}
                 filter="url(#parcelShadow)"
               />
-              {isSel && (
-                <line
-                  x1={p.frontageLine[0][0] + hd.dx}
-                  y1={p.frontageLine[0][1] + hd.dy}
-                  x2={p.frontageLine[1][0] + hd.dx}
-                  y2={p.frontageLine[1][1] + hd.dy}
-                  stroke={isYou ? "var(--color-gold-foreground)" : "var(--color-selected-foreground)"}
-                  strokeWidth="4.5"
-                  strokeLinecap="round"
-                  opacity="0.9"
-                />
-              )}
               <title>{p.name && p.name !== p.address ? `${p.name} · ${p.address}` : p.address}</title>
               {(() => {
                 const mainLabel = parcelDisplayLabel(p, idx);
