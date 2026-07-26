@@ -700,9 +700,6 @@ function StepPanel({
           <Button className="w-full" onClick={onGoToNeighbors}>
             Looks right — next <ArrowRight className="h-4 w-4" />
           </Button>
-          <p className="text-[11px] text-muted-foreground">
-            Tip: got a real contractor quote? Skip to step 5 and enter it under <span className="font-semibold">Fine-tune the math → I already have a quote</span>. You won't need to guess material prices.
-          </p>
         </div>
       )}
 
