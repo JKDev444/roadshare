@@ -1,78 +1,49 @@
-## Goals
+## Goal
 
-1. Ask about the contractor quote **in onboarding** (not the app rail).
-2. Redesign the right-rail **Estimated Share** area so it doesn't feel scrunched.
-3. Make the drawer's **"How much road does this home touch?"** slider (a) update the pinned Estimated Share live and (b) actually persist to the map after Save.
+Free the right rail so the "Your estimated share" hero can breathe. Move the list-management panels ("Homes on this road", "Roads") into compact buttons in the existing top toolbar. Each button opens a popover with the same list + add/rename/delete/reassign actions that live there today.
 
----
+## Toolbar changes (top-left floating pill, `PlatToolbar`)
 
-## 1. Onboarding — new "Cost" step
-
-`src/routes/_authenticated/welcome.tsx`
-
-- Insert a new screen `cost` between `shape` and `homes`. New sequence: `name → docs → shape → cost → homes` (5 steps; update all "Step X of 4" labels to "Step X of 5").
-- Screen content: **"Do you already have a contractor quote?"**
-  - Two large tiles side-by-side:
-    - **"Yes — I have a quote"** → reveals a `$` input (numeric, formatted with commas). CTA becomes enabled once a number > 0 is entered.
-    - **"No — estimate it for me"** → proceeds immediately.
-  - Helper: "If yes, we'll split that exact number. If no, we'll estimate it and you can adjust anytime."
-- Store `quoteTotal: number | undefined` in local state and pass it through `finish()` into `create({ data: { …, fixedTotal: quoteTotal } })`.
-- `createMyRoad` already persists arbitrary `state` JSON; extend the initial state written on create to include `fixedTotal` so `/my-road` boots with it in `PlannerSnapshot`.
-
-## 2. Rail — redesign the Estimated Share area
-
-`src/components/roadshare/Planner.tsx` + `src/components/roadshare/ResultsPanel.tsx`
-
-Replace the current cramped stacked-cards look with a single, breathable **ShareHero** card at the top of the rail. Layout:
+New order, left → right:
 
 ```text
-┌─ Your estimated share ─────────────────┐
-│                                        │
-│   $450 / year                          │  ← 40px display number
-│   ─────────────────────────────        │
-│   12.5% of the group   ● equal split   │  ← chip row
-│                                        │
-│   Total project   Per year (group)     │  ← two inline stats, no boxes
-│   $54,000         $3,600               │
-└────────────────────────────────────────┘
+[+ Add home]  [🏠 Homes (6) ▾]  [+ Add road]  [🛣 Roads (2) ▾]  [✨ Space evenly]  [↻ Reset]  |  [↶] [↷]
 ```
 
-Specifics:
-- Bigger, single hero card with generous padding (`p-5`), gold gradient background kept but softened.
-- Kill the separate `TOTAL PROJECT` / `PER YEAR (GROUP)` bordered tiles under the hero. Fold those two numbers into the hero footer as a two-column inline stat row (small uppercase label above a mono value, no box).
-- Remove the redundant sticky wrapper's extra border + shadow so the hero reads as one clean block, not "card inside a card".
-- Update `ResultsPanel` compact mode to render this new inline stat row instead of the two-tile grid; keep `hideHero` behaviour for the review-step breakdown table.
-- Keep the pinned/sticky behaviour so it stays visible while scrolling.
+- **Homes (N)** — `Home` icon + count. Click opens a popover containing today's `HomesPanel` (list of homes with rename, delete, "assign to road" dropdown, and an inline "+ Add" that mirrors "Add home").
+- **Roads (N)** — `Route` icon + count. Click opens a popover containing today's `RoadsPanel` (rename, delete, length input, width, Straighten / Extend actions).
+- Existing **Add home** and **Add road** buttons stay — one-tap adds are still the fastest path; the new buttons are for managing the list.
+- Divider between action buttons and undo/redo for visual grouping.
 
-## 3. Frontage slider — live update + save
+## Right rail changes
 
-`src/components/roadshare/HomeDetailsDrawer.tsx` + `src/routes/_authenticated/my-road.tsx`
+- Remove `<HomesPanel>` and `<RoadsPanel>` from the rail entirely.
+- Rail now shows only: the sticky **Your estimated share** hero, the two sliders (Road width, Plan over years), and the Total-project-cost input. Same content, more vertical room, no double scrollbar.
 
-Two fixes:
+## Popover behavior
 
-**a. Live pinned Estimated Share while dragging.**
-- Add an optional `onPreviewPatch?: (id, patch) => void` callback to `HomeDetailsDrawer`. Call it (debounced ~120 ms) whenever `frontage` or `skip` changes.
-- In `my-road.tsx`, wire that callback to update a `previewHomes` array (homes with the pending patch applied). Pass `previewHomes ?? homes` into `Planner` so the map + pinned rail recompute in real time as the slider moves.
-- Clear the preview on drawer close or on Save (Save promotes the preview to real state via existing `pushHistory`).
+- Use existing shadcn `Popover` (already in the project). Anchor to each toolbar button, `align="start"`, `sideOffset={8}`.
+- Max height ~70vh with internal scroll so long lists don't push the map.
+- Popover closes on outside click / Esc. Editing a home name or reassigning a road keeps it open.
+- On viewports < 640px the popover renders as a bottom sheet (`Sheet` component) so it doesn't clip off-screen.
 
-**b. Make Save actually stick on the map.**
-- Root cause: `handleSaveHome` → `pushHistory` updates `homes` state, and the persistence `useEffect` (line 520) writes it to the DB. That part works, but the drawer's `frontage` is stored as a string and cleared to `""` when the user hits "Use map estimate" — currently saving a blank writes `frontageFtOverride: null`, which reverts to the auto value. Verify + fix any off-by-one where a dragged value doesn't reach the patch:
-  - Ensure `save()` uses the current `frontageNumber` (already derived) rather than re-parsing `frontage`.
-  - After `onSave`, do NOT call `onClose()` until state has committed; keep it as-is but confirm the Planner's `homes` prop is the same reference `my-road` holds (it is — direct `homes` state).
-- Add a small toast "Saved — share updated" on successful save so users get feedback the change landed.
+## "What else could go up there?"
 
-## 4. Technical notes
+Recommended additions, in priority order:
 
-- `PlannerSnapshot.fixedTotal` is already threaded through the engine; only the seed path from onboarding and the initial DB state need updating.
-- `SliderControl`s for road width / plan years and the `TotalCostControl` remain in the rail unchanged.
-- No schema changes; `roads.state` is `jsonb`.
+1. **Space evenly** — already exists in the toolbar today but sits in a separate strip above the map; fold it into the same pill so all map actions live in one place.
+2. **Reset layout** (↻) — the existing "reset positions" action, moved into the pill.
+3. **Fit to screen** (⤢) — one-click zoom-to-content; helpful once users drag things off-canvas.
+4. **Legend / labels toggle** (👁) — show/hide the frontage-ft labels on each home; power users like it, first-timers find it noisy.
 
-## 5. Testing (Playwright, screenshots under `/tmp/browser/`)
+Everything except items 1 and 2 is optional — I'll implement 1 and 2 by default and hold 3–4 unless you want them now.
 
-Non-tech user pass answering: was the flow easy? confusing? did I get what I wanted?
-1. Trigger "roadshare" reset → land on `/welcome`.
-2. Walk through name → docs (skip) → shape (Straight) → **cost (Yes, $60,000)** → homes (Manual, 6) → land on `/my-road`.
-3. Verify pinned Estimated Share reads a value derived from $60,000 and stays visible while scrolling.
-4. Double-click a home → drag the frontage slider → screenshot: pinned Estimated Share number changes in real time.
-5. Click Save → close drawer → refresh the page → confirm the new frontage persisted (drawer reopens with the new value; share unchanged after refresh).
-6. Repeat with the "No — estimate it for me" branch and confirm the rail's Total-cost override still works.
+## Files touched
+
+- `src/components/roadshare/Planner.tsx` — extend `PlatToolbar` with two new popover buttons that receive the same props `HomesPanel` / `RoadsPanel` already accept; delete the two panels from the right-rail `<aside>`; keep them mounted only inside the popovers so no logic is duplicated.
+- No other files change. No data model, no server functions, no persistence changes.
+
+## Out of scope
+
+- No visual redesign of the panels themselves (same rows, same actions).
+- No change to onboarding — this only affects the main editor (`/my-road`).
