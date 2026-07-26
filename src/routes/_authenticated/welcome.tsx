@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, ArrowRight, FileText, Home, Loader2, MapPin, Minus, Pencil, Plus, Route as RouteIcon, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, DollarSign, FileText, Home, Loader2, MapPin, Minus, Pencil, Plus, Route as RouteIcon, Sparkles, Trash2, Upload, Wand2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -36,8 +36,9 @@ export const Route = createFileRoute("/_authenticated/welcome")({
   component: WelcomePage,
 });
 
-type Screen = "name" | "docs" | "shape" | "homes";
+type Screen = "name" | "docs" | "shape" | "cost" | "homes";
 type Tile = "address" | "paste" | "manual" | null;
+type CostChoice = "quote" | "estimate" | null;
 
 const DOC_BUCKET = "documents";
 const DOC_MAX_MB = 20;
@@ -54,6 +55,8 @@ function WelcomePage() {
   const [tile, setTile] = useState<Tile>(null);
   const [busy, setBusy] = useState(false);
   const [shapeId, setShapeId] = useState<string>("straight");
+  const [costChoice, setCostChoice] = useState<CostChoice>(null);
+  const [quoteAmount, setQuoteAmount] = useState<string>("");
 
   const [address, setAddress] = useState("");
   const [addressCount, setAddressCount] = useState(6);
@@ -93,8 +96,11 @@ function WelcomePage() {
       frontageFtOverride: h.frontageFtOverride ?? defaultFrontage,
     }));
     const arranged = autoArrangeHomes(seeded, segments);
+    const parsedQuote = Number(quoteAmount.replace(/[^0-9.]/g, ""));
+    const fixedTotal =
+      costChoice === "quote" && isFinite(parsedQuote) && parsedQuote > 0 ? parsedQuote : undefined;
     try {
-      await create({ data: { name: roadName, homes: arranged, segments } });
+      await create({ data: { name: roadName, homes: arranged, segments, fixedTotal } });
       await router.invalidate();
       navigate({ to: "/my-road" });
     } catch (err) {
@@ -225,7 +231,7 @@ function WelcomePage() {
                 <ArrowLeft className="h-4 w-4" />
               </button>
               <div className="flex-1">
-                <p className="text-xs font-bold uppercase tracking-wider text-primary">Step 2 of 4</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">Step 2 of 5</p>
                 <h1 className="font-display text-2xl font-bold tracking-tight">Got any documents?</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
                   CC&amp;Rs, a road-maintenance agreement, or a plat map — anything that helps you and your neighbors trust the plan. Totally optional.
@@ -326,7 +332,7 @@ function WelcomePage() {
                 <ArrowLeft className="h-4 w-4" />
               </button>
               <div className="flex-1">
-                <p className="text-xs font-bold uppercase tracking-wider text-primary">Step 3 of 4</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">Step 3 of 5</p>
                 <h1 className="font-display text-2xl font-bold tracking-tight">Pick a road shape</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Pick whichever looks closest to your road. You can drag, add, or tweak roads later — this is just a starting shape.
@@ -356,13 +362,13 @@ function WelcomePage() {
               ))}
             </div>
 
-            <Button className="mt-6 w-full" size="lg" onClick={() => setScreen("homes")}>
-              Next: who's on your road? <ArrowRight className="h-4 w-4" />
+            <Button className="mt-6 w-full" size="lg" onClick={() => setScreen("cost")}>
+              Next: do you have a quote? <ArrowRight className="h-4 w-4" />
             </Button>
           </section>
         )}
 
-        {screen === "homes" && (
+        {screen === "cost" && (
           <section className="rounded-3xl border border-border/70 bg-card p-8 shadow-xl">
             <div className="mb-6 flex items-start gap-3">
               <button
@@ -374,7 +380,105 @@ function WelcomePage() {
                 <ArrowLeft className="h-4 w-4" />
               </button>
               <div className="flex-1">
-                <p className="text-xs font-bold uppercase tracking-wider text-primary">Step 4 of 4</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">Step 4 of 5</p>
+                <h1 className="font-display text-2xl font-bold tracking-tight">Do you already have a quote?</h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  If yes, we'll split that exact number. If no, we'll estimate it and you can adjust the total anytime.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setCostChoice("quote")}
+                className={cn(
+                  "flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-colors",
+                  costChoice === "quote"
+                    ? "border-primary bg-primary/10 shadow-md"
+                    : "border-border bg-background hover:border-primary/50 hover:bg-primary/5",
+                )}
+              >
+                <span className={cn(
+                  "grid h-11 w-11 place-items-center rounded-2xl",
+                  costChoice === "quote" ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary",
+                )}>
+                  <DollarSign className="h-5 w-5" />
+                </span>
+                <span className="block font-display text-base font-bold tracking-tight">Yes, I have a quote</span>
+                <span className="block text-xs text-muted-foreground">A contractor gave me a total price.</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCostChoice("estimate")}
+                className={cn(
+                  "flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-colors",
+                  costChoice === "estimate"
+                    ? "border-primary bg-primary/10 shadow-md"
+                    : "border-border bg-background hover:border-primary/50 hover:bg-primary/5",
+                )}
+              >
+                <span className={cn(
+                  "grid h-11 w-11 place-items-center rounded-2xl",
+                  costChoice === "estimate" ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary",
+                )}>
+                  <Wand2 className="h-5 w-5" />
+                </span>
+                <span className="block font-display text-base font-bold tracking-tight">No — estimate it for me</span>
+                <span className="block text-xs text-muted-foreground">We'll ballpark it; you can adjust later.</span>
+              </button>
+            </div>
+
+            {costChoice === "quote" && (
+              <div className="mt-6 space-y-2 rounded-2xl border border-border bg-muted/30 p-4">
+                <Label htmlFor="quote-amount">Contractor quote (total $)</Label>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-lg font-bold text-primary">$</span>
+                  <Input
+                    id="quote-amount"
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step={100}
+                    value={quoteAmount}
+                    onChange={(e) => setQuoteAmount(e.target.value)}
+                    placeholder="e.g. 42000"
+                    autoFocus
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  We'll split this exact number across the homes on your road.
+                </p>
+              </div>
+            )}
+
+            <Button
+              className="mt-6 w-full"
+              size="lg"
+              disabled={
+                !costChoice ||
+                (costChoice === "quote" && !(Number(quoteAmount) > 0))
+              }
+              onClick={() => setScreen("homes")}
+            >
+              Next: who's on your road? <ArrowRight className="h-4 w-4" />
+            </Button>
+          </section>
+        )}
+
+        {screen === "homes" && (
+          <section className="rounded-3xl border border-border/70 bg-card p-8 shadow-xl">
+            <div className="mb-6 flex items-start gap-3">
+              <button
+                type="button"
+                onClick={() => setScreen("cost")}
+                className="mt-1 grid h-8 w-8 place-items-center rounded-xl border border-border bg-background text-muted-foreground hover:bg-accent"
+                aria-label="Back"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <div className="flex-1">
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">Step 5 of 5</p>
                 <h1 className="font-display text-2xl font-bold tracking-tight">Who's on your road?</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Pick the easiest way. Don't stress — you can rename or edit every home later.

@@ -359,10 +359,14 @@ export function Planner({
       {/* Pinned "your estimated share" hero — stays visible as the user tweaks
           anything below so they can watch the number change in real time. */}
       {step !== "home" && step !== "road" && (
-        <div className={cn(
-          "z-10 rounded-2xl border border-gold/50 bg-background/95 p-1 shadow-sm backdrop-blur",
-          isApp ? "sticky top-0 -mx-4 -mt-4 mb-1 rounded-none border-x-0 border-t-0 border-b border-border p-4" : "sticky top-20",
-        )}>
+        <div
+          className={cn(
+            "z-10",
+            isApp
+              ? "sticky top-0 -mx-4 -mt-4 mb-1 bg-background/95 px-4 pb-4 pt-4 shadow-sm ring-1 ring-border backdrop-blur"
+              : "sticky top-20",
+          )}
+        >
           <ResultsPanel result={result} methodology={methodology} compact />
         </div>
       )}
@@ -696,9 +700,6 @@ function StepPanel({
           <Button className="w-full" onClick={onGoToNeighbors}>
             Looks right — next <ArrowRight className="h-4 w-4" />
           </Button>
-          <p className="text-[11px] text-muted-foreground">
-            Tip: got a real contractor quote? Skip to step 5 and enter it under <span className="font-semibold">Fine-tune the math → I already have a quote</span>. You won't need to guess material prices.
-          </p>
         </div>
       )}
 

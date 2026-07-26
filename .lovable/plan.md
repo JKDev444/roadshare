@@ -1,65 +1,78 @@
-## Goal
+## Goals
 
-Simplify the right rail on Step 5 and move the contractor-quote decision into onboarding, so the Estimated Share number is always visible and updates live.
+1. Ask about the contractor quote **in onboarding** (not the app rail).
+2. Redesign the right-rail **Estimated Share** area so it doesn't feel scrunched.
+3. Make the drawer's **"How much road does this home touch?"** slider (a) update the pinned Estimated Share live and (b) actually persist to the map after Save.
 
-## Changes
+---
 
-### 1. Onboarding — add a "Cost" screen (`src/routes/_authenticated/welcome.tsx`)
+## 1. Onboarding — new "Cost" step
 
-Insert a new screen after `shape` (before `homes`): **"Do you already have a quote?"**
-- Two big tiles: **"Yes, I have a contractor quote"** (reveals a `$` input) and **"No — estimate it for me"**.
-- Store `fixedTotal?: number` in local state and pass it into `createMyRoad` as part of the initial planner snapshot (extend the server fn payload / initial state persisted for the road).
-- Screen sequence becomes: `name → docs → shape → cost → homes`.
+`src/routes/_authenticated/welcome.tsx`
 
-### 2. Planner right rail (`src/components/roadshare/Planner.tsx`)
+- Insert a new screen `cost` between `shape` and `homes`. New sequence: `name → docs → shape → cost → homes` (5 steps; update all "Step X of 4" labels to "Step X of 5").
+- Screen content: **"Do you already have a contractor quote?"**
+  - Two large tiles side-by-side:
+    - **"Yes — I have a quote"** → reveals a `$` input (numeric, formatted with commas). CTA becomes enabled once a number > 0 is entered.
+    - **"No — estimate it for me"** → proceeds immediately.
+  - Helper: "If yes, we'll split that exact number. If no, we'll estimate it and you can adjust anytime."
+- Store `quoteTotal: number | undefined` in local state and pass it through `finish()` into `create({ data: { …, fixedTotal: quoteTotal } })`.
+- `createMyRoad` already persists arbitrary `state` JSON; extend the initial state written on create to include `fixedTotal` so `/my-road` boots with it in `PlannerSnapshot`.
 
-Restructure the sticky right rail so the **Estimated Share hero is always pinned at the top and visible without scrolling**:
+## 2. Rail — redesign the Estimated Share area
+
+`src/components/roadshare/Planner.tsx` + `src/components/roadshare/ResultsPanel.tsx`
+
+Replace the current cramped stacked-cards look with a single, breathable **ShareHero** card at the top of the rail. Layout:
 
 ```text
-┌─ Right rail (380px, app variant) ─────────┐
-│ [PINNED, non-scrolling]                   │
-│   Your estimated share  $X,XXX / yr       │
-│   share % · vs equal split                │
-│   Total project · Per year (group)        │
-├───────────────────────────────────────────┤
-│ [SCROLLABLE below]                        │
-│   Step panel (walkthrough for current step│
-│   Split-method picker (on review)         │
-│   Simple controls:                        │
-│     • Road width slider                   │
-│     • Plan over years slider              │
-│     • (If no quote) "Adjust estimated cost│
-│        total" — single $ input replacing  │
-│        the surface-mix panel              │
-└───────────────────────────────────────────┘
+┌─ Your estimated share ─────────────────┐
+│                                        │
+│   $450 / year                          │  ← 40px display number
+│   ─────────────────────────────        │
+│   12.5% of the group   ● equal split   │  ← chip row
+│                                        │
+│   Total project   Per year (group)     │  ← two inline stats, no boxes
+│   $54,000         $3,600               │
+└────────────────────────────────────────┘
 ```
 
-Specifically:
-- Split the `<aside>` into a fixed header region (share hero + totals, always mounted for steps ≥ neighbors) and a scrollable region below. Use `flex flex-col` with the hero as `shrink-0` and the rest as `flex-1 overflow-y-auto`.
-- Remove the entire **"Fine-tune the math"** collapsible wrapper. Surface only two sliders directly in the rail: Road width and Plan over years. No collapse.
-- Remove the **`QuoteControl`** component from the rail. The quote is set in onboarding. If the user did *not* provide a quote, show a single **"Adjust estimated total cost"** `$` input (editable `fixedTotal`) in place of it. If they did provide a quote, show a small "Contractor quote: $X,XXX — edit" line with an inline edit affordance.
-- Delete the surface-mix picker UI from the rail entirely (kept default surface values under the hood only as a fallback when no `fixedTotal` and user hasn't touched the total; simplest path: seed `fixedTotal` from the default blended-rate × pavement-area on first mount when unset, so the rail only ever exposes one cost number to the user).
+Specifics:
+- Bigger, single hero card with generous padding (`p-5`), gold gradient background kept but softened.
+- Kill the separate `TOTAL PROJECT` / `PER YEAR (GROUP)` bordered tiles under the hero. Fold those two numbers into the hero footer as a two-column inline stat row (small uppercase label above a mono value, no box).
+- Remove the redundant sticky wrapper's extra border + shadow so the hero reads as one clean block, not "card inside a card".
+- Update `ResultsPanel` compact mode to render this new inline stat row instead of the two-tile grid; keep `hideHero` behaviour for the review-step breakdown table.
+- Keep the pinned/sticky behaviour so it stays visible while scrolling.
 
-### 3. Always-live Estimated Share
+## 3. Frontage slider — live update + save
 
-The share hero must render for every step from `neighbors` onward (not only on `review`). Move the compact `ResultsPanel` (or a new lean `ShareHero` component built from `result`) into the pinned header region so it recomputes automatically via the existing `useMemo` on `result` whenever selected homes, width, years, or total cost change.
+`src/components/roadshare/HomeDetailsDrawer.tsx` + `src/routes/_authenticated/my-road.tsx`
 
-### 4. Remove "What if more neighbors join?" (`src/components/roadshare/ResultsPanel.tsx`)
+Two fixes:
 
-Delete the entire projection block (the `Users`-icon card with the `extraNeighbors` slider) and the associated `useState`, `Slider`, and `Users` imports. Estimated Share already updates live when a home is added/removed from the group.
+**a. Live pinned Estimated Share while dragging.**
+- Add an optional `onPreviewPatch?: (id, patch) => void` callback to `HomeDetailsDrawer`. Call it (debounced ~120 ms) whenever `frontage` or `skip` changes.
+- In `my-road.tsx`, wire that callback to update a `previewHomes` array (homes with the pending patch applied). Pass `previewHomes ?? homes` into `Planner` so the map + pinned rail recompute in real time as the slider moves.
+- Clear the preview on drawer close or on Save (Save promotes the preview to real state via existing `pushHistory`).
 
-### 5. Copy / labels
+**b. Make Save actually stick on the map.**
+- Root cause: `handleSaveHome` → `pushHistory` updates `homes` state, and the persistence `useEffect` (line 520) writes it to the DB. That part works, but the drawer's `frontage` is stored as a string and cleared to `""` when the user hits "Use map estimate" — currently saving a blank writes `frontageFtOverride: null`, which reverts to the auto value. Verify + fix any off-by-one where a dragged value doesn't reach the patch:
+  - Ensure `save()` uses the current `frontageNumber` (already derived) rather than re-parsing `frontage`.
+  - After `onSave`, do NOT call `onClose()` until state has committed; keep it as-is but confirm the Planner's `homes` prop is the same reference `my-road` holds (it is — direct `homes` state).
+- Add a small toast "Saved — share updated" on successful save so users get feedback the change landed.
 
-- Onboarding cost screen: heading "Do you already have a contractor quote?", helper "If yes, we'll split that exact number. If no, we'll estimate it and you can adjust the total anytime."
-- Rail no-quote input label: "Estimated total cost" with helper "Change this anytime — the share updates live."
-- Rail quote line: "Using your contractor quote" with edit pencil.
+## 4. Technical notes
 
-## Technical notes
+- `PlannerSnapshot.fixedTotal` is already threaded through the engine; only the seed path from onboarding and the initial DB state need updating.
+- `SliderControl`s for road width / plan years and the `TotalCostControl` remain in the rail unchanged.
+- No schema changes; `roads.state` is `jsonb`.
 
-- `PlannerSnapshot` already carries `fixedTotal`; wiring onboarding → planner just requires seeding it in the initial state persisted by `createMyRoad`.
-- The engine already treats `fixedTotal > 0` as an override that bypasses surface-mix (`pctValid` gate), so hiding the surface UI is safe.
-- Keep the demo (`/tools/cedar-hollow`) rail behavior consistent: also drop "What if more neighbors join?" and the surface-mix UI, replacing with the single total input for parity.
+## 5. Testing (Playwright, screenshots under `/tmp/browser/`)
 
-## Testing
-
-Playwright pass covering: onboarding through new cost screen (both branches), landing on `/my-road`, verifying the Estimated Share hero stays visible while scrolling the rail, and confirming the number updates live when toggling neighbors, width, years, and the editable total. Screenshots at each step saved under `/tmp/browser/`.
+Non-tech user pass answering: was the flow easy? confusing? did I get what I wanted?
+1. Trigger "roadshare" reset → land on `/welcome`.
+2. Walk through name → docs (skip) → shape (Straight) → **cost (Yes, $60,000)** → homes (Manual, 6) → land on `/my-road`.
+3. Verify pinned Estimated Share reads a value derived from $60,000 and stays visible while scrolling.
+4. Double-click a home → drag the frontage slider → screenshot: pinned Estimated Share number changes in real time.
+5. Click Save → close drawer → refresh the page → confirm the new frontage persisted (drawer reopens with the new value; share unchanged after refresh).
+6. Repeat with the "No — estimate it for me" branch and confirm the rail's Total-cost override still works.
