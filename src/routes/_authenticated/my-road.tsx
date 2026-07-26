@@ -576,6 +576,18 @@ function MyRoadPage() {
             onAutoArrange={handleAutoArrange}
             onShare={handleShare}
             sharing={sharing}
+            homes={homes}
+            segments={segments}
+            parcels={toolbarParcels}
+            onRenameHome={handleRenameHome}
+            onDeleteHome={handleDeleteHome}
+            onAssignHomeSegment={handleAssignHomeSegment}
+            onRenameSegment={handleRenameSegment}
+            onDeleteSegment={handleDeleteSegment}
+            onSetSegmentLength={handleSetSegmentLength}
+            onSetSegmentWidth={handleSetSegmentWidth}
+            onStraightenSegment={handleStraightenSegment}
+            onExtendSegment={handleExtendSegment}
           />
         }
       />
