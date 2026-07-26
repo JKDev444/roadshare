@@ -1106,7 +1106,7 @@ function RoadsPanel({
             <div className="grid grid-cols-2 gap-2">
               <label className="block">
                 <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length</span>
-                <SegmentLengthInput segment={s} onChange={onSetSegmentWidth ? onSetSegmentLength : undefined} compact />
+                <SegmentLengthInput segment={s} onChange={onSetSegmentLength} compact />
               </label>
               <label className="block">
                 <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Width (ft)</span>
