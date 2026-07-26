@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-import { X, ArrowRight, RouteIcon as RouteLucide } from "lucide-react";
-import { Route as RouteIcon } from "lucide-react";
+import { X, ArrowRight, Route as RouteIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
