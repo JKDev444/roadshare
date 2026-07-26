@@ -1,85 +1,58 @@
-# Make it idiot-proof: tighter drawer + live "Your share" everywhere
+## Answers to your questions first
 
-You're right on every point. Here's what's actually wrong and the exact fixes I want to ship, ordered by pain.
+**Should CC&R upload come before "Who's on your road?"**
+Yes — as an *optional* Step 2 (between naming and homes). Rationale: CC&Rs sometimes list homes, frontage, or include a plat, so if we ask first we can pre-fill the next step. But the vast majority of users won't have a PDF handy, so it must be one-tap skippable — never a wall.
 
----
+**Should we skip "Who's on your road?" entirely if the doc has everything?**
+No — keep it, always. Two reasons:
+1. We can't reliably parse a scanned CC&R into structured homes/frontage today (that's an AI extraction feature for later). Even when we can, the user needs to **confirm** what we found.
+2. Removing the step for some users and not others makes the onboarding unpredictable. Better: always show it, but pre-fill it from the doc when possible so it feels like a review, not data entry.
 
-## 1. The Home Details drawer (Attachment 1)
-
-**Problems**
-- Horizontal scrollbar because the action row (Remove · Duplicate · Move to tray · Cancel · Save) is wider than the drawer.
-- "Move to tray" is jargon. Users don't know what a tray is.
-- "Skip from cost math" is jargon.
-- Frontage is buried and labeled "optional" — but frontage is THE input that changes someone's share. If they never open the drawer, they never set it. That's a real missing step.
-- No live share % / $ inside the drawer, so the user has to close it, scroll, and re-open to see if a change mattered.
-
-**Fix**
-- Widen drawer to `max-w-lg` and stack actions in two rows (primary row: Save / Cancel; secondary row: Duplicate / Take off the map / Remove). Kill the scrollbar.
-- Rename everywhere:
-  - "Move to tray" → **"Take off the map"**
-  - "Skip from cost math" → **"Don't count in the split"**
-  - "Road frontage in feet (optional)" → **"How much road does this home touch?"** with a slider (10–400 ft, default = auto map estimate) plus a small "Use map estimate" reset link. A slider is faster than typing and shows the range.
-- Add a persistent **"Your share preview"** strip pinned to the bottom of the drawer showing this home's `%` and `$/yr` — recalculates as they drag the frontage slider. This is the whole point of the app and it should be right there.
-
-## 2. Frontage collection is a missing step
-
-You're 100% right. Right now frontage comes from a map estimate the user never sees or confirms. Fix:
-
-- In the guided planner (step 3 "Neighbors"), add a **"Confirm road frontage"** micro-step: a compact list of each selected home with a slider (10–400 ft) showing the auto estimate. User can nudge or accept in one tap each. Big "Looks right" button to move on.
-- On the map, show the frontage number inside each selected home pill so it's visible without opening the drawer.
-
-## 3. Sliders should update the price live (Attachment 2)
-
-The engine already recomputes on every change — the reason it *feels* dead is the result panel is scrolled off-screen while you're moving the sliders. Fix by making the results **always visible**, not by re-plumbing calc.
-
-## 4. Rebuild the right rail so nothing hides
-
-New layout for the right rail on `/my-road`, top to bottom, no scrolling required to see the answer:
-
-```text
-+--------------------------------------------+
-|  YOUR SHARE                                |
-|  $180 / yr    16.7% of the group           |
-|  vs equal split: same                      |
-+--------------------------------------------+
-|  [ Neighbors sharing (5) ▾ ]  collapsed    |  <- accordion, collapsed by default
-+--------------------------------------------+
-|  Road width         [—————•———] 20 ft      |  <- sliders live here, big + labeled
-|  Plan length        [———•—————] 30 yr      |
-|  Surface mix        [ Chip seal ▾ ]        |  <- preset picker instead of 5 rows
-|     "Fine-tune mix" link -> opens sheet    |
-+--------------------------------------------+
-|  Total project  $5,400   ·   $180/yr total |
-+--------------------------------------------+
-```
-
-Key moves:
-- **"Your share" pinned at top**, never scrolls away. Every slider change animates the number.
-- **Neighbor list collapses** by default — 5 rows of $180 is noise once you've seen it once.
-- **Surface mix becomes a preset picker** (Gravel / Chip seal / 2" asphalt / 3" asphalt / Concrete). 90% of users pick one. Advanced "Fine-tune mix" link opens the existing 5-input sheet only if they want it. This kills the biggest scroll block.
-- Width and years stay as sliders but get bigger tracks and live-updating $ next to them (e.g. "20 ft · $180/yr").
-
-## 5. Other sliders / kid-game moves worth adding
-
-- **Home position on road** — instead of "Move earlier / Move later" buttons, one slider "Position along the road" that slides the tile left→right. Instant, obvious.
-- **Group size preview** — a slider "What if 2 more neighbors join?" that shows how your share drops. This is a huge "aha" for the negotiation conversation and takes zero extra data.
-- **Entrance distance** — already implicit; surface it as a read-only chip on each home pill ("320 ft from entrance") so the "By distance" methodology stops feeling like a black box.
-
-## 6. Ship order
-
-1. Drawer fixes: widen, rename, wrap actions, add live "Your share" strip, frontage as slider. *(smallest, biggest UX win)*
-2. Right rail restructure: pin Your Share, collapse neighbor list, add surface-preset picker with advanced sheet.
-3. Confirm-frontage micro-step in step 3 of the planner.
-4. Position slider replacing Move earlier/later.
-5. "What if N more neighbors" slider as a bonus.
-
-## Technical notes
-
-- Drawer lives in `src/components/roadshare/HomeDetailsDrawer.tsx`. Live "Your share" strip reuses `computeAllocation` from `src/lib/roadshare/engine.ts` against a locally-patched homes array so we don't need to plumb dollars in through props.
-- Right-rail changes live in `src/components/roadshare/Planner.tsx` (the `RoadsPanel` / results section) and `src/components/roadshare/ResultsPanel.tsx`. Surface presets map to the same `surfaces` object the engine already consumes — no engine changes.
-- Frontage confirmation step reuses `HomesTray` styling. Estimate comes from the same `frontage` interval already stored per home.
-- No schema changes. No new server functions.
+**Should users be able to set frontage per home in onboarding (or skip / use defaults)?**
+Not in onboarding — it would slow the fastest path. Instead:
+- Onboarding always uses a smart default frontage (road length ÷ homes, rounded to 5 ft) so the map + cost split work immediately.
+- Frontage editing already lives in the Home Details drawer on `/my-road`. We surface it better with a one-tap "Adjust frontages" quick action so users who care can tune everything in one place after landing.
 
 ---
 
-Approve this and I'll ship steps 1 + 2 first, screenshot the result, and answer the "would a non-tech user get it?" questions before moving to 3–5.
+## The plan
+
+### 1. New optional Step 2: "Got any documents?"
+Insert between "Name your road" and "Who's on your road?". Three big friendly tiles:
+
+- **Upload CC&Rs / plat / agreement** — file picker, saves to the existing `documents` bucket under the user's folder. Multiple files OK. Shows uploaded chips with remove buttons.
+- **I'll add them later** — skips instantly.
+- **I don't have any** — skips instantly.
+
+Screen shows: "These help your neighbors trust the plan later. Totally optional — skip if you don't have them." Files uploaded here get moved into the road's document list on finish (same `documents/{userId}/` path the DocumentsPanel already reads).
+
+Progress becomes "Step 2 of 3" → "Step 3 of 3". Back/forward preserved.
+
+### 2. Smart-default frontage everywhere
+In `welcome.tsx`'s `finish()`, after `autoArrangeHomes`, compute `defaultFrontage = round((segment length in ft) / homes.length / 5) * 5`, clamped to [15, 120], and set it on every home that doesn't already have one. Users land on a map where every home has a sensible pill label and the cost split works.
+
+### 3. Post-onboarding: make frontage easy to tune (no forced step)
+On `/my-road`:
+- Add a subtle "Adjust frontages" button in the right rail near the results. Opens the existing Home Details drawer pre-focused on the frontage slider, with prev/next arrows so a user can walk all homes in <30 seconds.
+- Keep the existing double-click-to-edit path.
+
+### 4. Foreshadow the "AI reads your CC&R" feature (no build yet)
+On the documents step, add a small badge: "Coming soon: we'll read your CC&Rs and suggest homes + frontage automatically." Sets expectation without over-promising.
+
+---
+
+## Technical details
+
+- **New screen state**: `type Screen = "name" | "docs" | "homes"`. Wire Back on `homes` to go to `docs`, Back on `docs` to go to `name`.
+- **Uploads**: reuse `supabase.storage.from("documents").upload("${userId}/${Date.now()}_${safeName}", file)` — same conventions as `DocumentsPanel.tsx`. Track uploaded file paths in local state; nothing else needed since the DocumentsPanel lists everything under `${userId}/`.
+- **Default frontage**: implement `defaultFrontageFor(segment, homeCount)` in `src/lib/roadshare/layout.ts` and apply in `welcome.tsx#finish()`. Type: extend `Home` if `frontage` isn't already there (check existing type — if it exists, just fill it in).
+- **Skip semantics**: "later" and "don't have any" both call `setScreen("homes")` with no state change; only Upload actually persists files.
+- **"Adjust frontages" quick action** in `Planner.tsx` right rail: opens `HomeDetailsDrawer` with the first home; drawer already has slider — add small `←` / `→` chevrons to step through homes.
+- **No schema changes** — `documents` bucket + `roads` table are unchanged.
+
+---
+
+## Out of scope (call out, don't build now)
+- Auto-parsing CC&R PDFs for homes/frontage (needs OCR + LLM pipeline).
+- Detecting a plat map image inside a PDF and importing geometry.
+Both are strong future features; the "Coming soon" badge sets the stage.
