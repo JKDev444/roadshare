@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { FileText, LayoutGrid, LogOut, Map as MapIcon, MoreHorizontal, Plus, Redo2, RotateCcw, RotateCw, Route as RouteIcon, Share2, Sparkles, Undo2 } from "lucide-react";
+import { ChevronDown, FileText, Home as HomeIcon, LayoutGrid, LogOut, Map as MapIcon, MoreHorizontal, Plus, Redo2, RotateCcw, RotateCw, Route as RouteIcon, Share2, Sparkles, Undo2 } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { HomesPanel, RoadsPanel } from "@/components/roadshare/Planner";
+import type { Home as RoadHome, LayoutParcel, Segment } from "@/lib/roadshare/layout";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -115,6 +118,18 @@ export function MapToolbar({
   onAutoArrange,
   onShare,
   sharing = false,
+  homes,
+  segments,
+  parcels,
+  onRenameHome,
+  onDeleteHome,
+  onAssignHomeSegment,
+  onRenameSegment,
+  onDeleteSegment,
+  onSetSegmentLength,
+  onSetSegmentWidth,
+  onStraightenSegment,
+  onExtendSegment,
 }: {
   onAddHome?: () => void;
   onAddSegment?: () => void;
@@ -128,6 +143,18 @@ export function MapToolbar({
   onAutoArrange?: () => void;
   onShare?: () => void;
   sharing?: boolean;
+  homes?: RoadHome[];
+  segments?: Segment[];
+  parcels?: LayoutParcel[];
+  onRenameHome?: (id: string) => void;
+  onDeleteHome?: (id: string) => void;
+  onAssignHomeSegment?: (homeId: string, segmentId: string) => void;
+  onRenameSegment?: (id: string) => void;
+  onDeleteSegment?: (id: string) => void;
+  onSetSegmentLength?: (id: string, lengthFt: number | undefined) => void;
+  onSetSegmentWidth?: (id: string, widthFt: number) => void;
+  onStraightenSegment?: (id: string) => void;
+  onExtendSegment?: (id: string, deltaFt: number) => void;
 }) {
   if (placingRoadId) {
     return (
@@ -140,6 +167,8 @@ export function MapToolbar({
       </div>
     );
   }
+  const homeCount = homes?.length ?? 0;
+  const roadCount = segments?.length ?? 0;
   return (
     <>
       {onAddHome && (
@@ -147,11 +176,59 @@ export function MapToolbar({
           <Plus className="mr-1 h-3.5 w-3.5" /> Add home
         </Button>
       )}
+      {homes && parcels && homeCount > 0 && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="ghost" className="h-8">
+              <HomeIcon className="mr-1 h-3.5 w-3.5" /> Homes ({homeCount})
+              <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-60" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" sideOffset={8} className="w-[340px] max-h-[70vh] overflow-auto p-0">
+            <div className="p-3">
+              <HomesPanel
+                homes={homes}
+                parcels={parcels}
+                segments={segments}
+                onAddHome={onAddHome}
+                onRenameHome={onRenameHome}
+                onDeleteHome={onDeleteHome}
+                onAssignHomeSegment={onAssignHomeSegment}
+              />
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
       {onAddSegment && (
         <Button size="sm" variant="outline" className="h-8" onClick={onAddSegment}>
           <Plus className="mr-1 h-3.5 w-3.5" /> Add road
         </Button>
       )}
+      {segments && roadCount > 0 && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="ghost" className="h-8">
+              <RouteIcon className="mr-1 h-3.5 w-3.5" /> Roads ({roadCount})
+              <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-60" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" sideOffset={8} className="w-[360px] max-h-[70vh] overflow-auto p-0">
+            <div className="p-3">
+              <RoadsPanel
+                segments={segments}
+                onAddSegment={onAddSegment}
+                onRenameSegment={onRenameSegment}
+                onDeleteSegment={onDeleteSegment}
+                onSetSegmentLength={onSetSegmentLength}
+                onSetSegmentWidth={onSetSegmentWidth}
+                onStraightenSegment={onStraightenSegment}
+                onExtendSegment={onExtendSegment}
+              />
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
+      <span aria-hidden className="mx-1 h-5 w-px bg-border" />
       {onRotate && (
         <Button size="sm" variant="ghost" className="h-8" onClick={onRotate} aria-label="Rotate map">
           <RotateCw className="h-4 w-4" />
