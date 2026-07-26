@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { FileText, LogOut, Map as MapIcon, MoreHorizontal, Plus, Redo2, RotateCcw, RotateCw, Route as RouteIcon, Share2, Sparkles, Undo2 } from "lucide-react";
+import { FileText, LayoutGrid, LogOut, Map as MapIcon, MoreHorizontal, Plus, Redo2, RotateCcw, RotateCw, Route as RouteIcon, Share2, Sparkles, Undo2 } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,14 @@ interface Props {
   roadName: string;
   active: "map" | "documents";
   onReset?: () => void;
+  /** Opens the layout template picker so the user can swap road shape. */
+  onChangeLayout?: () => void;
   busy?: boolean;
   /** Optional map-editing toolbar (only shown on the Map page). */
   toolbar?: ReactNode;
 }
 
-export function AppHeader({ roadName, active, onReset, busy = false, toolbar }: Props) {
+export function AppHeader({ roadName, active, onReset, onChangeLayout, busy = false, toolbar }: Props) {
   const navigate = useNavigate();
   async function signOut() {
     await supabase.auth.signOut();
@@ -68,6 +70,11 @@ export function AppHeader({ roadName, active, onReset, busy = false, toolbar }: 
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
+            {onChangeLayout && (
+              <DropdownMenuItem onClick={onChangeLayout} disabled={busy}>
+                <LayoutGrid className="mr-2 h-4 w-4" /> Change road layout
+              </DropdownMenuItem>
+            )}
             {onReset && (
               <DropdownMenuItem onClick={onReset} disabled={busy}>
                 <RotateCcw className="mr-2 h-4 w-4" /> Start over
