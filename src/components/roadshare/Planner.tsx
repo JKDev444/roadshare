@@ -171,6 +171,8 @@ export function Planner({
   );
   const [fixedTotal, setFixedTotal] = useState<number | undefined>(initialState?.fixedTotal);
   const hasQuote = typeof fixedTotal === "number" && fixedTotal > 0;
+  // Silence unused-var warning until we bring assumptions back.
+  void assumptionsOpen; void setAssumptionsOpen; void hasQuote;
   const [pendingTrayHomeId, setPendingTrayHomeId] = useState<string | null>(null);
 
   // Auto-cancel pending home if it becomes placed (via drag) or removed.
@@ -385,56 +387,27 @@ export function Planner({
         />
       </div>
 
+      {/* Breakdown table on the review step (hero is pinned above the rail). */}
       {step === "review" && (
         <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
-          <ResultsPanel result={result} methodology={methodology} />
+          <ResultsPanel result={result} methodology={methodology} hideHero />
         </div>
       )}
 
-      {/* App variant: keep a compact "your share" summary pinned in the rail
-          for steps 3+ so the user can watch the number change as they nudge
-          sliders, without needing to advance to the review step. */}
-      {isApp && step !== "review" && step !== "home" && step !== "road" && (
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-md">
-          <ResultsPanel result={result} methodology={methodology} compact />
-        </div>
-      )}
-
+      {/* Simple adjustments: total cost + width + years. Shown once the user
+          is past picking a home / drawing the road. */}
       {step !== "home" && step !== "road" && (
-      <QuoteControl fixedTotal={fixedTotal} setFixedTotal={setFixedTotal} />
-      )}
-
-      {step !== "home" && step !== "road" && (
-      <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
-        <button
-          type="button"
-          onClick={() => setAssumptionsOpen((v) => !v)}
-          className="flex w-full items-center justify-between gap-3 text-left"
-        >
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
-              <SlidersHorizontal className="h-4 w-4" />
-            </span>
-            <span className="min-w-0">
-              <span className="block font-display text-sm font-semibold">Fine-tune the math</span>
-              <span className="block truncate text-xs text-muted-foreground">Only if you want to — surface mix, width, and planning years</span>
-            </span>
-          </span>
-          <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", assumptionsOpen && "rotate-180")} />
-        </button>
-
-        {assumptionsOpen && (
-          <div className="mt-4 space-y-4 border-t border-border pt-4">
-            {!hasQuote && (
-              <SurfaceControls surfaces={surfaces} setSurfaces={setSurfaces} pctTotal={pctTotal} pctValid={pctValid} />
-            )}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-              <SliderControl label="How wide is the road?" value={roadWidth} suffix="ft" min={8} max={40} onChange={setRoadWidth} />
-              <SliderControl label="Plan over how many years?" value={fundingPeriod} suffix="yr" min={1} max={40} onChange={setFundingPeriod} />
-            </div>
+        <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <TotalCostControl
+            fixedTotal={fixedTotal}
+            estimatedTotal={result.totalCost}
+            setFixedTotal={setFixedTotal}
+          />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 border-t border-border pt-3">
+            <SliderControl label="How wide is the road?" value={roadWidth} suffix="ft" min={8} max={40} onChange={setRoadWidth} />
+            <SliderControl label="Plan over how many years?" value={fundingPeriod} suffix="yr" min={1} max={40} onChange={setFundingPeriod} />
           </div>
-        )}
-      </div>
+        </div>
       )}
     </>
   );
