@@ -49,6 +49,64 @@ const METHODS: { id: Methodology; label: string; helper: string }[] = [
   { id: "equal", label: "Equal split", helper: "Every selected home pays the same." },
 ];
 
+/** Editable length field that defaults to the road's length from the map and
+ *  commits changes on blur / Enter. */
+function SegmentLengthInput({
+  segment,
+  onChange,
+  compact,
+}: {
+  segment: Segment;
+  onChange?: (id: string, lengthFt: number | undefined) => void;
+  compact?: boolean;
+}) {
+  const mapLen = Math.round(segmentLengthFt(segment));
+  const [value, setValue] = useState<string>(String(mapLen));
+  const lastSyncedRef = useRef<number>(mapLen);
+  useEffect(() => {
+    // Keep the input in sync when the underlying length changes externally
+    // (e.g. user extends/shortens the road on the map).
+    if (mapLen !== lastSyncedRef.current) {
+      lastSyncedRef.current = mapLen;
+      setValue(String(mapLen));
+    }
+  }, [mapLen]);
+  const commit = () => {
+    const n = Math.round(Number(value));
+    if (!Number.isFinite(n) || n <= 0) {
+      setValue(String(mapLen));
+      return;
+    }
+    lastSyncedRef.current = n;
+    onChange?.(segment.id, n);
+  };
+  return (
+    <div className={cn("relative flex items-center", compact ? "h-8" : "h-9")}>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={1}
+        value={value}
+        disabled={!onChange}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            (e.target as HTMLInputElement).blur();
+          }
+        }}
+        className={cn(
+          "w-full rounded-md border border-border bg-background pr-8 font-mono",
+          compact ? "h-8 px-2 text-xs" : "h-9 px-2 text-sm",
+          "focus:outline-none focus:ring-2 focus:ring-primary/40",
+        )}
+      />
+      <span className={cn("pointer-events-none absolute right-2 text-muted-foreground", compact ? "text-[10px]" : "text-xs")}>ft</span>
+    </div>
+  );
+}
+
 const STEP_META: Record<WalkStep, { n: number; title: string; short: string; icon: ComponentType<{ className?: string }> }> = {
   home: { n: 1, title: "Pick your home", short: "Start here", icon: Home },
   road: { n: 2, title: "Confirm your road", short: "Your road", icon: RouteIcon },
