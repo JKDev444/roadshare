@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, ArrowRight, FileText, Home, Loader2, MapPin, Minus, Pencil, Plus, Route as RouteIcon, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, DollarSign, FileText, Home, Loader2, MapPin, Minus, Pencil, Plus, Route as RouteIcon, Sparkles, Trash2, Upload, Wand2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -36,8 +36,9 @@ export const Route = createFileRoute("/_authenticated/welcome")({
   component: WelcomePage,
 });
 
-type Screen = "name" | "docs" | "shape" | "homes";
+type Screen = "name" | "docs" | "shape" | "cost" | "homes";
 type Tile = "address" | "paste" | "manual" | null;
+type CostChoice = "quote" | "estimate" | null;
 
 const DOC_BUCKET = "documents";
 const DOC_MAX_MB = 20;
@@ -54,6 +55,8 @@ function WelcomePage() {
   const [tile, setTile] = useState<Tile>(null);
   const [busy, setBusy] = useState(false);
   const [shapeId, setShapeId] = useState<string>("straight");
+  const [costChoice, setCostChoice] = useState<CostChoice>(null);
+  const [quoteAmount, setQuoteAmount] = useState<string>("");
 
   const [address, setAddress] = useState("");
   const [addressCount, setAddressCount] = useState(6);
@@ -93,8 +96,11 @@ function WelcomePage() {
       frontageFtOverride: h.frontageFtOverride ?? defaultFrontage,
     }));
     const arranged = autoArrangeHomes(seeded, segments);
+    const parsedQuote = Number(quoteAmount.replace(/[^0-9.]/g, ""));
+    const fixedTotal =
+      costChoice === "quote" && isFinite(parsedQuote) && parsedQuote > 0 ? parsedQuote : undefined;
     try {
-      await create({ data: { name: roadName, homes: arranged, segments } });
+      await create({ data: { name: roadName, homes: arranged, segments, fixedTotal } });
       await router.invalidate();
       navigate({ to: "/my-road" });
     } catch (err) {
