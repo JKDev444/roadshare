@@ -1,85 +1,85 @@
+# Make it idiot-proof: tighter drawer + live "Your share" everywhere
 
-## What's wrong today
-1. **Selected frontage bar** is drawn in `--color-selected-foreground` at 0.9 opacity — on the dark asphalt it's almost invisible.
-2. **Map colors drift from the homepage hero.** The hero uses a very specific look (asphalt + animated dashed lane, gold "you" tile with selected-blue "neighbors", pulsing entrance dots). The editor uses similar tokens but different weights/opacities so it feels off-brand.
-3. **Selecting all parcels leaves gaps** because each parcel draws its own short frontage line — the road between two homes shows no highlight. There's no single "shared portion of the road" overlay.
-4. **No way to reorder homes** along the road. Users can drag freely (and detach), but can't say "put me second from the west."
-5. **Adding a road is a click-around free-draw** — endpoints land wherever the mouse goes, angles get weird, and connections to existing roads aren't snapped.
-6. **No way to change the road template later** once the map is created.
+You're right on every point. Here's what's actually wrong and the exact fixes I want to ship, ordered by pain.
 
-## Fix plan
+---
 
-### A. Make the "sharing this road" highlight obvious (rebrand to match hero)
-- Repaint the selected-frontage line as a **bright gold ribbon on top of the asphalt**: `var(--color-gold)` at full opacity, 7px wide, rounded caps, with a soft outer glow (SVG filter) so it reads on dark asphalt exactly like the hero's animated lane reads on the demo.
-- Add an **animated dashed overlay** on top of the ribbon (same marching-ants motion the hero uses) so a selected home visually "owns" a piece of road.
-- Tooltip on hover of the ribbon: "This is the piece of Maple Lane The Smiths share the cost of."
+## 1. The Home Details drawer (Attachment 1)
 
-### B. Continuous "group frontage" overlay (fixes the gap in attachment 2)
-- Compute the **union** of all selected parcels' frontage per road segment, merge overlapping/adjacent intervals, and draw **one continuous gold ribbon per segment** covering the merged span (plus a small pad between adjacent homes so there's no visible gap).
-- If every home on a segment is selected, the ribbon covers the full segment end-to-end.
-- Keeps per-home ribbons visible in a lighter tint when only some are selected, so you can still see which slice belongs to which house.
+**Problems**
+- Horizontal scrollbar because the action row (Remove · Duplicate · Move to tray · Cancel · Save) is wider than the drawer.
+- "Move to tray" is jargon. Users don't know what a tray is.
+- "Skip from cost math" is jargon.
+- Frontage is buried and labeled "optional" — but frontage is THE input that changes someone's share. If they never open the drawer, they never set it. That's a real missing step.
+- No live share % / $ inside the drawer, so the user has to close it, scroll, and re-open to see if a change mattered.
 
-### C. Match the homepage hero exactly
-- Reuse the hero's exact tokens/weights on `/my-road`:
-  - Asphalt stroke width, lane dash pattern, lane animation duration, entrance pulse.
-  - Home tiles: **gold for "you"**, **selected-blue for "sharing"**, muted lavender for "available" — same opacities as hero (0.9 / 0.55 / 0.35).
-  - Rounded corners `rx=5`, soft shadow filter, same font weight.
-- Extract the shared visual constants into `src/lib/roadshare/mapTheme.ts` so hero + editor render from one source.
-- Add the same topo-grid backdrop opacity (0.5) the hero uses.
+**Fix**
+- Widen drawer to `max-w-lg` and stack actions in two rows (primary row: Save / Cancel; secondary row: Duplicate / Take off the map / Remove). Kill the scrollbar.
+- Rename everywhere:
+  - "Move to tray" → **"Take off the map"**
+  - "Skip from cost math" → **"Don't count in the split"**
+  - "Road frontage in feet (optional)" → **"How much road does this home touch?"** with a slider (10–400 ft, default = auto map estimate) plus a small "Use map estimate" reset link. A slider is faster than typing and shows the range.
+- Add a persistent **"Your share preview"** strip pinned to the bottom of the drawer showing this home's `%` and `$/yr` — recalculates as they drag the frontage slider. This is the whole point of the app and it should be right there.
 
-### D. Let users reorder homes without breaking the map
-Add a **"Reorder homes"** mode toggle (button in the toolbar). While on:
-- Homes lock to their road side (top/bottom of segment).
-- Dragging a home along the road **swaps positions** with its neighbor (like reordering photos in Apple Photos) — no free-form placement, no detaching.
-- A small "↑↓ Move" chip on each home lets non-drag users tap to shift left/right.
-- A side toggle per home ("North side / South side") flips it across the road cleanly.
-This removes the "detached" problem entirely for users who just want to rearrange.
+## 2. Frontage collection is a missing step
 
-### E. Kid-simple road adder (fixes attachment 3)
-Replace the free-draw flow with a **guided modal**:
-1. **"Where does the new road go?"** — three big cards:
-   - **Connects to an existing road** (T-intersection) → pick which road, pick which side (north/south/east/west), pick length. We compute geometry, snap to endpoint or midpoint, no dragging.
-   - **Parallel to an existing road** → pick which one, pick distance. Auto-drawn parallel.
-   - **Standalone road** → pick direction (↑ ↓ ← →) and length. Auto-placed in empty space.
-2. **Templates for the whole layout**: "Straight," "L," "T," "Cross," "Cul-de-sac," "Loop" — same set as `ROAD_TEMPLATES`, shown as thumbnails. One tap replaces or extends the current layout.
-3. No free clicking on the canvas. Every road lands snapped, orthogonal, and connected.
+You're 100% right. Right now frontage comes from a map estimate the user never sees or confirms. Fix:
 
-### F. Change the template later
-- Add a **"Change layout"** action in the header menu.
-- Opens the same template gallery. Warns "This will rearrange your homes to fit the new layout — home names and settings are kept." On confirm, we re-run `autoArrangeHomes` against the new segments and preserve every home's owner/address/side preference where possible.
+- In the guided planner (step 3 "Neighbors"), add a **"Confirm road frontage"** micro-step: a compact list of each selected home with a slider (10–400 ft) showing the auto estimate. User can nudge or accept in one tap each. Big "Looks right" button to move on.
+- On the map, show the frontage number inside each selected home pill so it's visible without opening the drawer.
 
-### G. Other little adjustments users will want (all included)
-- **Flip a home to the other side of the road** (one tap).
-- **Rename a road** inline on the map (double-click the road label).
-- **Set a road as private/shared/public** (affects who pays).
-- **Mark a home as "skip from cost math"** (already in data model — surface as a toggle in the drawer with a clear "This home doesn't help pay").
-- **Straighten a road** (one tap to snap crooked endpoints to horizontal/vertical).
-- **Extend / shorten a road** with +/- buttons in feet (no dragging).
-- **Duplicate a home** ("Add another neighbor here").
-- **Move an entrance** to the other end of a road (one tap).
-- **Undo/Redo** already exists — surface keyboard shortcuts (⌘Z / ⌘⇧Z) in a tooltip.
-- **Reset zoom / fit to screen** button.
-- **Compass rotate** (already exists) with a "Snap to north" button.
-- **"Show cost per foot"** toggle that overlays each home's dollar share on the ribbon.
+## 3. Sliders should update the price live (Attachment 2)
 
-## Verification (per your standing rule)
-Playwright regression on `/my-road`:
-- Select a home → gold ribbon is clearly visible on asphalt (screenshot).
-- Select all homes → single continuous ribbon per road, no gap (screenshot matching attachment 2 scenario).
-- Reorder mode: drag home 4 into position 2 → swap succeeds, no detach (screenshot).
-- Add road via guided modal (T-intersection to Maple Lane) → lands snapped, no free-draw mess (screenshot matching attachment 3 scenario).
-- Change layout from Straight → L → homes redistribute, names preserved (screenshot).
-- Compare `/my-road` side-by-side with homepage hero → same asphalt, lane dash, tile colors.
+The engine already recomputes on every change — the reason it *feels* dead is the result panel is scrolled off-screen while you're moving the sliders. Fix by making the results **always visible**, not by re-plumbing calc.
 
-I'll post the screenshots and answer your three standing questions (easy? confusing? got the result you wanted?) after the run.
+## 4. Rebuild the right rail so nothing hides
+
+New layout for the right rail on `/my-road`, top to bottom, no scrolling required to see the answer:
+
+```text
++--------------------------------------------+
+|  YOUR SHARE                                |
+|  $180 / yr    16.7% of the group           |
+|  vs equal split: same                      |
++--------------------------------------------+
+|  [ Neighbors sharing (5) ▾ ]  collapsed    |  <- accordion, collapsed by default
++--------------------------------------------+
+|  Road width         [—————•———] 20 ft      |  <- sliders live here, big + labeled
+|  Plan length        [———•—————] 30 yr      |
+|  Surface mix        [ Chip seal ▾ ]        |  <- preset picker instead of 5 rows
+|     "Fine-tune mix" link -> opens sheet    |
++--------------------------------------------+
+|  Total project  $5,400   ·   $180/yr total |
++--------------------------------------------+
+```
+
+Key moves:
+- **"Your share" pinned at top**, never scrolls away. Every slider change animates the number.
+- **Neighbor list collapses** by default — 5 rows of $180 is noise once you've seen it once.
+- **Surface mix becomes a preset picker** (Gravel / Chip seal / 2" asphalt / 3" asphalt / Concrete). 90% of users pick one. Advanced "Fine-tune mix" link opens the existing 5-input sheet only if they want it. This kills the biggest scroll block.
+- Width and years stay as sliders but get bigger tracks and live-updating $ next to them (e.g. "20 ft · $180/yr").
+
+## 5. Other sliders / kid-game moves worth adding
+
+- **Home position on road** — instead of "Move earlier / Move later" buttons, one slider "Position along the road" that slides the tile left→right. Instant, obvious.
+- **Group size preview** — a slider "What if 2 more neighbors join?" that shows how your share drops. This is a huge "aha" for the negotiation conversation and takes zero extra data.
+- **Entrance distance** — already implicit; surface it as a read-only chip on each home pill ("320 ft from entrance") so the "By distance" methodology stops feeling like a black box.
+
+## 6. Ship order
+
+1. Drawer fixes: widen, rename, wrap actions, add live "Your share" strip, frontage as slider. *(smallest, biggest UX win)*
+2. Right rail restructure: pin Your Share, collapse neighbor list, add surface-preset picker with advanced sheet.
+3. Confirm-frontage micro-step in step 3 of the planner.
+4. Position slider replacing Move earlier/later.
+5. "What if N more neighbors" slider as a bonus.
 
 ## Technical notes
-- New file: `src/lib/roadshare/mapTheme.ts` — shared constants (asphalt width, lane dash, tile rx, opacities, animation timings).
-- `HeroMap` in `src/routes/index.tsx` and `PlatMap.tsx` both consume `mapTheme.ts`.
-- New file: `src/lib/roadshare/frontageMerge.ts` — merges per-parcel frontage intervals per segment into continuous ranges.
-- `PlatMap.tsx`: add SVG `<filter>` for gold glow; add merged-ribbon layer above asphalt, below per-parcel ribbons.
-- New component: `src/components/roadshare/AddRoadDialog.tsx` — guided 3-choice modal; replaces click-to-draw handler in `PlatMap.tsx`.
-- New component: `src/components/roadshare/ChangeLayoutDialog.tsx` — reuses `ROAD_TEMPLATES`; calls `autoArrangeHomes` after swap.
-- New component: `src/components/roadshare/ReorderHomesMode.tsx` — swap-based drag using array index on the segment; disables free drag while active.
-- `HomeDetailsDrawer.tsx`: add "Flip side," "Skip from cost math," "Duplicate."
-- No schema changes required — everything persists in the existing `road_shares` JSON blob via the debounced autosave.
+
+- Drawer lives in `src/components/roadshare/HomeDetailsDrawer.tsx`. Live "Your share" strip reuses `computeAllocation` from `src/lib/roadshare/engine.ts` against a locally-patched homes array so we don't need to plumb dollars in through props.
+- Right-rail changes live in `src/components/roadshare/Planner.tsx` (the `RoadsPanel` / results section) and `src/components/roadshare/ResultsPanel.tsx`. Surface presets map to the same `surfaces` object the engine already consumes — no engine changes.
+- Frontage confirmation step reuses `HomesTray` styling. Estimate comes from the same `frontage` interval already stored per home.
+- No schema changes. No new server functions.
+
+---
+
+Approve this and I'll ship steps 1 + 2 first, screenshot the result, and answer the "would a non-tech user get it?" questions before moving to 3–5.

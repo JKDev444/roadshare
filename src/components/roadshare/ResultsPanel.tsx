@@ -47,9 +47,13 @@ function Tile({
 export function ResultsPanel({
   result,
   methodology,
+  compact = false,
 }: {
   result: AllocationResult;
   methodology: Methodology;
+  /** Compact mode: show only the "your share" hero + total. Used in the app's
+   *  right rail so the number stays visible while the user tweaks sliders. */
+  compact?: boolean;
 }) {
   const { rows, pctValid, hasEntrance } = result;
   const maxResp = Math.max(1, ...rows.map((r) => r.responsibility));
@@ -110,6 +114,13 @@ export function ResultsPanel({
         </div>
       )}
 
+      {compact ? (
+        <div className="grid grid-cols-2 gap-2">
+          <Tile label="Total project" value={showDollars ? formatUSD(result.totalCost) : "—"} />
+          <Tile label="Per year (group)" value={showDollars ? formatUSD(result.totalPerYear) : "—"} />
+        </div>
+      ) : (
+        <>
       <div className="flex items-center justify-between">
         <h2 className="font-display text-base font-semibold">Cost breakdown</h2>
         <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -194,6 +205,8 @@ export function ResultsPanel({
             </tbody>
           </table>
         </div>
+      )}
+        </>
       )}
     </div>
   );
