@@ -732,10 +732,8 @@ function StepPanel({
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="block">
-                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length (from map)</span>
-                    <div className="flex h-9 items-center rounded-md border border-dashed border-border bg-muted/40 px-2 font-mono text-sm text-muted-foreground">
-                      {Math.round(segmentLengthFt(s)).toLocaleString()} ft
-                    </div>
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length</span>
+                    <SegmentLengthInput segment={s} onChange={onSetSegmentLength} />
                   </div>
                   <label className="block">
                     <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Width</span>
@@ -1105,10 +1103,8 @@ function RoadsPanel({
             </div>
             <div className="grid grid-cols-2 gap-2">
               <label className="block">
-                <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length (from map)</span>
-                <div className="flex h-8 items-center rounded-md border border-dashed border-border bg-muted/40 px-2 font-mono text-xs text-muted-foreground">
-                  {Math.round(segmentLengthFt(s)).toLocaleString()} ft
-                </div>
+                <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length</span>
+                <SegmentLengthInput segment={s} onChange={onSetSegmentWidth ? onSetSegmentLength : undefined} compact />
               </label>
               <label className="block">
                 <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Width (ft)</span>
