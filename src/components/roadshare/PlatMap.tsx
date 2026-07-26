@@ -638,19 +638,19 @@ export function PlatMap({
           const y = bb.y + hd.dy;
           const w = bb.w;
           const h = bb.h;
-          // Homepage-hero pill styling: solid fills, no visible border.
-          let fill = "color-mix(in oklab, var(--color-selected) 30%, transparent)";
-          let labelFill = "var(--color-muted-foreground)";
-          let fillOpacity = 0.9;
+          // Homepage-hero pill styling: exact same tokens + opacities as HeroMap.
+          let fill = "var(--color-selected)";
+          let labelFill = "var(--color-foreground)";
+          let fillOpacity = 0.55;
           if (isSel) {
             fill = "var(--color-selected)";
             labelFill = "var(--color-selected-foreground)";
-            fillOpacity = 0.85;
+            fillOpacity = 0.9;
           }
           if (isYou) {
             fill = "var(--color-gold)";
             labelFill = "var(--color-gold-foreground)";
-            fillOpacity = 0.95;
+            fillOpacity = 0.9;
           }
           return (
             <g
@@ -689,7 +689,6 @@ export function PlatMap({
                 stroke={isHover ? "var(--color-foreground)" : "none"}
                 strokeOpacity={isHover ? 0.25 : 0}
                 strokeWidth={isHover ? 1 : 0}
-                filter="url(#parcelShadow)"
               />
               <title>{p.name && p.name !== p.address ? `${p.name} · ${p.address}` : p.address}</title>
               {(() => {
