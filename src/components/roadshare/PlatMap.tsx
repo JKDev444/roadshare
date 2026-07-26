@@ -461,6 +461,67 @@ export function PlatMap({
           );
         })}
 
+        {/* Merged "shared frontage" ribbons — one continuous gold overlay per
+            road segment covering every selected parcel. Uses a soft glow plus
+            an animated dashed overlay so the highlighted stretch pops on top
+            of the dark asphalt (matches the homepage hero styling). */}
+        {(() => {
+          const highlightSet = new Set(selected);
+          if (you) highlightSet.add(you);
+          const ribbons = mergeSelectedFrontage(layout, Array.from(highlightSet));
+          if (ribbons.length === 0) return null;
+          return (
+            <g pointerEvents="none">
+              {ribbons.map((r, i) => {
+                const d = segDelta(r.segmentId);
+                // Approximate: use edge endpoints' delta averaged as the ribbon offset.
+                const ox = (d.dax + d.dbx) / 2;
+                const oy = (d.day + d.dby) / 2;
+                return (
+                  <g key={`ribbon-${i}`}>
+                    {/* Halo / glow */}
+                    <line
+                      x1={r.ax + ox}
+                      y1={r.ay + oy}
+                      x2={r.bx + ox}
+                      y2={r.by + oy}
+                      stroke="var(--color-gold)"
+                      strokeWidth="14"
+                      strokeLinecap="round"
+                      opacity="0.45"
+                      filter="url(#ribbonGlow)"
+                    />
+                    {/* Solid gold ribbon */}
+                    <line
+                      x1={r.ax + ox}
+                      y1={r.ay + oy}
+                      x2={r.bx + ox}
+                      y2={r.by + oy}
+                      stroke="var(--color-gold)"
+                      strokeWidth="9"
+                      strokeLinecap="round"
+                      opacity="0.98"
+                    />
+                    {/* Animated dash marching along the ribbon */}
+                    <line
+                      x1={r.ax + ox}
+                      y1={r.ay + oy}
+                      x2={r.bx + ox}
+                      y2={r.by + oy}
+                      stroke="var(--color-gold-foreground)"
+                      strokeWidth="2"
+                      strokeDasharray="8 8"
+                      strokeLinecap="round"
+                      opacity="0.95"
+                      style={{ animation: "rs-dash 2.4s linear infinite" }}
+                    />
+                  </g>
+                );
+              })}
+            </g>
+          );
+        })()}
+
         {/* Midpoint "+ corner" handle — click to add a bend / split the segment */}
         {onSplitSegment && !placing && !pendingPlacement && !drag && EDGES.map((e) => {
           const a = node(e.a);
