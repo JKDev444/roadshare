@@ -963,3 +963,35 @@ function PublicRoad({ d, width }: { d: string; width: number }) {
     </>
   );
 }
+
+// Snap threshold in SVG units — feels forgiving without hijacking small nudges.
+const SNAP_PX = 22;
+
+function collectOtherEndpoints(
+  movingId: string,
+  edges: Array<{ id: string; a: string; b: string }>,
+  nodes: Record<string, { x: number; y: number }>,
+): Array<{ x: number; y: number }> {
+  const pts: Array<{ x: number; y: number }> = [];
+  for (const e of edges) {
+    if (e.id === movingId) continue;
+    const na = nodes[e.a];
+    const nb = nodes[e.b];
+    if (na) pts.push({ x: na.x, y: na.y });
+    if (nb) pts.push({ x: nb.x, y: nb.y });
+  }
+  return pts;
+}
+
+function snapToEndpoint(
+  x: number,
+  y: number,
+  others: Array<{ x: number; y: number }>,
+): { x: number; y: number } | null {
+  let best: { x: number; y: number; d: number } | null = null;
+  for (const p of others) {
+    const d = Math.hypot(p.x - x, p.y - y);
+    if (d <= SNAP_PX && (!best || d < best.d)) best = { x: p.x, y: p.y, d };
+  }
+  return best ? { x: best.x, y: best.y } : null;
+}
