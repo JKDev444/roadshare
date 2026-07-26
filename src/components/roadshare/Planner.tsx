@@ -558,6 +558,7 @@ export function Planner({
               onAddSegment={onAddSegment}
               onRenameSegment={onRenameSegment}
               onDeleteSegment={onDeleteSegment}
+              onSetSegmentLength={onSetSegmentLength}
               onSetSegmentWidth={onSetSegmentWidth}
               onStraightenSegment={onStraightenSegment}
               onExtendSegment={onExtendSegment}
