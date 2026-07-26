@@ -827,13 +827,59 @@ function SurfaceControls({
   pctTotal: number;
   pctValid: boolean;
 }) {
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  // Which preset (if any) is currently active? Matches if exactly one row is 100.
+  const activeIdx = surfaces.findIndex((s) => Math.round(s.pct) === 100);
+  const singleSurfaceActive = activeIdx >= 0 && surfaces.every((s, i) => (i === activeIdx ? true : Math.round(s.pct) === 0));
+
+  function applyPreset(i: number) {
+    setSurfaces((arr) => arr.map((x, j) => ({ ...x, pct: j === i ? 100 : 0 })));
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-xs">
-        <Label className="font-semibold">Road surface mix</Label>
+        <Label className="font-semibold">What is the road made of?</Label>
         <span className={cn("font-mono font-bold", pctValid ? "text-selected" : "text-destructive")}>{pctTotal.toFixed(0)}%</span>
       </div>
-      {SURFACE_TYPES.map((surface, i) => (
+
+      {/* One-tap preset picker — 90% of users just want to pick a surface. */}
+      <div className="grid grid-cols-2 gap-1.5">
+        {SURFACE_TYPES.map((surface, i) => {
+          const active = singleSurfaceActive && activeIdx === i;
+          return (
+            <button
+              key={surface.id}
+              type="button"
+              onClick={() => applyPreset(i)}
+              className={cn(
+                "rounded-lg border p-2 text-left text-xs transition-colors",
+                active ? "border-primary bg-primary/10" : "border-border bg-background hover:bg-accent",
+              )}
+            >
+              <span className="block font-semibold">{surface.label}</span>
+              <span className="block text-[10px] text-muted-foreground">${surface.defaultCost.toFixed(2)}/sq ft</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setShowAdvanced((v) => !v)}
+        className="mt-1 text-[11px] font-semibold text-primary hover:underline"
+      >
+        {showAdvanced ? "Hide fine-tune" : "Mix multiple surfaces (advanced)"}
+      </button>
+
+      {showAdvanced && (
+        <div className="mt-2 space-y-1 border-t border-border pt-2">
+          <div className="grid grid-cols-[minmax(0,1fr)_60px_74px] gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <span>Surface</span>
+            <span className="text-right">%</span>
+            <span className="text-right">$/sqft</span>
+          </div>
+          {SURFACE_TYPES.map((surface, i) => (
         <div key={surface.id} className="grid grid-cols-[minmax(0,1fr)_68px_82px] items-center gap-2">
           <Label className="truncate text-xs">{surface.label}</Label>
           <Input
@@ -852,7 +898,9 @@ function SurfaceControls({
             className="h-8 text-sm"
           />
         </div>
-      ))}
+          ))}
+        </div>
+      )}
     </div>
   );
 }
