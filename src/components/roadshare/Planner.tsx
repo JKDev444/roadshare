@@ -171,6 +171,8 @@ export function Planner({
   const [surfaces, setSurfaces] = useState(
     initialState?.surfaces ?? SURFACE_TYPES.map((s) => ({ pct: s.defaultPct, cost: s.defaultCost })),
   );
+  const [fixedTotal, setFixedTotal] = useState<number | undefined>(initialState?.fixedTotal);
+  const hasQuote = typeof fixedTotal === "number" && fixedTotal > 0;
   const [pendingTrayHomeId, setPendingTrayHomeId] = useState<string | null>(null);
 
   // Auto-cancel pending home if it becomes placed (via drag) or removed.
@@ -189,10 +191,10 @@ export function Planner({
       return;
     }
     const t = setTimeout(() => {
-      onStateChange({ step, you, selected, entrances, methodology, roadWidth, fundingPeriod, surfaces });
+      onStateChange({ step, you, selected, entrances, methodology, roadWidth, fundingPeriod, surfaces, fixedTotal });
     }, 700);
     return () => clearTimeout(t);
-  }, [step, you, selected, entrances, methodology, roadWidth, fundingPeriod, surfaces, onStateChange]);
+  }, [step, you, selected, entrances, methodology, roadWidth, fundingPeriod, surfaces, fixedTotal, onStateChange]);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -214,8 +216,9 @@ export function Planner({
         fundingPeriod,
         you,
         layout,
+        fixedTotal,
       }),
-    [selected, entrances, methodology, surfaces, roadWidth, fundingPeriod, you, layout],
+    [selected, entrances, methodology, surfaces, roadWidth, fundingPeriod, you, layout, fixedTotal],
   );
 
   const pickedHome = PARCELS.find((p) => p.id === you);
@@ -420,7 +423,10 @@ export function Planner({
 
         {assumptionsOpen && (
           <div className="mt-4 space-y-4 border-t border-border pt-4">
-            <SurfaceControls surfaces={surfaces} setSurfaces={setSurfaces} pctTotal={pctTotal} pctValid={pctValid} />
+            <QuoteControl fixedTotal={fixedTotal} setFixedTotal={setFixedTotal} />
+            {!hasQuote && (
+              <SurfaceControls surfaces={surfaces} setSurfaces={setSurfaces} pctTotal={pctTotal} pctValid={pctValid} />
+            )}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
               <SliderControl label="How wide is the road?" value={roadWidth} suffix="ft" min={8} max={40} onChange={setRoadWidth} />
               <SliderControl label="Plan over how many years?" value={fundingPeriod} suffix="yr" min={1} max={40} onChange={setFundingPeriod} />
