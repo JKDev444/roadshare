@@ -87,43 +87,47 @@ export function ResultsPanel({
 
       {/* Your-share hero */}
       {!hideHero && showDollars && yourRow && (
-        <div className="overflow-hidden rounded-xl border border-gold/60 bg-gradient-to-br from-gold/20 to-gold/5 p-4">
-          <div className="text-[11px] font-medium uppercase tracking-wide text-gold-foreground/80">
+        <div className="overflow-hidden rounded-2xl border border-gold/60 bg-gradient-to-br from-gold/25 via-gold/10 to-background p-5 shadow-sm">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gold-foreground/80">
             Your estimated share
           </div>
-          <div className="mt-1 flex items-baseline gap-1.5">
-            <span className="font-display text-3xl font-bold text-foreground">
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="font-display text-4xl font-extrabold leading-none tracking-tight text-foreground">
               {formatUSD(yourRow.perYear)}
             </span>
-            <span className="text-sm text-muted-foreground">/ year</span>
+            <span className="text-sm font-medium text-muted-foreground">/ year</span>
           </div>
-          <div className="mt-1 flex items-center gap-1.5 text-xs">
-            <span className="font-mono font-semibold text-foreground">
-              {(yourRow.share * 100).toFixed(1)}%
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+            <span className="rounded-full bg-background/70 px-2 py-0.5 font-mono font-bold text-foreground ring-1 ring-gold/40">
+              {(yourRow.share * 100).toFixed(1)}% of the group
             </span>
-            <span className="text-muted-foreground">of the group ·</span>
             {Math.abs(yourDelta) < 1 ? (
-              <span className="text-muted-foreground">even with equal split</span>
+              <span className="text-muted-foreground">Even with an equal split.</span>
             ) : yourDelta > 0 ? (
-              <span className="flex items-center gap-0.5 text-destructive">
-                <TrendingUp className="h-3 w-3" /> {formatUSD(yourDelta)} vs equal
+              <span className="inline-flex items-center gap-1 text-destructive">
+                <TrendingUp className="h-3 w-3" /> {formatUSD(yourDelta)} more than equal split
               </span>
             ) : (
-              <span className="flex items-center gap-0.5 text-selected">
-                <TrendingDown className="h-3 w-3" /> {formatUSD(-yourDelta)} vs equal
+              <span className="inline-flex items-center gap-1 text-selected">
+                <TrendingDown className="h-3 w-3" /> {formatUSD(-yourDelta)} less than equal split
               </span>
             )}
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3 border-t border-gold/30 pt-3 text-xs">
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Total project</div>
+              <div className="mt-0.5 font-mono text-base font-bold text-foreground">{formatUSD(result.totalCost)}</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Per year (group)</div>
+              <div className="mt-0.5 font-mono text-base font-bold text-foreground">{formatUSD(result.totalPerYear)}</div>
+            </div>
           </div>
         </div>
       )}
 
       {compact ? (
-        hideHero ? null : (
-        <div className="grid grid-cols-2 gap-2">
-          <Tile label="Total project" value={showDollars ? formatUSD(result.totalCost) : "—"} />
-          <Tile label="Per year (group)" value={showDollars ? formatUSD(result.totalPerYear) : "—"} />
-        </div>
-        )
+        null
       ) : (
         <>
       <div className="flex items-center justify-between">
