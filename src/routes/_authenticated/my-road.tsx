@@ -128,15 +128,9 @@ function MyRoadPage() {
     pushHistory(next);
   }
   function handleRenameHome(id: string) {
-    const cur = homes.find((h) => h.id === id);
-    if (!cur) return;
-    const initial = cur.address ?? cur.label;
-    const val = typeof window !== "undefined" ? window.prompt("Rename this home", initial) : null;
-    if (val == null) return;
-    const trimmed = val.trim().slice(0, 80);
-    if (!trimmed) return;
-    const next = homes.map((h) => (h.id === id ? { ...h, label: trimmed, address: trimmed } : h));
-    pushHistory(next);
+    // Open the full details drawer so users can edit both the owner/family
+    // name (e.g. "The Smiths") and the address on one screen.
+    setEditingHomeId(id);
   }
   function handleRotate() {
     setRotation((r) => (((r + 90) % 360) as 0 | 90 | 180 | 270));
