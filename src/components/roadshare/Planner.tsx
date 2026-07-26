@@ -359,7 +359,10 @@ export function Planner({
       {/* Pinned "your estimated share" hero — stays visible as the user tweaks
           anything below so they can watch the number change in real time. */}
       {step !== "home" && step !== "road" && (
-        <div className="sticky top-0 z-10 -mx-4 -mt-4 mb-1 border-b border-border bg-background/95 p-4 backdrop-blur">
+        <div className={cn(
+          "z-10 rounded-2xl border border-gold/50 bg-background/95 p-1 shadow-sm backdrop-blur",
+          isApp ? "sticky top-0 -mx-4 -mt-4 mb-1 rounded-none border-x-0 border-t-0 border-b border-border p-4" : "sticky top-20",
+        )}>
           <ResultsPanel result={result} methodology={methodology} compact />
         </div>
       )}
