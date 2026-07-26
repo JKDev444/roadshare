@@ -405,6 +405,54 @@ function MyRoadPage() {
     [save, homes, roadName, rotation, segments],
   );
 
+  // Live "your share" preview for the details drawer. Rebuilds the layout
+  // + runs the same allocator the results panel uses, so the number in the
+  // drawer is the same one the user sees on the map — updated as they drag
+  // the frontage slider or toggle "don't count".
+  const livePreview = useCallback(
+    (homeId: string, patch: HomePatchPreview): HomeShareEstimate | null => {
+      const snap = lastSnapshotRef.current;
+      const patchedHomes = homes.map((h) =>
+        h.id === homeId
+          ? { ...h, frontageFtOverride: patch.frontageFtOverride, skipFromMath: patch.skipFromMath }
+          : h,
+      );
+      const layout = buildLayout(patchedHomes, roadName, segments);
+      // Selected set: drop any home flagged "don't count".
+      const skipIds = new Set(patchedHomes.filter((h) => h.skipFromMath).map((h) => h.id));
+      const selectedFromSnap = snap?.selected && snap.selected.length > 0
+        ? snap.selected
+        : layout.parcels.map((p) => p.id);
+      const selected = selectedFromSnap.filter((id) => !skipIds.has(id));
+      const entrances = snap?.entrances && snap.entrances.length > 0
+        ? snap.entrances
+        : layout.entrances.map((e) => e.id);
+      const result = computeAllocation({
+        selected,
+        entrances,
+        methodology: snap?.methodology ?? "frontage",
+        surfaces: snap?.surfaces ?? SURFACE_TYPES.map((s) => ({ pct: s.defaultPct, cost: s.defaultCost })),
+        surfaceTypes: SURFACE_TYPES,
+        roadWidth: snap?.roadWidth ?? DEFAULTS.roadWidth,
+        fundingPeriod: snap?.fundingPeriod ?? DEFAULTS.fundingPeriod,
+        you: snap?.you ?? null,
+        layout,
+      });
+      const row = result.rows.find((r) => r.id === homeId);
+      const ready = result.pctValid && result.hasEntrance && !!row;
+      if (!row) {
+        return { ready: false, share: 0, perYear: 0, deltaVsEqual: 0 };
+      }
+      return {
+        ready,
+        share: row.share,
+        perYear: row.perYear,
+        deltaVsEqual: row.perYear - row.equalPerYear,
+      };
+    },
+    [homes, roadName, segments],
+  );
+
   function handleAutoArrange() {
     const next = autoArrangeHomes(homes, segments);
     pushHistory(next);
@@ -551,6 +599,7 @@ function MyRoadPage() {
         onFlipSide={handleFlipHomeSide}
         onMoveInOrder={handleMoveHomeInOrder}
         onDuplicate={handleDuplicateHome}
+        livePreview={livePreview}
       />
     </div>
   );
