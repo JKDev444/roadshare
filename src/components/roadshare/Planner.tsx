@@ -1062,6 +1062,7 @@ function RoadsPanel({
   onAddSegment,
   onRenameSegment,
   onDeleteSegment,
+  onSetSegmentLength,
   onSetSegmentWidth,
   onStraightenSegment,
   onExtendSegment,
@@ -1070,6 +1071,7 @@ function RoadsPanel({
   onAddSegment?: () => void;
   onRenameSegment?: (id: string) => void;
   onDeleteSegment?: (id: string) => void;
+  onSetSegmentLength?: (id: string, lengthFt: number | undefined) => void;
   onSetSegmentWidth?: (id: string, widthFt: number) => void;
   onStraightenSegment?: (id: string) => void;
   onExtendSegment?: (id: string, deltaFt: number) => void;
