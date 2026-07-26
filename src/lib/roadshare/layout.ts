@@ -459,6 +459,15 @@ export const ROAD_TEMPLATES: RoadTemplate[] = [
     ],
   },
   {
+    id: "cul-de-sac-arc",
+    name: "Cul-de-sac (curved)",
+    short: "Straight in, curved loop at the end",
+    segments: [
+      { id: "s1", name: "Entry", widthFt: 20, geometry: { ax: 90, ay: 310, bx: 560, by: 310 } },
+      ...arcSegments("Bulb", 20, 660, 310, 100, -Math.PI, Math.PI, 10),
+    ],
+  },
+  {
     id: "loop",
     name: "Loop road",
     short: "Road that loops back",
