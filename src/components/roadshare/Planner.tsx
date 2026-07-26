@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { DEFAULTS, SURFACE_TYPES } from "@/lib/roadshare/data";
-import { buildLayout, cedarHollowLayout, type Home as RoadHome, type Layout, type LayoutEntrance, type LayoutParcel, type Segment } from "@/lib/roadshare/layout";
+import { buildLayout, cedarHollowLayout, segmentLengthFt, type Home as RoadHome, type Layout, type LayoutEntrance, type LayoutParcel, type Segment } from "@/lib/roadshare/layout";
 import { computeAllocation, type Methodology } from "@/lib/roadshare/engine";
 import { cn } from "@/lib/utils";
 
@@ -687,9 +687,9 @@ function StepPanel({
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="block">
-                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length</span>
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length (from map)</span>
                     <div className="flex h-9 items-center rounded-md border border-dashed border-border bg-muted/40 px-2 font-mono text-sm text-muted-foreground">
-                      {Math.round(layout.edges.find((e) => e.id === s.id)?.length ?? 0).toLocaleString()} ft
+                      {Math.round(segmentLengthFt(s)).toLocaleString()} ft
                     </div>
                   </div>
                   <label className="block">
