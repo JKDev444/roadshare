@@ -727,6 +727,9 @@ function StepPanel({
           <p className="text-sm text-muted-foreground">
             {pickedHome ? `${pickedHome.address} is your home. Now choose who shares the private road.` : "Pick your home first, then choose who shares the road."}
           </p>
+          <p className="rounded-lg border border-border bg-muted/40 p-2 text-[11px] text-muted-foreground">
+            Tip: each home pill shows its road frontage (feet). Double-click a home to nudge it — more frontage = bigger share.
+          </p>
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-xl border border-border bg-muted/40 p-3">
               <div className="text-xs text-muted-foreground">Selected homes</div>
