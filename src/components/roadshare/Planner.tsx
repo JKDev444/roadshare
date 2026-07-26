@@ -991,7 +991,7 @@ function PlatToolbar({
   );
 }
 
-function HomesPanel({
+export function HomesPanel({
   homes,
   parcels,
   segments,
@@ -1058,7 +1058,7 @@ function HomesPanel({
   );
 }
 
-function RoadsPanel({
+export function RoadsPanel({
   segments,
   onAddSegment,
   onRenameSegment,
