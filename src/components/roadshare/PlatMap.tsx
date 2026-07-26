@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { Layout, LayoutParcel } from "@/lib/roadshare/layout";
 import { nearestPointOnSegments, snapHomeTileToRoad } from "@/lib/roadshare/layout";
+import { mergeSelectedFrontage } from "@/lib/roadshare/frontageMerge";
 
 function parcelDisplayLabel(p: LayoutParcel, index: number): string {
   const raw = p.name?.trim() || p.address?.trim() || "";
