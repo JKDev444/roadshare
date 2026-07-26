@@ -187,15 +187,34 @@ export function PlatMap({
       } else if (drag.kind === "segMove" && onMoveSegment) {
         const a = NODES[`${drag.id}_W`];
         const b = NODES[`${drag.id}_E`];
-        if (a && b) onMoveSegment(drag.id, a.x + drag.dx, a.y + drag.dy, b.x + drag.dx, b.y + drag.dy);
+        if (a && b) {
+          let ax = a.x + drag.dx;
+          let ay = a.y + drag.dy;
+          let bx = b.x + drag.dx;
+          let by = b.y + drag.dy;
+          const others = collectOtherEndpoints(drag.id, EDGES, NODES);
+          const sa = snapToEndpoint(ax, ay, others);
+          if (sa) { ax = sa.x; ay = sa.y; }
+          const sb = snapToEndpoint(bx, by, others);
+          if (sb) { bx = sb.x; by = sb.y; }
+          onMoveSegment(drag.id, ax, ay, bx, by);
+        }
       } else if (drag.kind === "segEndpoint" && onMoveSegment) {
         const a = NODES[`${drag.id}_W`];
         const b = NODES[`${drag.id}_E`];
         if (a && b) {
-          const ax = drag.endpoint === "a" ? a.x + drag.dx : a.x;
-          const ay = drag.endpoint === "a" ? a.y + drag.dy : a.y;
-          const bx = drag.endpoint === "b" ? b.x + drag.dx : b.x;
-          const by = drag.endpoint === "b" ? b.y + drag.dy : b.y;
+          let ax = drag.endpoint === "a" ? a.x + drag.dx : a.x;
+          let ay = drag.endpoint === "a" ? a.y + drag.dy : a.y;
+          let bx = drag.endpoint === "b" ? b.x + drag.dx : b.x;
+          let by = drag.endpoint === "b" ? b.y + drag.dy : b.y;
+          const others = collectOtherEndpoints(drag.id, EDGES, NODES);
+          if (drag.endpoint === "a") {
+            const s = snapToEndpoint(ax, ay, others);
+            if (s) { ax = s.x; ay = s.y; }
+          } else {
+            const s = snapToEndpoint(bx, by, others);
+            if (s) { bx = s.x; by = s.y; }
+          }
           onMoveSegment(drag.id, ax, ay, bx, by);
         }
       }
@@ -943,4 +962,36 @@ function PublicRoad({ d, width }: { d: string; width: number }) {
       <path d={d} stroke="var(--color-map-lane)" strokeWidth="1.4" strokeDasharray="8 8" fill="none" opacity="0.55" />
     </>
   );
+}
+
+// Snap threshold in SVG units — feels forgiving without hijacking small nudges.
+const SNAP_PX = 22;
+
+function collectOtherEndpoints(
+  movingId: string,
+  edges: Array<{ id: string; a: string; b: string }>,
+  nodes: Record<string, { x: number; y: number }>,
+): Array<{ x: number; y: number }> {
+  const pts: Array<{ x: number; y: number }> = [];
+  for (const e of edges) {
+    if (e.id === movingId) continue;
+    const na = nodes[e.a];
+    const nb = nodes[e.b];
+    if (na) pts.push({ x: na.x, y: na.y });
+    if (nb) pts.push({ x: nb.x, y: nb.y });
+  }
+  return pts;
+}
+
+function snapToEndpoint(
+  x: number,
+  y: number,
+  others: Array<{ x: number; y: number }>,
+): { x: number; y: number } | null {
+  let best: { x: number; y: number; d: number } | null = null;
+  for (const p of others) {
+    const d = Math.hypot(p.x - x, p.y - y);
+    if (d <= SNAP_PX && (!best || d < best.d)) best = { x: p.x, y: p.y, d };
+  }
+  return best ? { x: best.x, y: best.y } : null;
 }

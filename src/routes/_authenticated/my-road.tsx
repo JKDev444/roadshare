@@ -298,6 +298,58 @@ function MyRoadPage() {
     pushHistory(arranged);
   }
 
+  function handleDuplicateHome(id: string) {
+    const src = homes.find((h) => h.id === id);
+    if (!src) return;
+    const copy: RoadHome = {
+      ...src,
+      id: makeHomeId(),
+      // Land the duplicate in the tray so users decide where it goes.
+      position: null,
+      label: src.ownerLabel ? `${src.ownerLabel} (copy)` : `${src.label} (copy)`,
+    };
+    pushHistory([...homes, copy]);
+    toast.success("Copied home to your tray.");
+  }
+
+  function handleStraightenSegment(id: string) {
+    const seg = segments.find((s) => s.id === id);
+    if (!seg?.geometry) return;
+    const { ax, ay, bx, by } = seg.geometry;
+    const dx = Math.abs(bx - ax);
+    const dy = Math.abs(by - ay);
+    // Snap to horizontal or vertical, whichever it's closest to.
+    if (dx >= dy) {
+      const y = Math.round((ay + by) / 2);
+      setSegments((prev) => prev.map((s) => (s.id === id ? { ...s, geometry: { ax, ay: y, bx, by: y }, lengthFt: undefined } : s)));
+    } else {
+      const x = Math.round((ax + bx) / 2);
+      setSegments((prev) => prev.map((s) => (s.id === id ? { ...s, geometry: { ax: x, ay, bx: x, by }, lengthFt: undefined } : s)));
+    }
+    toast.success("Road straightened.");
+  }
+
+  function handleExtendSegment(id: string, deltaFt: number) {
+    const FT_PER_UNIT = 1.25;
+    const seg = segments.find((s) => s.id === id);
+    if (!seg?.geometry) return;
+    const { ax, ay, bx, by } = seg.geometry;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const L = Math.hypot(dx, dy) || 1;
+    const deltaU = deltaFt / FT_PER_UNIT;
+    // Extend/shorten by moving the "b" endpoint along the road direction.
+    const nbx = Math.round(bx + (dx / L) * deltaU);
+    const nby = Math.round(by + (dy / L) * deltaU);
+    // Guard against collapsing the road below ~40 ft.
+    const newLen = Math.hypot(nbx - ax, nby - ay) * FT_PER_UNIT;
+    if (newLen < 40) {
+      toast.info("Road is already at its minimum length.");
+      return;
+    }
+    setSegments((prev) => prev.map((s) => (s.id === id ? { ...s, geometry: { ax, ay, bx: nbx, by: nby }, lengthFt: undefined } : s)));
+  }
+
   function handleUndo() {
     if (historyRef.current.length <= 1) return;
     const cur = historyRef.current.pop()!;
@@ -457,6 +509,8 @@ function MyRoadPage() {
         onDeleteSegment={handleDeleteSegment}
         onSetSegmentLength={handleSetSegmentLength}
         onSetSegmentWidth={handleSetSegmentWidth}
+        onStraightenSegment={handleStraightenSegment}
+        onExtendSegment={handleExtendSegment}
         onRotate={handleRotate}
         onUndo={handleUndo}
         onRedo={handleRedo}
@@ -493,6 +547,7 @@ function MyRoadPage() {
         onReturnToTray={handleReturnHomeToTray}
         onFlipSide={handleFlipHomeSide}
         onMoveInOrder={handleMoveHomeInOrder}
+        onDuplicate={handleDuplicateHome}
       />
     </div>
   );

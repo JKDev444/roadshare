@@ -88,6 +88,8 @@ export function Planner({
   onDeleteSegment,
   onSetSegmentLength,
   onSetSegmentWidth,
+  onStraightenSegment,
+  onExtendSegment,
   onRotate,
   onUndo,
   onRedo,
@@ -120,6 +122,8 @@ export function Planner({
   onDeleteSegment?: (id: string) => void;
   onSetSegmentLength?: (id: string, lengthFt: number | undefined) => void;
   onSetSegmentWidth?: (id: string, widthFt: number) => void;
+  onStraightenSegment?: (id: string) => void;
+  onExtendSegment?: (id: string, deltaFt: number) => void;
   onRotate?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
@@ -493,6 +497,8 @@ export function Planner({
               onDeleteSegment={onDeleteSegment}
               onSetSegmentLength={onSetSegmentLength}
               onSetSegmentWidth={onSetSegmentWidth}
+              onStraightenSegment={onStraightenSegment}
+              onExtendSegment={onExtendSegment}
             />
           )}
           {step !== "home" && step !== "review" && (onAddHome || onRenameHome || onDeleteHome) && homes && homes.length > 0 && (
@@ -991,6 +997,8 @@ function RoadsPanel({
   onDeleteSegment,
   onSetSegmentLength,
   onSetSegmentWidth,
+  onStraightenSegment,
+  onExtendSegment,
 }: {
   segments: Segment[];
   onAddSegment?: () => void;
@@ -998,6 +1006,8 @@ function RoadsPanel({
   onDeleteSegment?: (id: string) => void;
   onSetSegmentLength?: (id: string, lengthFt: number | undefined) => void;
   onSetSegmentWidth?: (id: string, widthFt: number) => void;
+  onStraightenSegment?: (id: string) => void;
+  onExtendSegment?: (id: string, deltaFt: number) => void;
 }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -1059,6 +1069,37 @@ function RoadsPanel({
                 </select>
               </label>
             </div>
+            {(onStraightenSegment || onExtendSegment) && s.geometry && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {onStraightenSegment && (
+                  <button
+                    type="button"
+                    onClick={() => onStraightenSegment(s.id)}
+                    className="rounded-md border border-border bg-background px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
+                  >
+                    Straighten
+                  </button>
+                )}
+                {onExtendSegment && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onExtendSegment(s.id, 50)}
+                      className="rounded-md border border-border bg-background px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
+                    >
+                      Extend +50 ft
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onExtendSegment(s.id, -50)}
+                      className="rounded-md border border-border bg-background px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
+                    >
+                      Shorten −50 ft
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </li>
         ))}
       </ul>
