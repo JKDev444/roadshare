@@ -497,6 +497,8 @@ export function Planner({
               onDeleteSegment={onDeleteSegment}
               onSetSegmentLength={onSetSegmentLength}
               onSetSegmentWidth={onSetSegmentWidth}
+              onStraightenSegment={onStraightenSegment}
+              onExtendSegment={onExtendSegment}
             />
           )}
           {step !== "home" && step !== "review" && (onAddHome || onRenameHome || onDeleteHome) && homes && homes.length > 0 && (
