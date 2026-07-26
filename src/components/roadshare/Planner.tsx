@@ -666,7 +666,7 @@ function StepPanel({
       {step === "road" && segments && (
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Set how long each road is (in feet) and how wide. This drives the cost math — leave length blank to use the map's estimate.
+            Pick how wide each road is. Length comes from what you drew on the map — use <span className="font-semibold">Extend / Shorten</span> on a road to change it.
           </p>
           <ul className="space-y-2">
             {segments.map((s) => (
@@ -686,23 +686,12 @@ function StepPanel({
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="block">
-                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length (feet)</span>
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      min={50}
-                      max={20000}
-                      step={10}
-                      className="h-9"
-                      value={s.lengthFt ?? ""}
-                      placeholder="auto"
-                      onChange={(e) => {
-                        const v = e.target.value.trim();
-                        onSetSegmentLength?.(s.id, v === "" ? undefined : Math.max(0, Number(v)));
-                      }}
-                    />
-                  </label>
+                  <div className="block">
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length</span>
+                    <div className="flex h-9 items-center rounded-md border border-dashed border-border bg-muted/40 px-2 font-mono text-sm text-muted-foreground">
+                      {Math.round(layout.edges.find((e) => e.id === s.id)?.length ?? 0).toLocaleString()} ft
+                    </div>
+                  </div>
                   <label className="block">
                     <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Width</span>
                     <select
@@ -725,7 +714,7 @@ function StepPanel({
             Looks right — next <ArrowRight className="h-4 w-4" />
           </Button>
           <p className="text-[11px] text-muted-foreground">
-            Tip: you can also add more roads or edit them later from the "Roads" panel below.
+            Tip: got a real contractor quote? Skip to step 5 and enter it under <span className="font-semibold">Fine-tune the math → I already have a quote</span>. You won't need to guess material prices.
           </p>
         </div>
       )}
