@@ -789,152 +789,61 @@ function StepPanel({
   );
 }
 
-function QuoteControl({
+function TotalCostControl({
   fixedTotal,
+  estimatedTotal,
   setFixedTotal,
 }: {
   fixedTotal: number | undefined;
+  estimatedTotal: number;
   setFixedTotal: (value: number | undefined) => void;
 }) {
-  const has = typeof fixedTotal === "number" && fixedTotal > 0;
-  const [draft, setDraft] = useState<string>(has ? String(fixedTotal) : "");
+  const hasQuote = typeof fixedTotal === "number" && fixedTotal > 0;
+  const displayed = hasQuote ? (fixedTotal as number) : Math.round(estimatedTotal);
+  const [draft, setDraft] = useState<string>(displayed > 0 ? String(displayed) : "");
+  // Keep the input synced when the estimate changes upstream (e.g. width slider).
+  useEffect(() => {
+    if (!hasQuote) setDraft(displayed > 0 ? String(displayed) : "");
+  }, [displayed, hasQuote]);
   return (
-    <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <Label className="block text-sm font-semibold">I already have a quote</Label>
-          <p className="text-[11px] text-muted-foreground">
-            Got a bid from a contractor? Enter the total project cost and we'll split it — no need to guess at material prices.
-          </p>
-        </div>
-        <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs font-semibold">
-          <input
-            type="checkbox"
-            checked={has}
-            onChange={(e) => {
-              if (e.target.checked) {
-                const n = Number(draft);
-                setFixedTotal(Number.isFinite(n) && n > 0 ? n : 10000);
-                if (!draft) setDraft("10000");
-              } else {
-                setFixedTotal(undefined);
-              }
-            }}
-            className="h-4 w-4"
-          />
-          Use quote
-        </label>
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <Label className="block text-sm font-semibold">Total project cost</Label>
+        {hasQuote ? (
+          <button
+            type="button"
+            onClick={() => setFixedTotal(undefined)}
+            className="text-[11px] font-semibold text-primary hover:underline"
+          >
+            Use estimate instead
+          </button>
+        ) : null}
       </div>
-      {has && (
-        <div className="mt-2 flex items-center gap-2">
-          <span className="font-mono text-lg font-bold text-primary">$</span>
-          <Input
-            type="number"
-            inputMode="decimal"
-            min={0}
-            step={100}
-            className="h-9"
-            value={draft}
-            onChange={(e) => {
-              const v = e.target.value;
-              setDraft(v);
-              const n = Number(v);
-              if (Number.isFinite(n) && n > 0) setFixedTotal(n);
-            }}
-            placeholder="e.g. 42000"
-          />
-          <span className="text-xs text-muted-foreground">total</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SurfaceControls({
-  surfaces,
-  setSurfaces,
-  pctTotal,
-  pctValid,
-}: {
-  surfaces: { pct: number; cost: number }[];
-  setSurfaces: Dispatch<SetStateAction<{ pct: number; cost: number }[]>>;
-  pctTotal: number;
-  pctValid: boolean;
-}) {
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  // Which preset (if any) is currently active? Matches if exactly one row is 100.
-  const activeIdx = surfaces.findIndex((s) => Math.round(s.pct) === 100);
-  const singleSurfaceActive = activeIdx >= 0 && surfaces.every((s, i) => (i === activeIdx ? true : Math.round(s.pct) === 0));
-
-  function applyPreset(i: number) {
-    setSurfaces((arr) => arr.map((x, j) => ({ ...x, pct: j === i ? 100 : 0 })));
-  }
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-xs">
-        <Label className="font-semibold">What is the road made of?</Label>
-        <span className={cn("font-mono font-bold", pctValid ? "text-selected" : "text-destructive")}>{pctTotal.toFixed(0)}%</span>
+      <p className="mt-0.5 text-[11px] text-muted-foreground">
+        {hasQuote
+          ? "Using your contractor quote — split updates live."
+          : "Change this anytime — the share updates live."}
+      </p>
+      <div className="mt-2 flex items-center gap-2">
+        <span className="font-mono text-lg font-bold text-primary">$</span>
+        <Input
+          type="number"
+          inputMode="decimal"
+          min={0}
+          step={100}
+          className="h-9"
+          value={draft}
+          onChange={(e) => {
+            const v = e.target.value;
+            setDraft(v);
+            const n = Number(v);
+            if (Number.isFinite(n) && n > 0) setFixedTotal(n);
+            else setFixedTotal(undefined);
+          }}
+          placeholder="e.g. 42000"
+        />
+        <span className="text-xs text-muted-foreground">total</span>
       </div>
-
-      {/* One-tap preset picker — 90% of users just want to pick a surface. */}
-      <div className="grid grid-cols-2 gap-1.5">
-        {SURFACE_TYPES.map((surface, i) => {
-          const active = singleSurfaceActive && activeIdx === i;
-          return (
-            <button
-              key={surface.id}
-              type="button"
-              onClick={() => applyPreset(i)}
-              className={cn(
-                "rounded-lg border p-2 text-left text-xs transition-colors",
-                active ? "border-primary bg-primary/10" : "border-border bg-background hover:bg-accent",
-              )}
-            >
-              <span className="block font-semibold">{surface.label}</span>
-              <span className="block text-[10px] text-muted-foreground">${surface.defaultCost.toFixed(2)}/sq ft</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <button
-        type="button"
-        onClick={() => setShowAdvanced((v) => !v)}
-        className="mt-1 text-[11px] font-semibold text-primary hover:underline"
-      >
-        {showAdvanced ? "Hide fine-tune" : "Mix multiple surfaces (advanced)"}
-      </button>
-
-      {showAdvanced && (
-        <div className="mt-2 space-y-1 border-t border-border pt-2">
-          <div className="grid grid-cols-[minmax(0,1fr)_60px_74px] gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            <span>Surface</span>
-            <span className="text-right">%</span>
-            <span className="text-right">$/sqft</span>
-          </div>
-          {SURFACE_TYPES.map((surface, i) => (
-        <div key={surface.id} className="grid grid-cols-[minmax(0,1fr)_68px_82px] items-center gap-2">
-          <Label className="truncate text-xs">{surface.label}</Label>
-          <Input
-            type="number"
-            min={0}
-            max={100}
-            value={surfaces[i].pct}
-            onChange={(e) => setSurfaces((arr) => arr.map((x, j) => (j === i ? { ...x, pct: Number(e.target.value) } : x)))}
-            className="h-8 text-sm"
-          />
-          <Input
-            type="number"
-            step="0.25"
-            value={surfaces[i].cost}
-            onChange={(e) => setSurfaces((arr) => arr.map((x, j) => (j === i ? { ...x, cost: Number(e.target.value) } : x)))}
-            className="h-8 text-sm"
-          />
-        </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
