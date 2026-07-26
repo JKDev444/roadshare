@@ -815,6 +815,67 @@ function StepPanel({
   );
 }
 
+function QuoteControl({
+  fixedTotal,
+  setFixedTotal,
+}: {
+  fixedTotal: number | undefined;
+  setFixedTotal: (value: number | undefined) => void;
+}) {
+  const has = typeof fixedTotal === "number" && fixedTotal > 0;
+  const [draft, setDraft] = useState<string>(has ? String(fixedTotal) : "");
+  return (
+    <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <Label className="block text-sm font-semibold">I already have a quote</Label>
+          <p className="text-[11px] text-muted-foreground">
+            Got a bid from a contractor? Enter the total project cost and we'll split it — no need to guess at material prices.
+          </p>
+        </div>
+        <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs font-semibold">
+          <input
+            type="checkbox"
+            checked={has}
+            onChange={(e) => {
+              if (e.target.checked) {
+                const n = Number(draft);
+                setFixedTotal(Number.isFinite(n) && n > 0 ? n : 10000);
+                if (!draft) setDraft("10000");
+              } else {
+                setFixedTotal(undefined);
+              }
+            }}
+            className="h-4 w-4"
+          />
+          Use quote
+        </label>
+      </div>
+      {has && (
+        <div className="mt-2 flex items-center gap-2">
+          <span className="font-mono text-lg font-bold text-primary">$</span>
+          <Input
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step={100}
+            className="h-9"
+            value={draft}
+            onChange={(e) => {
+              const v = e.target.value;
+              setDraft(v);
+              const n = Number(v);
+              if (Number.isFinite(n) && n > 0) setFixedTotal(n);
+            }}
+            placeholder="e.g. 42000"
+          />
+          <span className="text-xs text-muted-foreground">total</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SurfaceControls({
   surfaces,
   setSurfaces,
