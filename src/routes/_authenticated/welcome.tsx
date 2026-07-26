@@ -191,7 +191,7 @@ function WelcomePage() {
               className="mt-6 space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
-                setScreen("homes");
+                setScreen("docs");
               }}
             >
               <div className="space-y-2">
