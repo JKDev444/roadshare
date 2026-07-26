@@ -72,6 +72,18 @@ export function HomeDetailsDrawer({
     setSkip(!!home.skipFromMath);
   }, [home, segments]);
 
+  // Live-preview: recompute the share whenever frontage / skip changes.
+  // NOTE: this hook MUST run on every render (before any early return) so
+  // React's hook order stays consistent between the "closed" and "open"
+  // states of the drawer. Previously we early-returned when `home` was null
+  // and then called useMemo below, which crashed the app with
+  // "Rendered more hooks than during the previous render".
+  const frontageNumber = frontage.trim() === "" ? null : Math.max(0, Number(frontage) || 0);
+  const preview = useMemo(() => {
+    if (!livePreview || !home) return null;
+    return livePreview(home.id, { frontageFtOverride: frontageNumber, skipFromMath: skip });
+  }, [livePreview, home, frontageNumber, skip]);
+
   if (!home) return null;
 
   function save() {
@@ -88,13 +100,6 @@ export function HomeDetailsDrawer({
     onSave(home.id, patch);
     onClose();
   }
-
-  // Live-preview: recompute the share whenever frontage / skip changes.
-  const frontageNumber = frontage.trim() === "" ? null : Math.max(0, Number(frontage) || 0);
-  const preview = useMemo(() => {
-    if (!livePreview || !home) return null;
-    return livePreview(home.id, { frontageFtOverride: frontageNumber, skipFromMath: skip });
-  }, [livePreview, home, frontageNumber, skip]);
   const usdFmt = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
   return (
