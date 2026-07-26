@@ -1,58 +1,65 @@
-## Answers to your questions first
+## Goal
 
-**Should CC&R upload come before "Who's on your road?"**
-Yes — as an *optional* Step 2 (between naming and homes). Rationale: CC&Rs sometimes list homes, frontage, or include a plat, so if we ask first we can pre-fill the next step. But the vast majority of users won't have a PDF handy, so it must be one-tap skippable — never a wall.
+Simplify the right rail on Step 5 and move the contractor-quote decision into onboarding, so the Estimated Share number is always visible and updates live.
 
-**Should we skip "Who's on your road?" entirely if the doc has everything?**
-No — keep it, always. Two reasons:
-1. We can't reliably parse a scanned CC&R into structured homes/frontage today (that's an AI extraction feature for later). Even when we can, the user needs to **confirm** what we found.
-2. Removing the step for some users and not others makes the onboarding unpredictable. Better: always show it, but pre-fill it from the doc when possible so it feels like a review, not data entry.
+## Changes
 
-**Should users be able to set frontage per home in onboarding (or skip / use defaults)?**
-Not in onboarding — it would slow the fastest path. Instead:
-- Onboarding always uses a smart default frontage (road length ÷ homes, rounded to 5 ft) so the map + cost split work immediately.
-- Frontage editing already lives in the Home Details drawer on `/my-road`. We surface it better with a one-tap "Adjust frontages" quick action so users who care can tune everything in one place after landing.
+### 1. Onboarding — add a "Cost" screen (`src/routes/_authenticated/welcome.tsx`)
 
----
+Insert a new screen after `shape` (before `homes`): **"Do you already have a quote?"**
+- Two big tiles: **"Yes, I have a contractor quote"** (reveals a `$` input) and **"No — estimate it for me"**.
+- Store `fixedTotal?: number` in local state and pass it into `createMyRoad` as part of the initial planner snapshot (extend the server fn payload / initial state persisted for the road).
+- Screen sequence becomes: `name → docs → shape → cost → homes`.
 
-## The plan
+### 2. Planner right rail (`src/components/roadshare/Planner.tsx`)
 
-### 1. New optional Step 2: "Got any documents?"
-Insert between "Name your road" and "Who's on your road?". Three big friendly tiles:
+Restructure the sticky right rail so the **Estimated Share hero is always pinned at the top and visible without scrolling**:
 
-- **Upload CC&Rs / plat / agreement** — file picker, saves to the existing `documents` bucket under the user's folder. Multiple files OK. Shows uploaded chips with remove buttons.
-- **I'll add them later** — skips instantly.
-- **I don't have any** — skips instantly.
+```text
+┌─ Right rail (380px, app variant) ─────────┐
+│ [PINNED, non-scrolling]                   │
+│   Your estimated share  $X,XXX / yr       │
+│   share % · vs equal split                │
+│   Total project · Per year (group)        │
+├───────────────────────────────────────────┤
+│ [SCROLLABLE below]                        │
+│   Step panel (walkthrough for current step│
+│   Split-method picker (on review)         │
+│   Simple controls:                        │
+│     • Road width slider                   │
+│     • Plan over years slider              │
+│     • (If no quote) "Adjust estimated cost│
+│        total" — single $ input replacing  │
+│        the surface-mix panel              │
+└───────────────────────────────────────────┘
+```
 
-Screen shows: "These help your neighbors trust the plan later. Totally optional — skip if you don't have them." Files uploaded here get moved into the road's document list on finish (same `documents/{userId}/` path the DocumentsPanel already reads).
+Specifically:
+- Split the `<aside>` into a fixed header region (share hero + totals, always mounted for steps ≥ neighbors) and a scrollable region below. Use `flex flex-col` with the hero as `shrink-0` and the rest as `flex-1 overflow-y-auto`.
+- Remove the entire **"Fine-tune the math"** collapsible wrapper. Surface only two sliders directly in the rail: Road width and Plan over years. No collapse.
+- Remove the **`QuoteControl`** component from the rail. The quote is set in onboarding. If the user did *not* provide a quote, show a single **"Adjust estimated total cost"** `$` input (editable `fixedTotal`) in place of it. If they did provide a quote, show a small "Contractor quote: $X,XXX — edit" line with an inline edit affordance.
+- Delete the surface-mix picker UI from the rail entirely (kept default surface values under the hood only as a fallback when no `fixedTotal` and user hasn't touched the total; simplest path: seed `fixedTotal` from the default blended-rate × pavement-area on first mount when unset, so the rail only ever exposes one cost number to the user).
 
-Progress becomes "Step 2 of 3" → "Step 3 of 3". Back/forward preserved.
+### 3. Always-live Estimated Share
 
-### 2. Smart-default frontage everywhere
-In `welcome.tsx`'s `finish()`, after `autoArrangeHomes`, compute `defaultFrontage = round((segment length in ft) / homes.length / 5) * 5`, clamped to [15, 120], and set it on every home that doesn't already have one. Users land on a map where every home has a sensible pill label and the cost split works.
+The share hero must render for every step from `neighbors` onward (not only on `review`). Move the compact `ResultsPanel` (or a new lean `ShareHero` component built from `result`) into the pinned header region so it recomputes automatically via the existing `useMemo` on `result` whenever selected homes, width, years, or total cost change.
 
-### 3. Post-onboarding: make frontage easy to tune (no forced step)
-On `/my-road`:
-- Add a subtle "Adjust frontages" button in the right rail near the results. Opens the existing Home Details drawer pre-focused on the frontage slider, with prev/next arrows so a user can walk all homes in <30 seconds.
-- Keep the existing double-click-to-edit path.
+### 4. Remove "What if more neighbors join?" (`src/components/roadshare/ResultsPanel.tsx`)
 
-### 4. Foreshadow the "AI reads your CC&R" feature (no build yet)
-On the documents step, add a small badge: "Coming soon: we'll read your CC&Rs and suggest homes + frontage automatically." Sets expectation without over-promising.
+Delete the entire projection block (the `Users`-icon card with the `extraNeighbors` slider) and the associated `useState`, `Slider`, and `Users` imports. Estimated Share already updates live when a home is added/removed from the group.
 
----
+### 5. Copy / labels
 
-## Technical details
+- Onboarding cost screen: heading "Do you already have a contractor quote?", helper "If yes, we'll split that exact number. If no, we'll estimate it and you can adjust the total anytime."
+- Rail no-quote input label: "Estimated total cost" with helper "Change this anytime — the share updates live."
+- Rail quote line: "Using your contractor quote" with edit pencil.
 
-- **New screen state**: `type Screen = "name" | "docs" | "homes"`. Wire Back on `homes` to go to `docs`, Back on `docs` to go to `name`.
-- **Uploads**: reuse `supabase.storage.from("documents").upload("${userId}/${Date.now()}_${safeName}", file)` — same conventions as `DocumentsPanel.tsx`. Track uploaded file paths in local state; nothing else needed since the DocumentsPanel lists everything under `${userId}/`.
-- **Default frontage**: implement `defaultFrontageFor(segment, homeCount)` in `src/lib/roadshare/layout.ts` and apply in `welcome.tsx#finish()`. Type: extend `Home` if `frontage` isn't already there (check existing type — if it exists, just fill it in).
-- **Skip semantics**: "later" and "don't have any" both call `setScreen("homes")` with no state change; only Upload actually persists files.
-- **"Adjust frontages" quick action** in `Planner.tsx` right rail: opens `HomeDetailsDrawer` with the first home; drawer already has slider — add small `←` / `→` chevrons to step through homes.
-- **No schema changes** — `documents` bucket + `roads` table are unchanged.
+## Technical notes
 
----
+- `PlannerSnapshot` already carries `fixedTotal`; wiring onboarding → planner just requires seeding it in the initial state persisted by `createMyRoad`.
+- The engine already treats `fixedTotal > 0` as an override that bypasses surface-mix (`pctValid` gate), so hiding the surface UI is safe.
+- Keep the demo (`/tools/cedar-hollow`) rail behavior consistent: also drop "What if more neighbors join?" and the surface-mix UI, replacing with the single total input for parity.
 
-## Out of scope (call out, don't build now)
-- Auto-parsing CC&R PDFs for homes/frontage (needs OCR + LLM pipeline).
-- Detecting a plat map image inside a PDF and importing geometry.
-Both are strong future features; the "Coming soon" badge sets the stage.
+## Testing
+
+Playwright pass covering: onboarding through new cost screen (both branches), landing on `/my-road`, verifying the Estimated Share hero stays visible while scrolling the rail, and confirming the number updates live when toggling neighbors, width, years, and the editable total. Screenshots at each step saved under `/tmp/browser/`.
