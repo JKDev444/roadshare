@@ -65,6 +65,13 @@ export interface AllocationInput {
   fundingPeriod: number;
   you: string | null;
   layout: Layout;
+  /**
+   * When set (> 0) this contractor-quote total OVERRIDES the surface-mix math
+   * entirely. The blended-rate × pavement-area calculation is skipped and
+   * `totalCost` becomes this value. Use this when the user already has a real
+   * bid so the tool doesn't need to guess at material prices.
+   */
+  fixedTotal?: number;
 }
 
 export interface AllocationRow {
@@ -130,7 +137,12 @@ export function computeAllocation(input: AllocationInput): AllocationResult {
     (s, e) => s + e.length * (e.widthFt && e.widthFt > 0 ? e.widthFt : fallbackWidth),
     0,
   );
-  const totalCost = pctValid ? pavementArea * blendedRate : 0;
+  const hasFixed = typeof input.fixedTotal === "number" && input.fixedTotal > 0;
+  const totalCost = hasFixed
+    ? (input.fixedTotal as number)
+    : pctValid
+      ? pavementArea * blendedRate
+      : 0;
   const period = Math.max(1, Number(fundingPeriod) || 1);
 
   const entranceNodes = layout.entrances
@@ -169,7 +181,8 @@ export function computeAllocation(input: AllocationInput): AllocationResult {
     totalRoadFt: layout.totalRoadFt,
     pavementArea,
     pctTotal,
-    pctValid,
+    // With a fixed contractor quote, the surface-mix % gate is irrelevant.
+    pctValid: hasFixed ? true : pctValid,
     blendedRate,
     totalCost,
     totalPerYear: totalCost / period,

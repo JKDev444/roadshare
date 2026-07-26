@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { DEFAULTS, SURFACE_TYPES } from "@/lib/roadshare/data";
-import { buildLayout, cedarHollowLayout, type Home as RoadHome, type Layout, type LayoutEntrance, type LayoutParcel, type Segment } from "@/lib/roadshare/layout";
+import { buildLayout, cedarHollowLayout, segmentLengthFt, type Home as RoadHome, type Layout, type LayoutEntrance, type LayoutParcel, type Segment } from "@/lib/roadshare/layout";
 import { computeAllocation, type Methodology } from "@/lib/roadshare/engine";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +41,8 @@ export type PlannerSnapshot = {
   roadWidth: number;
   fundingPeriod: number;
   surfaces: { pct: number; cost: number }[];
+  /** Contractor quote (total $). When > 0 it overrides the material math. */
+  fixedTotal?: number;
 };
 
 const METHODS: { id: Methodology; label: string; helper: string }[] = [
@@ -169,6 +171,8 @@ export function Planner({
   const [surfaces, setSurfaces] = useState(
     initialState?.surfaces ?? SURFACE_TYPES.map((s) => ({ pct: s.defaultPct, cost: s.defaultCost })),
   );
+  const [fixedTotal, setFixedTotal] = useState<number | undefined>(initialState?.fixedTotal);
+  const hasQuote = typeof fixedTotal === "number" && fixedTotal > 0;
   const [pendingTrayHomeId, setPendingTrayHomeId] = useState<string | null>(null);
 
   // Auto-cancel pending home if it becomes placed (via drag) or removed.
@@ -187,10 +191,10 @@ export function Planner({
       return;
     }
     const t = setTimeout(() => {
-      onStateChange({ step, you, selected, entrances, methodology, roadWidth, fundingPeriod, surfaces });
+      onStateChange({ step, you, selected, entrances, methodology, roadWidth, fundingPeriod, surfaces, fixedTotal });
     }, 700);
     return () => clearTimeout(t);
-  }, [step, you, selected, entrances, methodology, roadWidth, fundingPeriod, surfaces, onStateChange]);
+  }, [step, you, selected, entrances, methodology, roadWidth, fundingPeriod, surfaces, fixedTotal, onStateChange]);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -212,8 +216,9 @@ export function Planner({
         fundingPeriod,
         you,
         layout,
+        fixedTotal,
       }),
-    [selected, entrances, methodology, surfaces, roadWidth, fundingPeriod, you, layout],
+    [selected, entrances, methodology, surfaces, roadWidth, fundingPeriod, you, layout, fixedTotal],
   );
 
   const pickedHome = PARCELS.find((p) => p.id === you);
@@ -418,7 +423,10 @@ export function Planner({
 
         {assumptionsOpen && (
           <div className="mt-4 space-y-4 border-t border-border pt-4">
-            <SurfaceControls surfaces={surfaces} setSurfaces={setSurfaces} pctTotal={pctTotal} pctValid={pctValid} />
+            <QuoteControl fixedTotal={fixedTotal} setFixedTotal={setFixedTotal} />
+            {!hasQuote && (
+              <SurfaceControls surfaces={surfaces} setSurfaces={setSurfaces} pctTotal={pctTotal} pctValid={pctValid} />
+            )}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
               <SliderControl label="How wide is the road?" value={roadWidth} suffix="ft" min={8} max={40} onChange={setRoadWidth} />
               <SliderControl label="Plan over how many years?" value={fundingPeriod} suffix="yr" min={1} max={40} onChange={setFundingPeriod} />
@@ -504,7 +512,6 @@ export function Planner({
               onAddSegment={onAddSegment}
               onRenameSegment={onRenameSegment}
               onDeleteSegment={onDeleteSegment}
-              onSetSegmentLength={onSetSegmentLength}
               onSetSegmentWidth={onSetSegmentWidth}
               onStraightenSegment={onStraightenSegment}
               onExtendSegment={onExtendSegment}
@@ -658,7 +665,7 @@ function StepPanel({
       {step === "road" && segments && (
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Set how long each road is (in feet) and how wide. This drives the cost math — leave length blank to use the map's estimate.
+            Pick how wide each road is. Length comes from what you drew on the map — use <span className="font-semibold">Extend / Shorten</span> on a road to change it.
           </p>
           <ul className="space-y-2">
             {segments.map((s) => (
@@ -678,23 +685,12 @@ function StepPanel({
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="block">
-                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length (feet)</span>
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      min={50}
-                      max={20000}
-                      step={10}
-                      className="h-9"
-                      value={s.lengthFt ?? ""}
-                      placeholder="auto"
-                      onChange={(e) => {
-                        const v = e.target.value.trim();
-                        onSetSegmentLength?.(s.id, v === "" ? undefined : Math.max(0, Number(v)));
-                      }}
-                    />
-                  </label>
+                  <div className="block">
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length (from map)</span>
+                    <div className="flex h-9 items-center rounded-md border border-dashed border-border bg-muted/40 px-2 font-mono text-sm text-muted-foreground">
+                      {Math.round(segmentLengthFt(s)).toLocaleString()} ft
+                    </div>
+                  </div>
                   <label className="block">
                     <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Width</span>
                     <select
@@ -717,7 +713,7 @@ function StepPanel({
             Looks right — next <ArrowRight className="h-4 w-4" />
           </Button>
           <p className="text-[11px] text-muted-foreground">
-            Tip: you can also add more roads or edit them later from the "Roads" panel below.
+            Tip: got a real contractor quote? Skip to step 5 and enter it under <span className="font-semibold">Fine-tune the math → I already have a quote</span>. You won't need to guess material prices.
           </p>
         </div>
       )}
@@ -813,6 +809,67 @@ function StepPanel({
               Result appears here when ready
             </Button>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QuoteControl({
+  fixedTotal,
+  setFixedTotal,
+}: {
+  fixedTotal: number | undefined;
+  setFixedTotal: (value: number | undefined) => void;
+}) {
+  const has = typeof fixedTotal === "number" && fixedTotal > 0;
+  const [draft, setDraft] = useState<string>(has ? String(fixedTotal) : "");
+  return (
+    <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <Label className="block text-sm font-semibold">I already have a quote</Label>
+          <p className="text-[11px] text-muted-foreground">
+            Got a bid from a contractor? Enter the total project cost and we'll split it — no need to guess at material prices.
+          </p>
+        </div>
+        <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs font-semibold">
+          <input
+            type="checkbox"
+            checked={has}
+            onChange={(e) => {
+              if (e.target.checked) {
+                const n = Number(draft);
+                setFixedTotal(Number.isFinite(n) && n > 0 ? n : 10000);
+                if (!draft) setDraft("10000");
+              } else {
+                setFixedTotal(undefined);
+              }
+            }}
+            className="h-4 w-4"
+          />
+          Use quote
+        </label>
+      </div>
+      {has && (
+        <div className="mt-2 flex items-center gap-2">
+          <span className="font-mono text-lg font-bold text-primary">$</span>
+          <Input
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step={100}
+            className="h-9"
+            value={draft}
+            onChange={(e) => {
+              const v = e.target.value;
+              setDraft(v);
+              const n = Number(v);
+              if (Number.isFinite(n) && n > 0) setFixedTotal(n);
+            }}
+            placeholder="e.g. 42000"
+          />
+          <span className="text-xs text-muted-foreground">total</span>
         </div>
       )}
     </div>
@@ -1055,7 +1112,6 @@ function RoadsPanel({
   onAddSegment,
   onRenameSegment,
   onDeleteSegment,
-  onSetSegmentLength,
   onSetSegmentWidth,
   onStraightenSegment,
   onExtendSegment,
@@ -1064,7 +1120,6 @@ function RoadsPanel({
   onAddSegment?: () => void;
   onRenameSegment?: (id: string) => void;
   onDeleteSegment?: (id: string) => void;
-  onSetSegmentLength?: (id: string, lengthFt: number | undefined) => void;
   onSetSegmentWidth?: (id: string, widthFt: number) => void;
   onStraightenSegment?: (id: string) => void;
   onExtendSegment?: (id: string, deltaFt: number) => void;
@@ -1098,21 +1153,10 @@ function RoadsPanel({
             </div>
             <div className="grid grid-cols-2 gap-2">
               <label className="block">
-                <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length (ft)</span>
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  min={50}
-                  max={20000}
-                  step={10}
-                  className="h-8 text-xs"
-                  value={s.lengthFt ?? ""}
-                  placeholder="auto"
-                  onChange={(e) => {
-                    const v = e.target.value.trim();
-                    onSetSegmentLength?.(s.id, v === "" ? undefined : Math.max(0, Number(v)));
-                  }}
-                />
+                <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length (from map)</span>
+                <div className="flex h-8 items-center rounded-md border border-dashed border-border bg-muted/40 px-2 font-mono text-xs text-muted-foreground">
+                  {Math.round(segmentLengthFt(s)).toLocaleString()} ft
+                </div>
               </label>
               <label className="block">
                 <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Width (ft)</span>
