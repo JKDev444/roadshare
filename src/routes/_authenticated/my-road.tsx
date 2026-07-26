@@ -554,9 +554,13 @@ function MyRoadPage() {
     }
   }
 
+  const toolbarParcels = useMemo(
+    () => buildLayout(homes, roadName, segments).parcels,
+    [homes, roadName, segments],
+  );
+
   return (
     <div className="min-h-screen bg-background">
-      {(() => null)()}
       <AppHeader
         roadName={road.name ?? "My road"}
         active="map"
