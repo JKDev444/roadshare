@@ -88,6 +88,8 @@ export function Planner({
   onDeleteSegment,
   onSetSegmentLength,
   onSetSegmentWidth,
+  onStraightenSegment,
+  onExtendSegment,
   onRotate,
   onUndo,
   onRedo,
@@ -120,6 +122,8 @@ export function Planner({
   onDeleteSegment?: (id: string) => void;
   onSetSegmentLength?: (id: string, lengthFt: number | undefined) => void;
   onSetSegmentWidth?: (id: string, widthFt: number) => void;
+  onStraightenSegment?: (id: string) => void;
+  onExtendSegment?: (id: string, deltaFt: number) => void;
   onRotate?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
