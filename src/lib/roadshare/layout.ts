@@ -415,6 +415,37 @@ export type RoadTemplate = {
   segments: Segment[];
 };
 
+/** Build N straight segments that approximate an arc — used so cul-de-sac
+ *  bulbs and loops feel curved even though the map only draws straight lines. */
+function arcSegments(
+  name: string,
+  widthFt: number,
+  cx: number,
+  cy: number,
+  radius: number,
+  a0: number,
+  a1: number,
+  steps: number,
+): Segment[] {
+  const out: Segment[] = [];
+  for (let i = 0; i < steps; i++) {
+    const t0 = a0 + ((a1 - a0) * i) / steps;
+    const t1 = a0 + ((a1 - a0) * (i + 1)) / steps;
+    out.push({
+      id: `arc_${i}_${Math.random().toString(36).slice(2, 6)}`,
+      name: i === 0 ? name : `${name} ${i + 1}`,
+      widthFt,
+      geometry: {
+        ax: Math.round(cx + Math.cos(t0) * radius),
+        ay: Math.round(cy + Math.sin(t0) * radius),
+        bx: Math.round(cx + Math.cos(t1) * radius),
+        by: Math.round(cy + Math.sin(t1) * radius),
+      },
+    });
+  }
+  return out;
+}
+
 export const ROAD_TEMPLATES: RoadTemplate[] = [
   {
     id: "straight",
