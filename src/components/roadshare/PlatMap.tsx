@@ -187,15 +187,34 @@ export function PlatMap({
       } else if (drag.kind === "segMove" && onMoveSegment) {
         const a = NODES[`${drag.id}_W`];
         const b = NODES[`${drag.id}_E`];
-        if (a && b) onMoveSegment(drag.id, a.x + drag.dx, a.y + drag.dy, b.x + drag.dx, b.y + drag.dy);
+        if (a && b) {
+          let ax = a.x + drag.dx;
+          let ay = a.y + drag.dy;
+          let bx = b.x + drag.dx;
+          let by = b.y + drag.dy;
+          const others = collectOtherEndpoints(drag.id, EDGES, NODES);
+          const sa = snapToEndpoint(ax, ay, others);
+          if (sa) { ax = sa.x; ay = sa.y; }
+          const sb = snapToEndpoint(bx, by, others);
+          if (sb) { bx = sb.x; by = sb.y; }
+          onMoveSegment(drag.id, ax, ay, bx, by);
+        }
       } else if (drag.kind === "segEndpoint" && onMoveSegment) {
         const a = NODES[`${drag.id}_W`];
         const b = NODES[`${drag.id}_E`];
         if (a && b) {
-          const ax = drag.endpoint === "a" ? a.x + drag.dx : a.x;
-          const ay = drag.endpoint === "a" ? a.y + drag.dy : a.y;
-          const bx = drag.endpoint === "b" ? b.x + drag.dx : b.x;
-          const by = drag.endpoint === "b" ? b.y + drag.dy : b.y;
+          let ax = drag.endpoint === "a" ? a.x + drag.dx : a.x;
+          let ay = drag.endpoint === "a" ? a.y + drag.dy : a.y;
+          let bx = drag.endpoint === "b" ? b.x + drag.dx : b.x;
+          let by = drag.endpoint === "b" ? b.y + drag.dy : b.y;
+          const others = collectOtherEndpoints(drag.id, EDGES, NODES);
+          if (drag.endpoint === "a") {
+            const s = snapToEndpoint(ax, ay, others);
+            if (s) { ax = s.x; ay = s.y; }
+          } else {
+            const s = snapToEndpoint(bx, by, others);
+            if (s) { bx = s.x; by = s.y; }
+          }
           onMoveSegment(drag.id, ax, ay, bx, by);
         }
       }
