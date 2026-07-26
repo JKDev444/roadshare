@@ -1052,7 +1052,6 @@ function RoadsPanel({
   onAddSegment,
   onRenameSegment,
   onDeleteSegment,
-  onSetSegmentLength,
   onSetSegmentWidth,
   onStraightenSegment,
   onExtendSegment,
@@ -1061,7 +1060,6 @@ function RoadsPanel({
   onAddSegment?: () => void;
   onRenameSegment?: (id: string) => void;
   onDeleteSegment?: (id: string) => void;
-  onSetSegmentLength?: (id: string, lengthFt: number | undefined) => void;
   onSetSegmentWidth?: (id: string, widthFt: number) => void;
   onStraightenSegment?: (id: string) => void;
   onExtendSegment?: (id: string, deltaFt: number) => void;
@@ -1095,21 +1093,10 @@ function RoadsPanel({
             </div>
             <div className="grid grid-cols-2 gap-2">
               <label className="block">
-                <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length (ft)</span>
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  min={50}
-                  max={20000}
-                  step={10}
-                  className="h-8 text-xs"
-                  value={s.lengthFt ?? ""}
-                  placeholder="auto"
-                  onChange={(e) => {
-                    const v = e.target.value.trim();
-                    onSetSegmentLength?.(s.id, v === "" ? undefined : Math.max(0, Number(v)));
-                  }}
-                />
+                <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length (from map)</span>
+                <div className="flex h-8 items-center rounded-md border border-dashed border-border bg-muted/40 px-2 font-mono text-xs text-muted-foreground">
+                  {Math.round(segmentLengthFt(s)).toLocaleString()} ft
+                </div>
               </label>
               <label className="block">
                 <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Width (ft)</span>
