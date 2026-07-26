@@ -997,6 +997,8 @@ function RoadsPanel({
   onDeleteSegment,
   onSetSegmentLength,
   onSetSegmentWidth,
+  onStraightenSegment,
+  onExtendSegment,
 }: {
   segments: Segment[];
   onAddSegment?: () => void;
@@ -1004,6 +1006,8 @@ function RoadsPanel({
   onDeleteSegment?: (id: string) => void;
   onSetSegmentLength?: (id: string, lengthFt: number | undefined) => void;
   onSetSegmentWidth?: (id: string, widthFt: number) => void;
+  onStraightenSegment?: (id: string) => void;
+  onExtendSegment?: (id: string, deltaFt: number) => void;
 }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
