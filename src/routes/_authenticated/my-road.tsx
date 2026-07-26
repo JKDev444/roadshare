@@ -240,6 +240,7 @@ function MyRoadPage() {
   function handleSaveHome(id: string, patch: Partial<RoadHome>) {
     const next = homes.map((h) => (h.id === id ? { ...h, ...patch } : h));
     pushHistory(next);
+    toast.success("Home updated.");
   }
   function handlePickTemplate(t: RoadTemplate) {
     setSegments(t.segments.map((s) => ({ ...s })));
