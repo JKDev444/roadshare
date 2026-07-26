@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { AlertTriangle, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, TrendingDown, TrendingUp, Users } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import {
   formatFt,
   formatUSD,
@@ -63,6 +65,18 @@ export function ResultsPanel({
     yourRow && yourRow.equalPerYear > 0
       ? yourRow.perYear - yourRow.equalPerYear
       : 0;
+
+  // "What if more neighbors join?" — a rough equal-split projection using the
+  // current total per year and the current group size + N extra homes. This
+  // isn't a re-run of the allocator (we don't know where those hypothetical
+  // homes would sit), so it's presented as an even-split ballpark.
+  const [extraNeighbors, setExtraNeighbors] = useState(0);
+  const groupCount = rows.length;
+  const projectedGroup = groupCount + extraNeighbors;
+  const projectedPerHome =
+    showDollars && projectedGroup > 0 ? result.totalPerYear / projectedGroup : 0;
+  const currentEqualPerHome =
+    showDollars && groupCount > 0 ? result.totalPerYear / groupCount : 0;
 
   return (
     <div className="space-y-4">
@@ -207,6 +221,48 @@ export function ResultsPanel({
         </div>
       )}
         </>
+      )}
+
+      {/* "What if more neighbors join?" — shown in both compact and full modes
+          because it's one of the top questions a user asks themselves. */}
+      {showDollars && groupCount > 0 && (
+        <div className="rounded-xl border border-border bg-muted/30 p-3">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              What if more neighbors join?
+            </span>
+          </div>
+          <div className="mt-2 flex items-baseline justify-between gap-2">
+            <div>
+              <div className="font-display text-xl font-bold text-foreground">
+                {formatUSD(projectedPerHome)}
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                / yr if split evenly ({projectedGroup} home{projectedGroup === 1 ? "" : "s"})
+              </div>
+            </div>
+            <div className="text-right text-[11px] text-muted-foreground">
+              Today's even split:
+              <div className="font-mono font-semibold text-foreground">
+                {formatUSD(currentEqualPerHome)}
+              </div>
+            </div>
+          </div>
+          <Slider
+            className="mt-3"
+            min={0}
+            max={20}
+            step={1}
+            value={[extraNeighbors]}
+            onValueChange={(v) => setExtraNeighbors(v[0])}
+          />
+          <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+            <span>+0</span>
+            <span className="font-semibold text-foreground">+{extraNeighbors} joining</span>
+            <span>+20</span>
+          </div>
+        </div>
       )}
     </div>
   );

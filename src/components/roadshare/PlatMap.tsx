@@ -697,11 +697,16 @@ export function PlatMap({
                 const showSub = !!p.name?.trim() && !!p.address?.trim() && p.name.trim() !== p.address.trim();
                 const subLabel = showSub ? (p.address!.length > 20 ? p.address!.slice(0, 18) + "…" : p.address!) : null;
                 const subSize = subLabel ? Math.max(8, mainSize - 2) : 0;
+                // Small "road frontage" chip inside the pill — the whole app
+                // hinges on this number so it should be visible without
+                // opening the details drawer.
+                const frontageFt = Math.round(Math.abs(p.frontage[1].offset - p.frontage[0].offset));
+                const showFrontage = frontageFt >= 10 && frontageFt <= 900;
                 return (
                   <>
                     <text
                       x={p.label[0] + hd.dx}
-                      y={p.label[1] + hd.dy - (subLabel ? 4 : 0)}
+                      y={p.label[1] + hd.dy - (subLabel ? 8 : showFrontage ? 4 : 0)}
                       fill={labelFill}
                       fontSize={mainSize}
                       fontWeight={isYou || isSel ? 700 : 600}
@@ -715,7 +720,7 @@ export function PlatMap({
                     {subLabel && (
                       <text
                         x={p.label[0] + hd.dx}
-                        y={p.label[1] + hd.dy + 6}
+                        y={p.label[1] + hd.dy + 2}
                         fill={labelFill}
                         fontSize={subSize}
                         fontFamily="var(--font-sans)"
@@ -726,6 +731,22 @@ export function PlatMap({
                         pointerEvents="none"
                       >
                         {subLabel}
+                      </text>
+                    )}
+                    {showFrontage && (
+                      <text
+                        x={p.label[0] + hd.dx}
+                        y={p.label[1] + hd.dy + (subLabel ? 12 : 8)}
+                        fill={labelFill}
+                        fontSize={8}
+                        fontFamily="var(--font-mono, ui-monospace)"
+                        fontWeight={600}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        opacity="0.7"
+                        pointerEvents="none"
+                      >
+                        {frontageFt} ft
                       </text>
                     )}
                   </>

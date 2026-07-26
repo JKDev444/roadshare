@@ -29,6 +29,9 @@ export function HomeDetailsDrawer({
   onReturnToTray,
   onFlipSide,
   onMoveInOrder,
+  onSetOrderIndex,
+  peerCount,
+  peerIndex,
   onDuplicate,
   livePreview,
 }: {
@@ -42,6 +45,12 @@ export function HomeDetailsDrawer({
   onFlipSide?: (id: string) => void;
   /** Shift the home earlier/later in the ordering along its road (auto-spaces). */
   onMoveInOrder?: (id: string, dir: -1 | 1) => void;
+  /** Move this home to a specific 1..N position along its road (auto-spaces). */
+  onSetOrderIndex?: (id: string, targetIndex: number) => void;
+  /** Number of homes currently sitting on this home's road (for the slider). */
+  peerCount?: number;
+  /** This home's 1..N index along the road (for the slider). */
+  peerIndex?: number;
   /** Duplicate this home (copies name, address, frontage) into the tray. */
   onDuplicate?: (id: string) => void;
   /** Live "your share" estimator. Given the pending patch, returns the share
@@ -206,16 +215,38 @@ export function HomeDetailsDrawer({
           </label>
         </div>
 
-        {(onFlipSide || onMoveInOrder) && home.position && (
+        {(onFlipSide || onSetOrderIndex || onMoveInOrder) && home.position && (
           <div className="mt-5 rounded-2xl border border-border bg-background p-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Position on the road</p>
-            <div className="mt-2 flex flex-wrap gap-2">
+            {onSetOrderIndex && typeof peerCount === "number" && peerCount > 1 && typeof peerIndex === "number" && (
+              <div className="mt-3">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted-foreground">Where on the road?</span>
+                  <span className="font-mono font-bold text-foreground">
+                    #{peerIndex} of {peerCount}
+                  </span>
+                </div>
+                <Slider
+                  className="mt-2"
+                  min={1}
+                  max={peerCount}
+                  step={1}
+                  value={[peerIndex]}
+                  onValueChange={(v) => onSetOrderIndex(home.id, v[0])}
+                />
+                <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+                  <span>First</span>
+                  <span>Last</span>
+                </div>
+              </div>
+            )}
+            <div className="mt-3 flex flex-wrap gap-2">
               {onFlipSide && (
                 <Button variant="outline" size="sm" onClick={() => onFlipSide(home.id)}>
                   <FlipHorizontal2 className="h-4 w-4" /> Flip to other side
                 </Button>
               )}
-              {onMoveInOrder && (
+              {onMoveInOrder && !onSetOrderIndex && (
                 <>
                   <Button variant="outline" size="sm" onClick={() => onMoveInOrder(home.id, -1)}>
                     <ArrowUp className="h-4 w-4" /> Move earlier
@@ -227,7 +258,7 @@ export function HomeDetailsDrawer({
               )}
             </div>
             <p className="mt-2 text-[11px] text-muted-foreground">
-              Move earlier/later re-spaces every home on this road so nothing overlaps.
+              Reordering re-spaces every home on this road so nothing overlaps.
             </p>
           </div>
         )}
