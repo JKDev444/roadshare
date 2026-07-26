@@ -403,6 +403,10 @@ export function Planner({
       )}
 
       {step !== "home" && step !== "road" && (
+      <QuoteControl fixedTotal={fixedTotal} setFixedTotal={setFixedTotal} />
+      )}
+
+      {step !== "home" && step !== "road" && (
       <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
         <button
           type="button"
@@ -423,7 +427,6 @@ export function Planner({
 
         {assumptionsOpen && (
           <div className="mt-4 space-y-4 border-t border-border pt-4">
-            <QuoteControl fixedTotal={fixedTotal} setFixedTotal={setFixedTotal} />
             {!hasQuote && (
               <SurfaceControls surfaces={surfaces} setSurfaces={setSurfaces} pctTotal={pctTotal} pctValid={pctValid} />
             )}
