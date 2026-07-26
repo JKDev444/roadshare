@@ -83,6 +83,25 @@ const ROAD_MARGIN = 70; // horizontal margin from edge of viewport to first lot
 const LOT_W = 130;
 const LOT_H = 82;
 
+/** Segment length in feet (uses lengthFt override, else geometry, else a
+ *  reasonable fallback based on the default road span). */
+export function segmentLengthFt(segment: Segment): number {
+  if (segment.lengthFt && segment.lengthFt > 0) return segment.lengthFt;
+  const g = segment.geometry;
+  if (g) return Math.hypot(g.bx - g.ax, g.by - g.ay) * FT_PER_UNIT;
+  return (BASE_VIEW_W - ROAD_MARGIN * 2) * FT_PER_UNIT;
+}
+
+/** Pick a friendly per-home default frontage in feet: total road length
+ *  divided by the number of homes, rounded to 5, clamped to [15, 120]. */
+export function defaultFrontageFor(segments: Segment[], homeCount: number): number {
+  if (homeCount <= 0) return 60;
+  const total = segments.reduce((s, seg) => s + segmentLengthFt(seg), 0);
+  const raw = total / homeCount;
+  const rounded = Math.round(raw / 5) * 5;
+  return Math.max(15, Math.min(120, rounded || 60));
+}
+
 function projectOntoSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number) {
   const dx = bx - ax;
   const dy = by - ay;
