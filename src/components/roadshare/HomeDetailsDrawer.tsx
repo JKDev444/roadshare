@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Trash2 } from "lucide-react";
+import { X, Trash2, FlipHorizontal2, ArrowUp, ArrowDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,8 @@ export function HomeDetailsDrawer({
   onSave,
   onDelete,
   onReturnToTray,
+  onFlipSide,
+  onMoveInOrder,
 }: {
   home: RoadHome | null;
   segments: Segment[];
@@ -20,6 +22,10 @@ export function HomeDetailsDrawer({
   onSave: (id: string, patch: Partial<RoadHome>) => void;
   onDelete?: (id: string) => void;
   onReturnToTray?: (id: string) => void;
+  /** Move the home to the opposite side of its road. */
+  onFlipSide?: (id: string) => void;
+  /** Shift the home earlier/later in the ordering along its road (auto-spaces). */
+  onMoveInOrder?: (id: string, dir: -1 | 1) => void;
 }) {
   const [address, setAddress] = useState("");
   const [owner, setOwner] = useState("");
@@ -125,6 +131,32 @@ export function HomeDetailsDrawer({
             </span>
           </label>
         </div>
+
+        {(onFlipSide || onMoveInOrder) && home.position && (
+          <div className="mt-5 rounded-2xl border border-border bg-background p-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Position on the road</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {onFlipSide && (
+                <Button variant="outline" size="sm" onClick={() => onFlipSide(home.id)}>
+                  <FlipHorizontal2 className="h-4 w-4" /> Flip to other side
+                </Button>
+              )}
+              {onMoveInOrder && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => onMoveInOrder(home.id, -1)}>
+                    <ArrowUp className="h-4 w-4" /> Move earlier
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => onMoveInOrder(home.id, 1)}>
+                    <ArrowDown className="h-4 w-4" /> Move later
+                  </Button>
+                </>
+              )}
+            </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Move earlier/later re-spaces every home on this road so nothing overlaps.
+            </p>
+          </div>
+        )}
 
         <div className="mt-6 flex items-center justify-between gap-2">
           {onDelete ? (

@@ -8,9 +8,11 @@ import { Planner, type PlannerSnapshot } from "@/components/roadshare/Planner";
 import { HomeDetailsDrawer } from "@/components/roadshare/HomeDetailsDrawer";
 import { TemplatePicker } from "@/components/roadshare/TemplatePicker";
 import { BulkAddDialog } from "@/components/roadshare/BulkAddDialog";
+import { AddRoadDialog, type AddRoadSpec } from "@/components/roadshare/AddRoadDialog";
 import {
   makeHomeId,
   makeSegmentId,
+  snapHomeTileToRoad,
   type Home as RoadHome,
   type Segment as RoadSegment,
   type RoadTemplate,
@@ -78,6 +80,7 @@ function MyRoadPage() {
     !initialHomes.some((h) => h.position);
   const [showTemplates, setShowTemplates] = useState(initialShowTemplates);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [addRoadOpen, setAddRoadOpen] = useState(false);
   const historyRef = useRef<RoadHome[][]>([initialHomes]);
   const futureRef = useRef<RoadHome[][]>([]);
   const [historyTick, setHistoryTick] = useState(0);
@@ -137,10 +140,21 @@ function MyRoadPage() {
   }
 
   function handleAddSegment() {
+    // Guided modal: user picks how the new road connects (extend / cross /
+    // standalone) and we place it for them. Replaces the old free-click flow
+    // that produced messy disconnected roads.
+    setAddRoadOpen(true);
+  }
+  function handleAddRoadConfirm(spec: AddRoadSpec) {
     const id = makeSegmentId();
-    const next: RoadSegment = { id, name: `Road ${segments.length + 1}`, widthFt: 20 };
-    setSegments((prev) => [...prev, next]);
-    setPlacingRoadId(id);
+    const newSeg: RoadSegment = {
+      id,
+      name: spec.name,
+      widthFt: spec.widthFt,
+      geometry: { ax: spec.ax, ay: spec.ay, bx: spec.bx, by: spec.by },
+    };
+    setSegments((prev) => [...prev, newSeg]);
+    toast.success(`${spec.name} added.`);
   }
   function handlePlaceRoad(id: string, ax: number, ay: number, bx: number, by: number) {
     setSegments((prev) => prev.map((s) => (s.id === id ? { ...s, geometry: { ax, ay, bx, by } } : s)));
@@ -229,6 +243,59 @@ function MyRoadPage() {
     // Reassign every home to the first segment so nothing goes orphaned.
     setHomes((prev) => prev.map((h) => ({ ...h, segmentId: t.segments[0].id, position: null })));
     setShowTemplates(false);
+  }
+
+  function handleFlipHomeSide(id: string) {
+    const home = homes.find((h) => h.id === id);
+    if (!home || !home.position) return;
+    const seg = segments.find((s) => s.id === (home.segmentId ?? segments[0]?.id));
+    if (!seg?.geometry) {
+      toast.info("Flip works once this road has a shape on the map.");
+      return;
+    }
+    const g = seg.geometry;
+    const dx = g.bx - g.ax;
+    const dy = g.by - g.ay;
+    const L2 = dx * dx + dy * dy || 1;
+    const cx = home.position.x + 65; // half of LOT_W (130)
+    const cy = home.position.y + 41; // half of LOT_H (82)
+    let t = ((cx - g.ax) * dx + (cy - g.ay) * dy) / L2;
+    t = Math.max(0, Math.min(1, t));
+    const landX = g.ax + t * dx;
+    const landY = g.ay + t * dy;
+    // Figure out current side, flip it.
+    const cross = dx * (cy - g.ay) - dy * (cx - g.ax);
+    const currentSide: "left" | "right" = cross > 0 ? "right" : "left";
+    const newSide: "left" | "right" = currentSide === "left" ? "right" : "left";
+    const pos = snapHomeTileToRoad(g.ax, g.ay, g.bx, g.by, landX, landY, newSide);
+    const next = homes.map((h) => (h.id === id ? { ...h, position: pos } : h));
+    pushHistory(next);
+  }
+
+  function handleMoveHomeInOrder(id: string, dir: -1 | 1) {
+    const home = homes.find((h) => h.id === id);
+    if (!home) return;
+    const segId = home.segmentId ?? segments[0]?.id;
+    // Reorder within the full homes array by swapping with the previous/next
+    // home on the same segment, then re-space all homes evenly.
+    const idx = homes.findIndex((h) => h.id === id);
+    const searchFrom = dir < 0 ? idx - 1 : idx + 1;
+    const step = dir < 0 ? -1 : 1;
+    let swapIdx = -1;
+    for (let i = searchFrom; i >= 0 && i < homes.length; i += step) {
+      if (homes[i].segmentId === segId || (segments.length === 1)) {
+        swapIdx = i;
+        break;
+      }
+    }
+    if (swapIdx < 0) {
+      toast.info(dir < 0 ? "Already first on this road." : "Already last on this road.");
+      return;
+    }
+    const reordered = homes.slice();
+    [reordered[idx], reordered[swapIdx]] = [reordered[swapIdx], reordered[idx]];
+    const arranged = autoArrangeHomes(reordered, segments);
+    pushHistory(arranged);
   }
 
   function handleUndo() {
@@ -354,6 +421,7 @@ function MyRoadPage() {
         roadName={road.name ?? "My road"}
         active="map"
         onReset={doReset}
+        onChangeLayout={() => setShowTemplates(true)}
         busy={busy}
         toolbar={
           <MapToolbar
@@ -408,6 +476,13 @@ function MyRoadPage() {
       {showTemplates && (
         <TemplatePicker onPick={handlePickTemplate} onSkip={() => setShowTemplates(false)} />
       )}
+      {addRoadOpen && (
+        <AddRoadDialog
+          segments={segments}
+          onClose={() => setAddRoadOpen(false)}
+          onConfirm={handleAddRoadConfirm}
+        />
+      )}
       <BulkAddDialog open={bulkOpen} onClose={() => setBulkOpen(false)} onAdd={handleBulkAdd} />
       <HomeDetailsDrawer
         home={editingHomeId ? homes.find((h) => h.id === editingHomeId) ?? null : null}
@@ -416,6 +491,8 @@ function MyRoadPage() {
         onSave={handleSaveHome}
         onDelete={homes.length > 1 ? handleDeleteHome : undefined}
         onReturnToTray={handleReturnHomeToTray}
+        onFlipSide={handleFlipHomeSide}
+        onMoveInOrder={handleMoveHomeInOrder}
       />
     </div>
   );

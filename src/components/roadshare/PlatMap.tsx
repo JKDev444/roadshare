@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { Layout, LayoutParcel } from "@/lib/roadshare/layout";
 import { nearestPointOnSegments, snapHomeTileToRoad } from "@/lib/roadshare/layout";
+import { mergeSelectedFrontage } from "@/lib/roadshare/frontageMerge";
 
 function parcelDisplayLabel(p: LayoutParcel, index: number): string {
   const raw = p.name?.trim() || p.address?.trim() || "";
@@ -374,6 +375,9 @@ export function PlatMap({
           <filter id="parcelShadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="1.2" stdDeviation="1.4" floodOpacity="0.18" />
           </filter>
+          <filter id="ribbonGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3.2" />
+          </filter>
         </defs>
 
         {/* Public road stubs at each entrance */}
@@ -456,6 +460,67 @@ export function PlatMap({
             />
           );
         })}
+
+        {/* Merged "shared frontage" ribbons — one continuous gold overlay per
+            road segment covering every selected parcel. Uses a soft glow plus
+            an animated dashed overlay so the highlighted stretch pops on top
+            of the dark asphalt (matches the homepage hero styling). */}
+        {(() => {
+          const highlightSet = new Set(selected);
+          if (you) highlightSet.add(you);
+          const ribbons = mergeSelectedFrontage(layout, Array.from(highlightSet));
+          if (ribbons.length === 0) return null;
+          return (
+            <g pointerEvents="none">
+              {ribbons.map((r, i) => {
+                const d = segDelta(r.segmentId);
+                // Approximate: use edge endpoints' delta averaged as the ribbon offset.
+                const ox = (d.dax + d.dbx) / 2;
+                const oy = (d.day + d.dby) / 2;
+                return (
+                  <g key={`ribbon-${i}`}>
+                    {/* Halo / glow */}
+                    <line
+                      x1={r.ax + ox}
+                      y1={r.ay + oy}
+                      x2={r.bx + ox}
+                      y2={r.by + oy}
+                      stroke="var(--color-gold)"
+                      strokeWidth="14"
+                      strokeLinecap="round"
+                      opacity="0.45"
+                      filter="url(#ribbonGlow)"
+                    />
+                    {/* Solid gold ribbon */}
+                    <line
+                      x1={r.ax + ox}
+                      y1={r.ay + oy}
+                      x2={r.bx + ox}
+                      y2={r.by + oy}
+                      stroke="var(--color-gold)"
+                      strokeWidth="9"
+                      strokeLinecap="round"
+                      opacity="0.98"
+                    />
+                    {/* Animated dash marching along the ribbon */}
+                    <line
+                      x1={r.ax + ox}
+                      y1={r.ay + oy}
+                      x2={r.bx + ox}
+                      y2={r.by + oy}
+                      stroke="var(--color-gold-foreground)"
+                      strokeWidth="2"
+                      strokeDasharray="8 8"
+                      strokeLinecap="round"
+                      opacity="0.95"
+                      style={{ animation: "rs-dash 2.4s linear infinite" }}
+                    />
+                  </g>
+                );
+              })}
+            </g>
+          );
+        })()}
 
         {/* Midpoint "+ corner" handle — click to add a bend / split the segment */}
         {onSplitSegment && !placing && !pendingPlacement && !drag && EDGES.map((e) => {
@@ -607,18 +672,6 @@ export function PlatMap({
                 strokeWidth={isHover ? 1 : 0}
                 filter="url(#parcelShadow)"
               />
-              {isSel && (
-                <line
-                  x1={p.frontageLine[0][0] + hd.dx}
-                  y1={p.frontageLine[0][1] + hd.dy}
-                  x2={p.frontageLine[1][0] + hd.dx}
-                  y2={p.frontageLine[1][1] + hd.dy}
-                  stroke={isYou ? "var(--color-gold-foreground)" : "var(--color-selected-foreground)"}
-                  strokeWidth="4.5"
-                  strokeLinecap="round"
-                  opacity="0.9"
-                />
-              )}
               <title>{p.name && p.name !== p.address ? `${p.name} · ${p.address}` : p.address}</title>
               {(() => {
                 const mainLabel = parcelDisplayLabel(p, idx);
