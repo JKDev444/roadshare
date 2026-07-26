@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import { AppHeader, MapToolbar } from "@/components/roadshare/AppHeader";
 import { Planner, type PlannerSnapshot } from "@/components/roadshare/Planner";
-import { HomeDetailsDrawer } from "@/components/roadshare/HomeDetailsDrawer";
+import { HomeDetailsDrawer, type HomePatchPreview, type HomeShareEstimate } from "@/components/roadshare/HomeDetailsDrawer";
 import { TemplatePicker } from "@/components/roadshare/TemplatePicker";
 import { BulkAddDialog } from "@/components/roadshare/BulkAddDialog";
 import { AddRoadDialog, type AddRoadSpec } from "@/components/roadshare/AddRoadDialog";
@@ -13,6 +13,7 @@ import {
   makeHomeId,
   makeSegmentId,
   snapHomeTileToRoad,
+  buildLayout,
   type Home as RoadHome,
   type Segment as RoadSegment,
   type RoadTemplate,
@@ -20,6 +21,9 @@ import {
 import { getMyRoad, resetMyRoad, saveMyRoadState } from "@/lib/roadshare/road.functions";
 import { createShare } from "@/lib/roadshare/share.functions";
 import { autoArrangeHomes } from "@/lib/roadshare/layout";
+import { computeAllocation } from "@/lib/roadshare/engine";
+import { SURFACE_TYPES, DEFAULTS } from "@/lib/roadshare/data";
+import { useCallback as useCallbackReact } from "react";
 
 export const Route = createFileRoute("/_authenticated/my-road")({
   ssr: false,
