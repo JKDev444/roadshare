@@ -509,6 +509,8 @@ function MyRoadPage() {
         onDeleteSegment={handleDeleteSegment}
         onSetSegmentLength={handleSetSegmentLength}
         onSetSegmentWidth={handleSetSegmentWidth}
+        onStraightenSegment={handleStraightenSegment}
+        onExtendSegment={handleExtendSegment}
         onRotate={handleRotate}
         onUndo={handleUndo}
         onRedo={handleRedo}
@@ -545,6 +547,7 @@ function MyRoadPage() {
         onReturnToTray={handleReturnHomeToTray}
         onFlipSide={handleFlipHomeSide}
         onMoveInOrder={handleMoveHomeInOrder}
+        onDuplicate={handleDuplicateHome}
       />
     </div>
   );
