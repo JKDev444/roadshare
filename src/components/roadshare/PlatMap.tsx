@@ -375,6 +375,9 @@ export function PlatMap({
           <filter id="parcelShadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="1.2" stdDeviation="1.4" floodOpacity="0.18" />
           </filter>
+          <filter id="ribbonGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3.2" />
+          </filter>
         </defs>
 
         {/* Public road stubs at each entrance */}
